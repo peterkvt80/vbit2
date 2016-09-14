@@ -16,4 +16,4 @@ You only want cout.
 
 To get only cout run vbit2 like this
 
-vbi2.exe 2? null
+vbi2.exe 2> null
