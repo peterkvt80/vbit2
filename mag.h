@@ -22,9 +22,10 @@ class Mag
 {
     public:
         /** Default constructor */
-        Mag(std::list<TTXPageStream>* pageSet);
+        Mag(int mag, std::list<TTXPageStream>* pageSet);
         /** Default destructor */
         virtual ~Mag();
+
         /** Access _pageSet
          * \return The current value of _pageSet
          */
@@ -43,11 +44,18 @@ class Mag
          */
         int GetPageCount();
 
+        /** Header flag
+         * \return true if the last packet was a header
+         */
+        inline bool GetHeaderFlag(){return _headerFlag;};
+
     protected:
     private:
         std::list<TTXPageStream>*  _pageSet; //!< Member variable "_pageSet"
         std::list<TTXPageStream>::iterator _it;
         TTXPageStream* _page; //!< The current page being output
+        int _magNumber; //!< The number of this magazine. (where 0 is mag 8)
+        bool _headerFlag; //!< True if the last packet was a header
 };
 
 }

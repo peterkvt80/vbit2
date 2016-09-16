@@ -13,7 +13,7 @@ Configure::Configure(int argc, char** argv) :
 	_initialSubcode(0x3F7F),
 	_NetworkIdentificationCode(0x0000)
 {
-	std::cout << "[Configure::Configure] Started" << std::endl;
+	std::cerr << "[Configure::Configure] Started" << std::endl;
 	strncpy(_configFile,"vbit.conf",MAXPATH-1);
 	strncpy(_pageDir,"i:\\temp\\teletext",MAXPATH-1); // Can't use ~ because this is not the shell
 	// This is where the default header template is defined.
@@ -22,7 +22,7 @@ Configure::Configure(int argc, char** argv) :
 	//char headerTemplate[33];
 	//char serviceStatusString[21];
 	//Scan the command line for overriding the pages file.
-	std::cout << "Parameters=" << argc << " " << std::endl;
+	std::cerr << "Parameters=" << argc << " " << std::endl;
 	if (argc>1)
 	{
 		for (int i=1;i<argc-1;i++)
@@ -35,13 +35,14 @@ Configure::Configure(int argc, char** argv) :
 		}
 	}
 	/// @ scan for overriding the configuration file
-	std::cout << "Pages directory is " << _pageDir << std::endl;
-	std::cout << "Config file is " << _configFile << std::endl;
+	std::cerr << "Pages directory is " << _pageDir << std::endl;
+	std::cerr << "Config file is " << _configFile << std::endl;
 	/// @todo load the configuration file.
 	/// @todo scan the command line for other overrides.
+	std::cerr << "[Configure::Configure] Exits" << std::endl;
 }
 
 Configure::~Configure()
 {
-	std::cout << "[Configure] Destructor" << std::endl;
+	std::cerr << "[Configure] Destructor" << std::endl;
 }

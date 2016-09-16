@@ -2,8 +2,8 @@
 
 using namespace vbit;
 
-Mag::Mag(std::list<TTXPageStream>* pageSet) :
-    _pageSet(pageSet), _page(NULL)
+Mag::Mag(int mag, std::list<TTXPageStream>* pageSet) :
+    _pageSet(pageSet), _page(NULL), _magNumber(mag), _headerFlag(false)
 {
     //ctor
     if (_pageSet->size()>0)
@@ -61,16 +61,17 @@ Packet *Mag::GetPacket()
     //std::cerr << "[GetPacket] DEBUG DUMP 1 " << std::endl;
     //_page->DebugDump();
 
-     // To begin with, let's not do carousels. Only transmit single pages
+    // To begin with, let's not do carousels. Only transmit single pages
 
-     TTXLine* txt=_page->GetNextRow();
+    TTXLine* txt=_page->GetNextRow();
 
-     if (txt!=NULL)
-        std::cerr << "[GetPacket] Sending " << txt->GetLine() << std::endl;
-    else
+
+    _headerFlag=txt==NULL; // if last line was read
+
+    if (_headerFlag)
     {
-        // if last line was read
         std::cerr << "[GetPacket] Going to the next page " << std::endl;
+        // We only deal with single pages as this is the main sequence
         // Iterate to the next page, and loop to beginning if needed
         ++_it;
         if (_it==_pageSet->end())
@@ -79,16 +80,25 @@ Packet *Mag::GetPacket()
         }
         // Get pointer to the page we are sending
         _page=&*_it;
+        // If this page is not a single page then skip it.
+        // Send a null to avoid the risk of getting stuck here.
+        if (_page->Getm_SubPage()==NULL)
+        {
+            std::cerr << "[GetPacket] Ignoring carousels for now (todo) " << std::endl;
+            return NULL;
+        }
+        std::cerr << "[GetPacket] Need to create header packet now " << std::endl;
+        // Assemble the header
+        int thisMag=_page->GetPageNumber();
+        int thisRow=5; // @todo placeholder
+        Packet* p=new Packet();
+        p->Header(thisMag,thisPage,thisSubcode,ThisControl);// loads of stuff to do here!
+        return p; /// @todo Should we do this?
+
     }
+    else
+        std::cerr << "[GetPacket] Sending " << txt->GetLine() << std::endl;
 
-
-    // We need to iterate on these levels within this mag:
-    // pageSet: subPage: line:
-
-    // Get the next line
-    // find our line iterator
-    // increment it
-    // Is it past the end of the line.
 
 
     // Go to the next page
@@ -107,14 +117,11 @@ Packet *Mag::GetPacket()
 */
     std::cerr << "[Mag::GetPacket] Page description=" << _page->GetDescription() << std::endl;
 
-    auto thing1=_pageSet->begin();
-    auto thing2=_pageSet->end();
-
 //    Dump whole page list for debug purposes
 /*
     for (_it=thing1;_it!=thing2;++_it)
     {
-        std::cout << "[Mag::GetPacket]Filename =" << _it->GetSourcePage() << std::endl;
+        std::cerr << "[Mag::GetPacket]Filename =" << _it->GetSourcePage() << std::endl;
     }
 */
 
@@ -125,6 +132,10 @@ Packet *Mag::GetPacket()
     // the carousel gets sent out and the page index is incremented.
     // A carousel is skipped in the main sequence.
 
-    return new Packet( ); /// @todo place holder. Need to implement
+    // Assemble the packet
+    int thisMag=_page->GetPageNumber(); // Hmm, This looks wrong!
+    int thisRow=5; // @todo placeholder
+    Packet* p=new Packet(thisMag, thisRow, txt->GetLine());
+    return p; /// @todo place holder. Need to implement
 }
 

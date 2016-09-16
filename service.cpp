@@ -6,29 +6,29 @@ using namespace ttx;
 
 Service::Service()
 {
-	std::cout << "[Service::Service] Started" << std::endl;
+	std::cerr << "[Service::Service] Started" << std::endl;
 }
 
 Service::Service(Configure *configure, PageList *pageList) :
 	_configure(configure),_pageList(pageList)
 {
-	std::cout << "[Service::Service] Started (2) " << std::endl;
+	std::cerr << "[Service::Service] Started (2) " << std::endl;
 //	_pageList->loadPageList(_configure->GetPageDirectory());
 
 }
 
 Service::~Service()
 {
-	std::cout << "[Service] Destructor" << std::endl;
+	std::cerr << "[Service] Destructor" << std::endl;
 }
 
 bool Service::run()
 {
-	std::cout << "[Service::run] This should start a thread that starts the teletext stream" << std::endl;
+	std::cerr << "[Service::run] This should start a thread that starts the teletext stream" << std::endl;
 	std::thread t(&Service::worker, this);
-    std::cout << "[Service::run]Main thread" << std::endl;
+    std::cerr << "[Service::run]Main thread" << std::endl;
     t.join();
-    std::cout << "[Service::run]Main thread ended" << std::endl;
+    std::cerr << "[Service::run]Main thread ended" << std::endl;
 	return false;
 }
 
@@ -42,7 +42,7 @@ void Service::worker()
     vbit::Mag **mag; // Pointer to magazines array
     vbit::Mag *pMag; // Pointer to the magazine that we are working on
     uint8_t hold[STREAMS]; /// If hold is set then the magazine can not be sent until the next field
-    std::cout << "[Service::worker]This is the worker process" << std::endl;
+    std::cerr << "[Service::worker]This is the worker process" << std::endl;
 
     int rowCounter=16; // Counts 16 rows to a field
 
@@ -59,7 +59,7 @@ void Service::worker()
     /// Check that we got what we expect
     for (int i=0;i<8;i++)
     {
-        std::cout << " Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
+        std::cerr << " Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
     }
 
     for (int k=0;k<200;k++) // Debugging! This will be a while(1)
@@ -85,9 +85,14 @@ void Service::worker()
 		// Does it have any pages and it isn't in hold
 		if (!hold[nmag])
         {
-            std::cout << "Mag=" << (int)nmag << std::endl;
+            std::cerr << "Mag=" << (int)nmag << std::endl;
             vbit::Packet* pkt=pMag->GetPacket();
-        }
+            if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere
+            {
+                std::cout << pkt->tx(true);
+                std::cout << std::endl;
+            }
+         }
 
         //
 
