@@ -1,7 +1,7 @@
 #ifndef _TTXPAGESTREAM_H_
 #define _TTXPAGESTREAM_H_
 
-#include <ttxpage.h>
+#include "ttxpage.h"
 
 /** @brief Extends TTXPage to allow Service to iterate through this page.
  */

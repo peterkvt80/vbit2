@@ -4,7 +4,7 @@
 CC=g++
 
 #Set any compiler flags you want to use (e.g. "-I."), or leave blank
-CFLAGS = -g -O2 -Wall -std=gnu++11 -fstack-protector-all -Wextra -I.
+CFLAGS = -g -O2 -Wall -std=gnumake++11 -fstack-protector-all -Wextra -I.
 
 ifeq ($(OS),Windows_NT)
 LIBS = -lpthread -lwsock32
