@@ -35,13 +35,12 @@ Packet::~Packet()
 void Packet::Set_packet(char *val)
 {
     std::cout << "[Packet::Set_packet] todo. Implement copy" << std::endl;
-    strncpy(&_packet[5],val,45+1);
+    strncpy(&_packet[5],val,40);
 }
 
 void Packet::SetPacketText(std::string val)
 {
-    std::cout << "[Packet::SetPacketText] todo. Implement copy" << std::endl;
-    strncpy(&_packet[5],val.c_str(),45+1);
+    strncpy(&_packet[5],val.c_str(),40);
 }
 
 // Clear entire packet to 0
@@ -64,27 +63,29 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
 	*p++=HamTab[((row>>1)&0x0f)];
 } // SetMRAG
 
+/* Ideally we would set _packet[0] for other hardware, or _packet[3] for Alistair Buxton raspi-teletext/
+ * but hard code this for now */
 std::string Packet::tx(bool debugMode=false)
 {
     // @TODO: parity
     if (!debugMode)
     {
         // @todo drop off the first three characters for raspi-teletext
-        return _packet;
+        return &_packet[3]; // For raspi-pi we skip clock run in and
     }
     else
     {
-        std::cerr << std::setfill('0') <<  std::hex ;
+        std::cout << std::setfill('0') <<  std::hex ;
         for (int i=0;i<45;i++)
-            std::cerr << std::setw(2)  << (int)(_packet[i] & 0x7f) << " ";
-        std::cerr << std::dec << std::endl;
+            std::cout << std::setw(2)  << (int)(_packet[i] & 0xff) << " ";
+        std::cout << std::dec << std::endl;
         for (int i=0;i<45;i++)
         {
             char ch=_packet[i] & 0x7f;
             if (ch<' ') ch='.';
-            std::cerr << " " << ch << " ";
+            std::cout << " " << ch << " ";
         }
-        std::cerr << std::endl;
+        // std::cout << std::endl;
         return &_packet[3];
     }
 
@@ -129,4 +130,33 @@ void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode,
 	if (control & 0x0040) cbit|=0x01;	// C11 serial/parallel
 	_packet[12]=HamTab[cbit]; // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
 } // Header
+
+void Packet::HeaderText(std::string val)
+{
+    strncpy(&_packet[13],val.c_str(),32);
+}
+
+/**
+ * @brief Check parity.
+ * \param Offset is normally 5 for rows, 13 for header
+ */
+void Packet::Parity(uint8_t offset)
+{
+	int i;
+	//uint8_t c;
+	for (i=offset;i<PACKETSIZE;i++)
+	{
+		_packet[i]=ParTab[(uint8_t)(_packet[i]&0x7f)];
+	}
+	/* DO NOT REVERSE for Raspi. Other devices may need byte endian reversed
+	for (i=0;i<PACKETSIZE;i++)
+	{
+		c=(uint8_t)packet[i];
+		c = (c & 0x0F) << 4 | (c & 0xF0) >> 4;
+		c = (c & 0x33) << 2 | (c & 0xCC) >> 2;
+		c = (c & 0x55) << 1 | (c & 0xAA) >> 1;
+		packet[i]=(char)c;
+	}
+	*/
+} // Parity
 

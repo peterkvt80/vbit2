@@ -82,17 +82,21 @@ Packet *Mag::GetPacket()
         _page=&*_it;
         // If this page is not a single page then skip it.
         // Send a null to avoid the risk of getting stuck here.
-        if (_page->Getm_SubPage()==NULL)
+        if (_page->Getm_SubPage()!=NULL)
         {
             std::cerr << "[GetPacket] Ignoring carousels for now (todo) " << std::endl;
             return NULL;
         }
         std::cerr << "[GetPacket] Need to create header packet now " << std::endl;
-        // Assemble the header
-        int thisMag=_page->GetPageNumber();
-        int thisRow=5; // @todo placeholder
+        // Assemble the header. (we can simplify this or leave it for the optimiser)
+        int thisPage=_page->GetPageNumber();
+        int thisSubcode=_page->GetSubCode();
+        int thisStatus=_page->GetPageStatus();
         Packet* p=new Packet();
-        p->Header(thisMag,thisPage,thisSubcode,ThisControl);// loads of stuff to do here!
+        p->Header(_magNumber,thisPage,thisSubcode,thisStatus);// loads of stuff to do here!
+
+        p->HeaderText("CEEFAX 1 DAY MTH BLAH N 12:34.56"); // Placeholder 32 characters. This gets replaced later
+        p->Parity(13);
         return p; /// @todo Should we do this?
 
     }
@@ -133,9 +137,12 @@ Packet *Mag::GetPacket()
     // A carousel is skipped in the main sequence.
 
     // Assemble the packet
-    int thisMag=_page->GetPageNumber(); // Hmm, This looks wrong!
-    int thisRow=5; // @todo placeholder
+    int thisMag=_magNumber;
+    int thisRow=_page->GetLineCounter(); // The number of the last row received
+
     Packet* p=new Packet(thisMag, thisRow, txt->GetLine());
+    p->Parity();
+
     return p; /// @todo place holder. Need to implement
 }
 

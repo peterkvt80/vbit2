@@ -89,7 +89,10 @@ void Service::worker()
             vbit::Packet* pkt=pMag->GetPacket();
             if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere
             {
-                std::cout << pkt->tx(true);
+                #if 0
+                std::cout <<
+                #endif
+                pkt->tx(true);
                 std::cout << std::endl;
             }
          }

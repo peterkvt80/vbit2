@@ -156,11 +156,16 @@ class TTXPage
         bool SavePageDefault();
 
 
-        /** Set the subcode
+        /** Set the subcode. Subcode is effectively the subpage nummber in a carousel
          * \param subcode : A subcode value from 0000 to FFFF
          * \return nothing yet
          */
          void SetSubCode(int subcode) {m_subcode=subcode;}
+
+        /** Get the subcode
+         * \return Subcode value
+         */
+         inline int GetSubCode() {return m_subcode;}
 
         /** Copy the metadata from page to here.
          *  Metadata is everything except the actual text lines and the SubPage link.

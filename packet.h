@@ -78,6 +78,18 @@ class Packet
          */
         void Header(unsigned char mag, unsigned char page, unsigned int subcode, unsigned int control);
 
+        /** HeaderText
+         * Sets last 32 bytes. This is the caption part
+         * @param val String of exactly 32 characters.
+         */
+        void HeaderText(std::string val);
+
+        /** Parity
+         * Sets the parity of the bytes starting from offset
+         * @param offset 5 (default) for normal text rows, 13 for headers
+         */
+        void Parity(uint8_t offset=5);
+
     protected:
     private:
         char _packet[45]; //!< Member variable "_packet[45]"
