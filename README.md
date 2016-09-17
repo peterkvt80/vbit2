@@ -9,7 +9,7 @@ This program is written in c++11. It was developed on Windows. I used Code::Bloc
 The toolchain change is needed to support c++11 and more specifically threads.
 Please contact me if you are trying to set up a windows development environment.
 
-On Raspberry Pi it uses the default development environment.
+On Raspberry Pi it uses the default development environment. Just changed CFLAGS to CXXFLAGS and added flag -std=gnu++11
 
 vbit2 probably outputs a lot of garbage on cerr depending on how I left it.
 You only want cout.
