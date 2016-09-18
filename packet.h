@@ -2,9 +2,10 @@
 #define _PACKET_H_
 
 #include <stdint.h>
-#include "iostream"
-#include "iomanip"
+#include <iostream>
+#include <iomanip>
 #include <string.h>
+#include <time.h>
 #include "tables.h"
 
 /**
@@ -60,7 +61,7 @@ class Packet
          * Sometimes we need to reverse the bit order
          *
          */
-        std::string tx(bool debugMode);
+        std::string tx(bool debugMode=false);
 
         /** SetMRAG
          * Sets the first five bytes of the packet
@@ -93,6 +94,7 @@ class Packet
     protected:
     private:
         char _packet[45]; //!< Member variable "_packet[45]"
+				bool _isHeader; //<! True if the packet is a header
 };
 
 }

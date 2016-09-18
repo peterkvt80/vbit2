@@ -38,7 +38,7 @@ void Service::worker()
     // @todo Put priority into config and add commands to allow updates.
     char priority[STREAMS]={5,3,3,3,3,2,5,9,1};	// 1=High priority,9=low. Note: priority[0] is mag 8, while priority mag[8] is the newfor stream!
     char priorityCount[STREAMS];
-    uint8_t nmag;
+    uint8_t nmag=1;
     vbit::Mag **mag; // Pointer to magazines array
     vbit::Mag *pMag; // Pointer to the magazine that we are working on
     uint8_t hold[STREAMS]; /// If hold is set then the magazine can not be sent until the next field
@@ -59,10 +59,11 @@ void Service::worker()
     /// Check that we got what we expect
     for (int i=0;i<8;i++)
     {
-        std::cerr << " Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
+        std::cerr << "[Service::worker] Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
     }
 
-    for (int k=0;k<200;k++) // Debugging! This will be a while(1)
+    for (int k=0;true;k++) // Debugging! This will be a while(1)
+//    for (int k=0;k<200;k++) // Debugging! This will be a while(1)
     {
         // Find the next magazine to put out
         for (;priorityCount[nmag]>0;nmag=(nmag+1)%(STREAMS-1)) /// @todo Subtitles need stream 8. But we can't access magazine 9
@@ -78,6 +79,7 @@ void Service::worker()
 			// Should put packet 8/30 stuff here as in vbit stream.c
         }
 
+
         // If the magazine has no pages it can be put into hold
         if (pMag->GetPageCount()<1)
             hold[nmag]=true;
@@ -87,13 +89,20 @@ void Service::worker()
         {
             std::cerr << "Mag=" << (int)nmag << std::endl;
             vbit::Packet* pkt=pMag->GetPacket();
-            if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere
+            if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere. Empty lines are also skipped.
             {
-                #if 0
-                std::cout <<
-                #endif
+								std::string s=pkt->tx();
+								if (s.length()<42)
+								{
+									std::cout << "Length=" << s.length() << std::endl;
+									exit(3);
+								}
+                #if 1
+                std::cout << s.substr(0,42);
+                #else
                 pkt->tx(true);
                 std::cout << std::endl;
+								#endif
             }
          }
 

@@ -3,18 +3,18 @@
 
 using namespace vbit;
 
-Packet::Packet()
+Packet::Packet() : _isHeader(false)
 {
     //ctor
 }
 
-Packet::Packet(char *val)
+Packet::Packet(char *val) : _isHeader(false)
 {
     //ctor
     strncpy(_packet,val,45+1);
 }
 
-Packet::Packet(std::string val)
+Packet::Packet(std::string val) : _isHeader(false)
 {
     //ctor
     strncpy(_packet,val.c_str(),45+1);
@@ -22,6 +22,7 @@ Packet::Packet(std::string val)
 
 Packet::Packet(int mag, int row, std::string val)
 {
+		_isHeader=row==0;
     SetMRAG(mag, row);
     SetPacketText(val);
 }
@@ -34,7 +35,7 @@ Packet::~Packet()
 
 void Packet::Set_packet(char *val)
 {
-    std::cout << "[Packet::Set_packet] todo. Implement copy" << std::endl;
+    std::cerr << "[Packet::Set_packet] todo. Implement copy" << std::endl;
     strncpy(&_packet[5],val,40);
 }
 
@@ -61,17 +62,29 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
 	// add MRAG
 	*p++=HamTab[mag%8+((row%2)<<3)]; // mag + bit 3 is the lowest bit of row
 	*p++=HamTab[((row>>1)&0x0f)];
+	_isHeader=row==0;
 } // SetMRAG
 
 /* Ideally we would set _packet[0] for other hardware, or _packet[3] for Alistair Buxton raspi-teletext/
  * but hard code this for now */
-std::string Packet::tx(bool debugMode=false)
+std::string Packet::tx(bool debugMode)
 {
     // @TODO: parity
+		if (_isHeader)
+		{
+			// Do header substitutions
+			time_t rawtime;
+			struct tm * timeinfo;
+			time(&rawtime);
+			timeinfo=localtime(&rawtime);
+			std::cerr << "[Packet::tx]" << asctime(timeinfo) << std::endl;
+			strncpy(&_packet[37],&asctime(timeinfo)[11],8);
+			Parity(13); // redo the parity because substitutions will need processing
+		}
     if (!debugMode)
     {
         // @todo drop off the first three characters for raspi-teletext
-        return &_packet[3]; // For raspi-pi we skip clock run in and
+        return &_packet[3]; // For raspi-pi we skip clock run in and framing code
     }
     else
     {

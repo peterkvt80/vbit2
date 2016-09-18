@@ -22,7 +22,8 @@ TTXPageStream::~TTXPageStream()
 
 TTXLine* TTXPageStream::GetCurrentRow()
 {
-    // @todo Check everything in sight
+    // @todo Check everything in sight.
+		// Not quite. the first packets out should be magazines
     TTXLine* line=GetRow(_lineCounter);
     std::cerr << "[TTXPageStream::GetRow]This line is " << line->GetLine() << " linecounter=" << _lineCounter << std::endl;
     return line;

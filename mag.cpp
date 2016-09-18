@@ -90,18 +90,25 @@ Packet *Mag::GetPacket()
         std::cerr << "[GetPacket] Need to create header packet now " << std::endl;
         // Assemble the header. (we can simplify this or leave it for the optimiser)
         int thisPage=_page->GetPageNumber();
+				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
         int thisSubcode=_page->GetSubCode();
         int thisStatus=_page->GetPageStatus();
         Packet* p=new Packet();
         p->Header(_magNumber,thisPage,thisSubcode,thisStatus);// loads of stuff to do here!
 
         p->HeaderText("CEEFAX 1 DAY MTH BLAH N 12:34.56"); // Placeholder 32 characters. This gets replaced later
+				
+				
+				
         p->Parity(13);
         return p; /// @todo Should we do this?
 
     }
     else
         std::cerr << "[GetPacket] Sending " << txt->GetLine() << std::endl;
+				
+		if (txt->GetLine().empty())
+			return NULL;
 
 
 

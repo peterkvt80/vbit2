@@ -218,7 +218,7 @@ std::string TTXLine::GetLine()
     if (len<0 || len>40)
     {
         std::cerr << "[TTXLine::GetLine] len=" << len << std::endl;
-        return "**********      INVALID DATA           ***";
+        return ""; // Test this with empty(). We get more flexibility and speed by being able to skip lines.
     }
     if (len<40)
         for (int i=len;i<40;i++)
