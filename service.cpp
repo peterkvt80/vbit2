@@ -44,7 +44,7 @@ void Service::worker()
     uint8_t hold[STREAMS]; /// If hold is set then the magazine can not be sent until the next field
     std::cerr << "[Service::worker]This is the worker process" << std::endl;
 
-    int rowCounter=16; // Counts 16 rows to a field
+    int rowCounter=0; // Counts 16 rows to a field
 
     // Initialise the priority counts
 	for (uint8_t i=0;i<STREAMS;i++)
@@ -53,65 +53,86 @@ void Service::worker()
 		priorityCount[i]=priority[i];
 	}
 
-    // Get the magazines
-    mag=_pageList->GetMagazines();
+	// Get the magazines
+	mag=_pageList->GetMagazines();
 
-    /// Check that we got what we expect
-    for (int i=0;i<8;i++)
-    {
-        std::cerr << "[Service::worker] Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
-    }
+	/// Check that we got what we expect
+	for (int i=0;i<8;i++)
+	{
+		std::cerr << "[Service::worker] Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
+	}
+	
+	int debugMode=0; // 0=normal, 1=debug, 3=magazine debug
 
-    for (int k=0;true;k++) // Debugging! This will be a while(1)
+	while(1) // normal
 //    for (int k=0;k<200;k++) // Debugging! This will be a while(1)
-    {
-        // Find the next magazine to put out
-        for (;priorityCount[nmag]>0;nmag=(nmag+1)%(STREAMS-1)) /// @todo Subtitles need stream 8. But we can't access magazine 9
+	{
+		// Find the next magazine to put out
+		for (;priorityCount[nmag]>0;nmag=(nmag+1)%(STREAMS-1)) /// @todo Subtitles need stream 8. But we can't access magazine 9
 		{
 			priorityCount[nmag]--;
 		}
-        pMag=mag[nmag];
+		pMag=mag[nmag];
 
-        if (rowCounter>=16)
-        {
-            rowCounter=0;
-			for (uint8_t i=0;i<STREAMS;i++) hold[i]=0;	// Any holds are released now
-			// Should put packet 8/30 stuff here as in vbit stream.c
-        }
-
-
-        // If the magazine has no pages it can be put into hold
-        if (pMag->GetPageCount()<1)
-            hold[nmag]=true;
+		// If the magazine has no pages it can be put into hold
+		if (pMag->GetPageCount()<1)
+			hold[nmag]=true;
 
 		// Does it have any pages and it isn't in hold
 		if (!hold[nmag])
-        {
-            std::cerr << "Mag=" << (int)nmag << std::endl;
-            vbit::Packet* pkt=pMag->GetPacket();
-            if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere. Empty lines are also skipped.
-            {
-								std::string s=pkt->tx();
-								if (s.length()<42)
-								{
-									std::cout << "Length=" << s.length() << std::endl;
-									exit(3);
-								}
-                #if 1
-                std::cout << s.substr(0,42);
-                #else
-                pkt->tx(true);
-                std::cout << std::endl;
-								#endif
-            }
-         }
+		{
+			std::cerr << "Mag=" << (int)nmag << std::endl;
+			vbit::Packet* pkt=pMag->GetPacket();
+			if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere. Empty lines are also skipped.
+			{
+				std::string s=pkt->tx();
+				if (s.length()<42)
+				{
+					std::cout << "Length=" << s.length() << std::endl;
+					exit(3);
+				}
+				// Set this to 0=normal 1=debug mode
+				switch (debugMode)
+				{
+				case 0: 
+					std::cout << s.substr(0,42);
+					break;
+				case 1:
+					pkt->tx(true);
+					std::cout << std::endl;
+					break;
+				case 3:
+					if (pkt->LastPacketWasHeader())
+						std::cout << (int)nmag << "* ";
+					else
+						std::cout << (int)nmag << "  ";
+					break;
+				default:
+					exit(3);
+				}
+				// Was the last packet a header? If so we need to go into hold
+				if (pkt->LastPacketWasHeader())
+				{
+					hold[nmag]=true;
+					std::cerr << "Header wait mode mag=" << nmag << std::endl;
+				}
+				rowCounter++;
+				if (rowCounter>=16)
+				{
+					rowCounter=0;
+					for (uint8_t i=0;i<STREAMS;i++) hold[i]=0;	// Any holds are released now
+					// Should put packet 8/30 stuff here as in vbit stream.c
+					if (debugMode==3)
+						std::cout << std::endl;			
+				}			
+			}			
+		}
 
-        //
-
-        // Reset the priority of this magazine
-		if (priority[nmag]==0) priority[nmag]=1;	// Can't be 0 or that mag will take all the packets
+		// Reset the priority of this magazine
+		if (priority[nmag]==0)
+			priority[nmag]=1;	// Can't be 0 or that mag will take all the packets
 		priorityCount[nmag]=priority[nmag];	// Reset the priority for the mag that just went out
-    }
+	} // while
 
 }
 

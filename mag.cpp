@@ -31,7 +31,7 @@ Packet *Mag::GetPacket()
 {
     // This returns one packet at a time from a page.
     // We enter with _CurrentPage pointing to the first page
-    std::cerr << "[Mag::GetPacket] called " << std::endl;
+    // std::cerr << "[Mag::GetPacket] called " << std::endl;
 
     // So what page will we send?
     // Pages are two types: single pages and carousels.
@@ -47,7 +47,7 @@ Packet *Mag::GetPacket()
      */
 
      // If there are no pages, we don't have anything. @todo We could go quiet or filler.
-    std::cerr << "[GetPacket] PageSize " << _pageSet->size() << std::endl;
+    // std::cerr << "[GetPacket] PageSize " << _pageSet->size() << std::endl;
 /*
         vbit::Mag* m=_mag[i];
         std::list<TTXPageStream> p=m->Get_pageSet();
@@ -70,7 +70,7 @@ Packet *Mag::GetPacket()
 
     if (_headerFlag)
     {
-        std::cerr << "[GetPacket] Going to the next page " << std::endl;
+        std::cerr << "[GetPacket] HEADER!!! " << std::endl;
         // We only deal with single pages as this is the main sequence
         // Iterate to the next page, and loop to beginning if needed
         ++_it;
@@ -96,7 +96,8 @@ Packet *Mag::GetPacket()
         Packet* p=new Packet();
         p->Header(_magNumber,thisPage,thisSubcode,thisStatus);// loads of stuff to do here!
 
-        p->HeaderText("CEEFAX 1 DAY MTH BLAH N 12:34.56"); // Placeholder 32 characters. This gets replaced later
+      //p->HeaderText("CEEFAX 1 DAY MTH BLAH N 12:34.56"); // Placeholder 32 characters. This gets replaced later
+        p->HeaderText("CEEFAX %%# DAY MTH BLAH 12:34.56"); // Placeholder 32 characters. This gets replaced later
 				
 				
 				
@@ -105,7 +106,9 @@ Packet *Mag::GetPacket()
 
     }
     else
-        std::cerr << "[GetPacket] Sending " << txt->GetLine() << std::endl;
+		{
+			// std::cerr << "[GetPacket] Sending " << txt->GetLine() << std::endl;
+		}
 				
 		if (txt->GetLine().empty())
 			return NULL;
@@ -126,7 +129,7 @@ Packet *Mag::GetPacket()
         p->GetCurrentPage()->SetLineCounter(1);
     }
 */
-    std::cerr << "[Mag::GetPacket] Page description=" << _page->GetDescription() << std::endl;
+    // std::cerr << "[Mag::GetPacket] Page description=" << _page->GetDescription() << std::endl;
 
 //    Dump whole page list for debug purposes
 /*

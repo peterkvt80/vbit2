@@ -7,6 +7,7 @@
 #include <string.h>
 #include <time.h>
 #include "tables.h"
+#include <assert.h>
 
 /**
  * Teletext packet.
@@ -90,11 +91,20 @@ class Packet
          * @param offset 5 (default) for normal text rows, 13 for headers
          */
         void Parity(uint8_t offset=5);
+				
+        /** LastPacketWasHeader
+         * Need this to obey transmission rule: After a header packet, wait at least one field before transmitting rows.
+         * @return true if the last packet out was a header packet.
+         */
+				bool LastPacketWasHeader(){return _isHeader;};
+
 
     protected:
     private:
         char _packet[45]; //!< Member variable "_packet[45]"
 				bool _isHeader; //<! True if the packet is a header
+				uint8_t _mag;//<! The magazine number this packet belongs to
+				uint32_t _page;//<! The page number this packet belongs to
 };
 
 }

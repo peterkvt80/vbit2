@@ -3,28 +3,29 @@
 
 using namespace vbit;
 
-Packet::Packet() : _isHeader(false)
+Packet::Packet() : _isHeader(false), _mag(1)
 {
     //ctor
 }
 
-Packet::Packet(char *val) : _isHeader(false)
+Packet::Packet(char *val) : _isHeader(false), _mag(1)
 {
     //ctor
     strncpy(_packet,val,45+1);
 }
 
-Packet::Packet(std::string val) : _isHeader(false)
+Packet::Packet(std::string val) : _isHeader(false), _mag(1)
 {
     //ctor
     strncpy(_packet,val.c_str(),45+1);
 }
 
-Packet::Packet(int mag, int row, std::string val)
+Packet::Packet(int mag, int row, std::string val) : _mag(mag)
 {
-		_isHeader=row==0;
-    SetMRAG(mag, row);
-    SetPacketText(val);
+	_isHeader=false;
+	SetMRAG(mag, row);
+	SetPacketText(val);
+	assert(row!=0);
 }
 
 Packet::~Packet()
@@ -41,6 +42,7 @@ void Packet::Set_packet(char *val)
 
 void Packet::SetPacketText(std::string val)
 {
+	_isHeader=false; // Because it can't be a header
     strncpy(&_packet[5],val.c_str(),40);
 }
 
@@ -63,6 +65,7 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
 	*p++=HamTab[mag%8+((row%2)<<3)]; // mag + bit 3 is the lowest bit of row
 	*p++=HamTab[((row>>1)&0x0f)];
 	_isHeader=row==0;
+	_mag=mag;
 } // SetMRAG
 
 /* Ideally we would set _packet[0] for other hardware, or _packet[3] for Alistair Buxton raspi-teletext/
@@ -70,9 +73,29 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
 std::string Packet::tx(bool debugMode)
 {
     // @TODO: parity
-		if (_isHeader)
+		if (_isHeader) // We can do header substitutions
 		{
-			// Do header substitutions
+			// mpp page number. Use %%#
+			char*	ptr2=strstr(_packet,"%%#");
+			if (ptr2)
+			{
+				if (_mag==0)
+					ptr2[0]='8';
+				else
+					ptr2[0]=_mag+'0';
+				std::cerr << "[Packet::tx]page=" << _page << std::endl;
+				ptr2[1]=_page/0x10+'0';
+				if (ptr2[1]>'9')
+					ptr2[1]=ptr2[1]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm			
+				std::cerr << "[Packet::tx]ptr[1]=" << ptr2[1] << std::endl;
+
+				ptr2[2]=_page%0x10+'0';
+				if (ptr2[2]>'9')
+					ptr2[2]=ptr2[2]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm			
+				std::cerr << "[Packet::tx]ptr[2]=" << ptr2[2] << std::endl;
+			}
+			
+			// Hardcode the time for now
 			time_t rawtime;
 			struct tm * timeinfo;
 			time(&rawtime);
@@ -80,7 +103,9 @@ std::string Packet::tx(bool debugMode)
 			std::cerr << "[Packet::tx]" << asctime(timeinfo) << std::endl;
 			strncpy(&_packet[37],&asctime(timeinfo)[11],8);
 			Parity(13); // redo the parity because substitutions will need processing
+			
 		}
+
     if (!debugMode)
     {
         // @todo drop off the first three characters for raspi-teletext
@@ -103,6 +128,7 @@ std::string Packet::tx(bool debugMode)
     }
 
 }
+
 
 /** A header has mag, row=0, page, flags, caption and time
  */
@@ -142,11 +168,14 @@ void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode,
 	cbit=(control & 0x0380) >> 6;	// Shift the language bits C12,C13,C14. TODO: Check if C12/C14 need swapping. CHECKED OK.
 	if (control & 0x0040) cbit|=0x01;	// C11 serial/parallel
 	_packet[12]=HamTab[cbit]; // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
+	
+	_page=page;
 } // Header
 
 void Packet::HeaderText(std::string val)
 {
-    strncpy(&_packet[13],val.c_str(),32);
+	_isHeader=true; // Because it must be a header
+  strncpy(&_packet[13],val.c_str(),32);
 }
 
 /**
