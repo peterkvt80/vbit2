@@ -44,7 +44,7 @@ void Service::worker()
     uint8_t hold[STREAMS]; /// If hold is set then the magazine can not be sent until the next field
     std::cerr << "[Service::worker]This is the worker process" << std::endl;
 
-    int rowCounter=0; // Counts 16 rows to a field
+    uint8_t rowCounter=0; // Counts 16 rows to a field
 
     // Initialise the priority counts
 	for (uint8_t i=0;i<STREAMS;i++)
@@ -65,68 +65,72 @@ void Service::worker()
 	int debugMode=0; // 0=normal, 1=debug, 3=magazine debug
 
 	while(1) // normal
-//    for (int k=0;k<200;k++) // Debugging! This will be a while(1)
 	{
-		// Find the next magazine to put out
+		// Find the next magazine to put out.
+		// We decrement the priority count for each magazine until one reaches 0.
 		for (;priorityCount[nmag]>0;nmag=(nmag+1)%(STREAMS-1)) /// @todo Subtitles need stream 8. But we can't access magazine 9
 		{
 			priorityCount[nmag]--;
 		}
 		pMag=mag[nmag];
 
-		// If the magazine has no pages it can be put into hold
+		// If the magazine has no pages it can be put into hold.
+		// @todo Subtitles are an exception. They should not have a page but the could be skipped.
 		if (pMag->GetPageCount()<1)
-			hold[nmag]=true;
-
-		// Does it have any pages and it isn't in hold
-		if (!hold[nmag])
 		{
-			std::cerr << "Mag=" << (int)nmag << std::endl;
-			vbit::Packet* pkt=pMag->GetPacket();
-			if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere. Empty lines are also skipped.
-			{
-				std::string s=pkt->tx();
-				if (s.length()<42)
-				{
-					std::cout << "Length=" << s.length() << std::endl;
-					exit(3);
-				}
-				// Set this to 0=normal 1=debug mode
-				switch (debugMode)
-				{
-				case 0: 
-					std::cout << s.substr(0,42);
-					break;
-				case 1:
-					pkt->tx(true);
-					std::cout << std::endl;
-					break;
-				case 3:
-					if (pkt->LastPacketWasHeader())
-						std::cout << (int)nmag << "* ";
-					else
-						std::cout << (int)nmag << "  ";
-					break;
-				default:
-					exit(3);
-				}
-				// Was the last packet a header? If so we need to go into hold
-				if (pkt->LastPacketWasHeader())
-				{
-					hold[nmag]=true;
-					std::cerr << "Header wait mode mag=" << nmag << std::endl;
-				}
-				rowCounter++;
-				if (rowCounter>=16)
-				{
-					rowCounter=0;
-					for (uint8_t i=0;i<STREAMS;i++) hold[i]=0;	// Any holds are released now
-					// Should put packet 8/30 stuff here as in vbit stream.c
-					if (debugMode==3)
-						std::cout << std::endl;			
-				}			
-			}			
+			hold[nmag]=true;
 		}
+		else
+		{
+			if (!hold[nmag]) 		// Not in hold
+			{
+				std::cerr << "Mag=" << (int)nmag << std::endl;
+				vbit::Packet* pkt=pMag->GetPacket();
+				if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere. Empty lines are also skipped.
+				{
+					std::string s=pkt->tx();
+					if (s.length()<42)
+					{
+						std::cout << "Length=" << s.length() << std::endl;
+						exit(3);
+					}
+					// Set this to 0=normal 1=debug mode 3=wtf
+					switch (debugMode)
+					{
+					case 0: 
+						std::cout << s.substr(0,42); // Transmit the packet
+						break;
+					case 1:
+						pkt->tx(true);
+						std::cout << std::endl;
+						break;
+					case 3:
+						if (pkt->LastPacketWasHeader())
+							std::cout << (int)nmag << "* ";
+						else
+							std::cout << (int)nmag << "  ";
+						break;
+					default:
+						exit(3);
+					}
+					// Was the last packet a header? If so we need to go into hold
+					if (pkt->LastPacketWasHeader())
+					{
+						hold[nmag]=true;
+						std::cerr << "Header wait mode mag=" << nmag << std::endl;
+					}
+					rowCounter++;
+					if (rowCounter>=16)
+					{
+						rowCounter=0;
+						for (uint8_t i=0;i<STREAMS;i++) hold[i]=0;	// Any holds are released now
+						// Should put packet 8/30 stuff here as in vbit stream.c
+						if (debugMode==3)
+							std::cout << std::endl;			
+					}			
+				} // not a null packet			
+			} // not in hold
+		} // page count is positive
 
 		// Reset the priority of this magazine
 		if (priority[nmag]==0)

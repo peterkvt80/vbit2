@@ -72,6 +72,16 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
  * but hard code this for now */
 std::string Packet::tx(bool debugMode)
 {
+	// Get local time
+	time_t rawtime;
+	struct tm * timeinfo;
+	time(&rawtime);
+	timeinfo=localtime(&rawtime);
+	
+	// @todo: Get these from the locale!
+	const char *dayNames[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};	
+	const char *monthNames[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};	
+
     // @TODO: parity
 		if (_isHeader) // We can do header substitutions
 		{
@@ -94,12 +104,40 @@ std::string Packet::tx(bool debugMode)
 					ptr2[2]=ptr2[2]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm			
 				std::cerr << "[Packet::tx]ptr[2]=" << ptr2[2] << std::endl;
 			}
+
+			// Day of week. Mon, Tue etc. Use %%a
+			ptr2=strstr(_packet,"%%a");
+			if (ptr2)
+			{
+				int day=timeinfo->tm_wday;
+				ptr2[0]=dayNames[day][0];
+				ptr2[1]=dayNames[day][1];
+				ptr2[2]=dayNames[day][2];
+			}
+			
+			// Date 2 digits, leading 0 %d			
+			ptr2=strstr(_packet,"%d");
+			if (ptr2)
+			{
+				int date=timeinfo->tm_mday;
+				ptr2[0]='0'+date/10;
+				ptr2[1]='0'+date%10;
+			}		
+
+			// Month: Three characters in locale format %%b
+			ptr2=strstr(_packet,"%%b");
+			if (ptr2)
+			{
+				int month=timeinfo->tm_mon;
+				ptr2[0]=monthNames[month][0];
+				ptr2[1]=monthNames[month][1];
+				ptr2[2]=monthNames[month][2];
+			}		
+
+				// @todo See buffer.c for additional codes that have not been implemented
+
 			
 			// Hardcode the time for now
-			time_t rawtime;
-			struct tm * timeinfo;
-			time(&rawtime);
-			timeinfo=localtime(&rawtime);
 			std::cerr << "[Packet::tx]" << asctime(timeinfo) << std::endl;
 			strncpy(&_packet[37],&asctime(timeinfo)[11],8);
 			Parity(13); // redo the parity because substitutions will need processing
@@ -166,7 +204,7 @@ void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode,
 
 	_packet[11]=HamTab[cbit]; // C7 to C10
 	cbit=(control & 0x0380) >> 6;	// Shift the language bits C12,C13,C14. TODO: Check if C12/C14 need swapping. CHECKED OK.
-	if (control & 0x0040) cbit|=0x01;	// C11 serial/parallel
+	// if (control & 0x0040) cbit|=0x01;	// C11 serial/parallel *** We only work in parallel mode, Serial would mean a different packet ordering.
 	_packet[12]=HamTab[cbit]; // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
 	
 	_page=page;

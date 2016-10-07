@@ -35,7 +35,7 @@ Packet *Mag::GetPacket()
 
     // So what page will we send?
     // Pages are two types: single pages and carousels.
-    // We won't implement an individual page timing. (ie. to make the index page appear more regularly)
+    // We won't implement non-carousel page timing. (ie. to make the index page appear more often)
     // The page selection algorithm will then be:
     /* 1) Every page starts off as non-carousel. A flag indicates this state.
      * 2) The page list is iterated through. If a page set has only one page then output that page.
@@ -55,7 +55,7 @@ Packet *Mag::GetPacket()
 */
     // If there is no page, we should send a filler?
     if (_pageSet->size()<1)
-        return new Packet();
+        return new Packet(); // @todo make this a filler (or quiet or NULL)
 
 
     //std::cerr << "[GetPacket] DEBUG DUMP 1 " << std::endl;
@@ -96,8 +96,8 @@ Packet *Mag::GetPacket()
         Packet* p=new Packet();
         p->Header(_magNumber,thisPage,thisSubcode,thisStatus);// loads of stuff to do here!
 
-      //p->HeaderText("CEEFAX 1 DAY MTH BLAH N 12:34.56"); // Placeholder 32 characters. This gets replaced later
-        p->HeaderText("CEEFAX %%# DAY MTH BLAH 12:34.56"); // Placeholder 32 characters. This gets replaced later
+      //p->HeaderText("CEEFAX 1 MPP DAY DD MTH 12:34.56"); // Placeholder 32 characters. This gets replaced later
+        p->HeaderText("CEEFAX 1 %%# %%a %d %%b 12:34.56"); // Placeholder 32 characters. This gets replaced later
 				
 				
 				
