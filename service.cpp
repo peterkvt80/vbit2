@@ -62,7 +62,7 @@ void Service::worker()
 		std::cerr << "[Service::worker] Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
 	}
 
-	int debugMode=4; // 0=normal, 1=debug, 3=magazine debug
+	int debugMode=0; // 0=normal, 1=debug, 3=magazine debug
 
 	int debugCounter=0;
 
