@@ -6,20 +6,20 @@ using namespace ttx;
 
 Service::Service()
 {
-	std::cerr << "[Service::Service] Started" << std::endl;
+	// std::cerr << "[Service::Service] Started" << std::endl;
 }
 
 Service::Service(Configure *configure, PageList *pageList) :
 	_configure(configure),_pageList(pageList)
 {
-	std::cerr << "[Service::Service] Started (2) " << std::endl;
+	// std::cerr << "[Service::Service] Started (2) " << std::endl;
 //	_pageList->loadPageList(_configure->GetPageDirectory());
 
 }
 
 Service::~Service()
 {
-	std::cerr << "[Service] Destructor" << std::endl;
+	// std::cerr << "[Service] Destructor" << std::endl;
 }
 
 bool Service::run()
@@ -47,7 +47,7 @@ void Service::worker()
     uint8_t rowCounter=0; // Counts 16 rows to a field
 
     // Initialise the priority counts
-	for (uint8_t i=0;i<STREAMS;i++)
+	for (uint8_t i=0;i<STREAMS-1;i++)
 	{
 		hold[i]=0;
 		priorityCount[i]=priority[i];
@@ -61,11 +61,23 @@ void Service::worker()
 	{
 		std::cerr << "[Service::worker] Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
 	}
-	
-	int debugMode=0; // 0=normal, 1=debug, 3=magazine debug
+
+	int debugMode=4; // 0=normal, 1=debug, 3=magazine debug
+
+	int debugCounter=0;
 
 	while(1) // normal
 	{
+        if (debugMode==4)
+        {
+            if (debugCounter>1000)
+            {
+                std::cout << "S";
+                debugCounter=0;
+            }
+            debugCounter++;
+        }
+
 		// Find the next magazine to put out.
 		// We decrement the priority count for each magazine until one reaches 0.
 		for (;priorityCount[nmag]>0;nmag=(nmag+1)%(STREAMS-1)) /// @todo Subtitles need stream 8. But we can't access magazine 9
@@ -75,7 +87,7 @@ void Service::worker()
 		pMag=mag[nmag];
 
 		// If the magazine has no pages it can be put into hold.
-		// @todo Subtitles are an exception. They should not have a page but the could be skipped.
+		// @todo Subtitles are an exception. They should not have a page but they could be skipped.
 		if (pMag->GetPageCount()<1)
 		{
 			hold[nmag]=true;
@@ -84,7 +96,7 @@ void Service::worker()
 		{
 			if (!hold[nmag]) 		// Not in hold
 			{
-				std::cerr << "Mag=" << (int)nmag << std::endl;
+				if (debugMode==4) std::cout << (int)nmag;
 				vbit::Packet* pkt=pMag->GetPacket();
 				if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere. Empty lines are also skipped.
 				{
@@ -97,7 +109,7 @@ void Service::worker()
 					// Set this to 0=normal 1=debug mode 3=wtf
 					switch (debugMode)
 					{
-					case 0: 
+					case 0:
 						std::cout << s.substr(0,42); // Transmit the packet
 						break;
 					case 1:
@@ -110,6 +122,9 @@ void Service::worker()
 						else
 							std::cout << (int)nmag << "  ";
 						break;
+                    case 4:
+                        std::cout << "P";
+                        break;
 					default:
 						exit(3);
 					}
@@ -117,19 +132,49 @@ void Service::worker()
 					if (pkt->LastPacketWasHeader())
 					{
 						hold[nmag]=true;
-						std::cerr << "Header wait mode mag=" << nmag << std::endl;
+						// std::cerr << "Header wait mode mag=" << nmag << std::endl;
 					}
 					rowCounter++;
 					if (rowCounter>=16)
 					{
 						rowCounter=0;
-						for (uint8_t i=0;i<STREAMS;i++) hold[i]=0;	// Any holds are released now
+						for (uint8_t i=0;i<STREAMS-1;i++) hold[i]=0;	// Any holds are released now
 						// Should put packet 8/30 stuff here as in vbit stream.c
-						if (debugMode==3)
-							std::cout << std::endl;			
-					}			
-				} // not a null packet			
+						if (debugMode==3 || debugMode==4)
+							std::cout << std::endl;
+					}
+				} // not a null packet
+				else
+                {
+                    if (debugMode==4) std::cout << "C"; // This is where we look at carousels? NO It just means we haven't implemented them yet
+				}
 			} // not in hold
+			else
+            {
+                // To avoid a deadlock, we check if everything is in hold
+                bool blocked=true;
+                for (uint8_t i=0;i<STREAMS-1;i++) // Hold does not include stream 9 (subtitles)
+                {
+                    if (hold[i]==false)
+                    {
+                        blocked=false;
+                        break;
+                    }
+                }
+                if (blocked)
+                {
+                    vbit::Packet* p=new vbit::Packet();
+                    p->PacketQuiet();
+                    std::cout << p->tx();
+                    // Step the row counter
+					rowCounter++;
+					if (rowCounter>=16)
+					{
+						rowCounter=0;
+						for (uint8_t i=0;i<STREAMS;i++) hold[i]=0;	// Any holds are released now
+					}
+                } // blocked
+            }
 		} // page count is positive
 
 		// Reset the priority of this magazine
@@ -138,6 +183,6 @@ void Service::worker()
 		priorityCount[nmag]=priority[nmag];	// Reset the priority for the mag that just went out
 	} // while
 
-}
+} // worker
 
 

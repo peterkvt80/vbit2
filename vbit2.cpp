@@ -29,7 +29,7 @@ int main(int argc, char** argv)
 
 	service->run();
 
-	std::cout << "VBIT2 ended" << std::endl;
+	std::cout << "VBIT2 ended. Press any key to continue" << std::endl;
     system("pause"); // @todo Only apply this line in debug
 }
 

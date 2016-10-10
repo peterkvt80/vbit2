@@ -25,14 +25,16 @@ class TTXPageStream : public TTXPage
          * \param val New value to set
          */
         void SetLineCounter(unsigned int val) { _lineCounter = val; }
+
         /** Access _isCarousel
          * \return The current value of _isCarousel
          */
-        bool GetisCarousel() { return _isCarousel; }
+        bool GetCarouselFlag() { return _isCarousel; }
+
         /** Set _isCarousel
          * \param val New value to set
          */
-        void SetisCarousel(bool val) { _isCarousel = val; }
+        void SetCarouselFlag(bool val) { _isCarousel = val; }
 
         /** Access _CurrentPage
          * \return The current value of _CurrentPage
@@ -51,6 +53,12 @@ class TTXPageStream : public TTXPage
          * \return The next row from the current page
          */
         TTXLine* GetNextRow();
+
+        /** Is the page a carousel?
+         *  Don't confuse this with the _isCarousel flag which is used to mark when a page changes between single/carousel
+         * \return True if there are subpages
+         */
+        inline bool IsCarousel(){return Getm_SubPage()!=NULL;};
 
     protected:
 

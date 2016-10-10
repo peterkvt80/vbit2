@@ -48,7 +48,7 @@ TTXPage::TTXPage(std::string filename) :
      m_sourcepage(filename),
      m_Loaded(false)
 {
-    std::cerr << "[TTXPage] file constructor loading " << filename<< std::endl;
+    // std::cerr << "[TTXPage] file constructor loading " << filename<< std::endl;
     m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
     // Try all the possible formats.
 
@@ -559,8 +559,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
     }
     filein.close(); // Not sure that we need to close it
     p->Setm_SubPage(NULL);
-    if (lines>0) // Might need more sophisticated test
-        std::cerr << "Finished reading TTI page. Line count=" << lines << std::endl;
+    // if (lines>0) std::cerr << "Finished reading TTI page. Line count=" << lines << std::endl;
     TTXPage::pageChanged=false;
     return (lines>0);
 }
@@ -570,7 +569,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
 TTXPage::TTXPage(const TTXPage& other)
 {
     //copy ctor.
-    std::cerr << "TTXPage copy constructor" << std::endl;
+    // std::cerr << "TTXPage copy constructor" << std::endl;
 
     m_PageNumber=other.m_PageNumber;  // PN
     m_SubPage=other.m_SubPage;
@@ -623,7 +622,7 @@ TTXPage* TTXPage::GetPage(unsigned int pageNumber)
 
 TTXLine* TTXPage::GetRow(unsigned int row)
 {
-    std::cerr << "[TTXPage::GetRow] getting row " << row << std::endl;
+    //std::cerr << "[TTXPage::GetRow] getting row " << row << std::endl;
     if (row>MAXROW)
     {
         std::cerr << "[TTXPage::GetRow]Invalid row requested: " << row << std::endl;
@@ -841,11 +840,6 @@ void TTXPage::SetFastextLink(int link, int value)
     }
     m_fastextlinks[link]=value;
 }
-
-
-
-
-
 
 void TTXPage::DebugDump() const
 {

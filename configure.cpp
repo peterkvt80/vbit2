@@ -22,7 +22,7 @@ Configure::Configure(int argc, char** argv) :
 	//char headerTemplate[33];
 	//char serviceStatusString[21];
 	//Scan the command line for overriding the pages file.
-	std::cerr << "Parameters=" << argc << " " << std::endl;
+	std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
 	if (argc>1)
 	{
 		for (int i=1;i<argc-1;i++)
@@ -35,8 +35,8 @@ Configure::Configure(int argc, char** argv) :
 		}
 	}
 	/// @ scan for overriding the configuration file
-	std::cerr << "Pages directory is " << _pageDir << std::endl;
-	std::cerr << "Config file is " << _configFile << std::endl;
+	std::cerr << "[Configure::Configure] Pages directory is " << _pageDir << std::endl;
+	std::cerr << "[Configure::Configure] Config file is " << _configFile << std::endl;
 	/// @todo load the configuration file.
 	/// @todo scan the command line for other overrides.
 	std::cerr << "[Configure::Configure] Exits" << std::endl;

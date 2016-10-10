@@ -217,7 +217,7 @@ std::string TTXLine::GetLine()
     int len=m_textline.length();
     if (len<0 || len>40)
     {
-        std::cerr << "[TTXLine::GetLine] len=" << len << std::endl;
+        // std::cerr << "[TTXLine::GetLine] len=" << len << std::endl;
         return ""; // Test this with empty(). We get more flexibility and speed by being able to skip lines.
     }
     if (len<40)

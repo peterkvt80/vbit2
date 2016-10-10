@@ -15,8 +15,8 @@ PageList::PageList(Configure *configure) :
 		return;
 	}
 	//_filenames={};
-	std::cerr << "[PageList::PageList] Started " << std::endl;
-	std::cerr << "[PageList::PageList] Directory= " << _configure->GetPageDirectory() << std::endl;
+	//std::cerr << "[PageList::PageList] Started " << std::endl;
+	//std::cerr << "[PageList::PageList] Directory= " << _configure->GetPageDirectory() << std::endl;
 	LoadPageList(_configure->GetPageDirectory());
 }
 
@@ -27,7 +27,7 @@ PageList::~PageList()
 
 int PageList::LoadPageList(std::string filepath)
 {
-	std::cerr << "[PageList::LoadPageList] Loading pages from " << filepath << std::endl;
+	// std::cerr << "[PageList::LoadPageList] Loading pages from " << filepath << std::endl;
 	// Open the directory
 	DIR *dp;
 	//TTXPageStream *p;
@@ -46,7 +46,7 @@ int PageList::LoadPageList(std::string filepath)
         {
             int mag=(q->GetPageNumber() >> 16) & 0x7;
             _pageList[mag].push_back(*q);
-            std::cerr << "[PageList::LoadPage] Added one page to mag " << mag << "page number=" << q->GetPageNumber()<< std::endl;
+            // std::cerr << "[PageList::LoadPage] Added one page to mag " << mag << "page number=" << q->GetPageNumber()<< std::endl;
             // q->DebugDump();
         }
 	}
@@ -56,7 +56,7 @@ int PageList::LoadPageList(std::string filepath)
 	// How many files did we accept?
 	for (int i=0;i<8;i++)
     {
-        std::cerr << "Page list count[" << i << "]=" << _pageList[i].size() << std::endl;
+        //std::cerr << "Page list count[" << i << "]=" << _pageList[i].size() << std::endl;
         // Initialise a magazine streamer with a page list
 /*
         std::list<TTXPageStream> pageSet;
@@ -66,7 +66,7 @@ int PageList::LoadPageList(std::string filepath)
         _mag[i]=new vbit::Mag(i, &_pageList[i]);
     }
     // Just for testing
-    for (int i=0;i<8;i++)
+    if (0) for (int i=0;i<8;i++)
     {
         vbit::Mag* m=_mag[i];
         std::list<TTXPageStream>* p=m->Get_pageSet();

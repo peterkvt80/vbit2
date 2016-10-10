@@ -8,23 +8,28 @@ Mag::Mag(int mag, std::list<TTXPageStream>* pageSet) :
     //ctor
     if (_pageSet->size()>0)
     {
-        std::cerr << "[Mag::Mag] enters. page size=" << _pageSet->size() << std::endl;
+        //std::cerr << "[Mag::Mag] enters. page size=" << _pageSet->size() << std::endl;
         _it=_pageSet->begin();
-        _it->DebugDump();
+        //_it->DebugDump();
         _page=&*_it;
     }
-    std::cerr << "[Mag::Mag] exits" << std::endl;
+    //std::cerr << "[Mag::Mag] exits" << std::endl;
 }
 
 Mag::~Mag()
 {
-    std::cerr << "[Mag::Mag] ~ " << std::endl;
+    //std::cerr << "[Mag::Mag] ~ " << std::endl;
     //dtor
 }
 
 int Mag::GetPageCount()
 {
     return _pageSet->size();
+}
+
+TTXPageStream* Mag::GetCarousel()
+{
+    return NULL; // @todo Look at the carousel list and see if one is ready go
 }
 
 Packet *Mag::GetPacket()
@@ -70,24 +75,32 @@ Packet *Mag::GetPacket()
 
     if (_headerFlag)
     {
-        std::cerr << "[GetPacket] HEADER!!! " << std::endl;
+        // @todo: Consider carousels now
+        _page=GetCarousel();
+
+        // @todo: Otherwise take the next single page
+        // std::cerr << "[GetPacket] HEADER!!! " << std::endl;
         // We only deal with single pages as this is the main sequence
         // Iterate to the next page, and loop to beginning if needed
-        ++_it;
-        if (_it==_pageSet->end())
+
+        if (_page==NULL)
         {
-            _it=_pageSet->begin();
+            ++_it;
+            if (_it==_pageSet->end())
+            {
+                _it=_pageSet->begin();
+            }
+            // Get pointer to the page we are sending
+            _page=&*_it;
         }
-        // Get pointer to the page we are sending
-        _page=&*_it;
         // If this page is not a single page then skip it.
         // Send a null to avoid the risk of getting stuck here.
-        if (_page->Getm_SubPage()!=NULL)
+        if (_page->IsCarousel())
         {
             std::cerr << "[GetPacket] Ignoring carousels for now (todo) " << std::endl;
             return NULL;
         }
-        std::cerr << "[GetPacket] Need to create header packet now " << std::endl;
+        //std::cerr << "[GetPacket] Need to create header packet now " << std::endl;
         // Assemble the header. (we can simplify this or leave it for the optimiser)
         int thisPage=_page->GetPageNumber();
 				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
@@ -98,9 +111,9 @@ Packet *Mag::GetPacket()
 
       //p->HeaderText("CEEFAX 1 MPP DAY DD MTH 12:34.56"); // Placeholder 32 characters. This gets replaced later
         p->HeaderText("CEEFAX 1 %%# %%a %d %%b 12:34.56"); // Placeholder 32 characters. This gets replaced later
-				
-				
-				
+
+
+
         p->Parity(13);
         return p; /// @todo Should we do this?
 
@@ -109,7 +122,7 @@ Packet *Mag::GetPacket()
 		{
 			// std::cerr << "[GetPacket] Sending " << txt->GetLine() << std::endl;
 		}
-				
+
 		if (txt->GetLine().empty())
 			return NULL;
 
