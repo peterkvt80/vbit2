@@ -97,6 +97,15 @@ class Packet
          * @return true if the last packet out was a header packet.
          */
 				bool LastPacketWasHeader(){return _isHeader;};
+				
+        /** Create a Fastext packet
+         * Requires a list of six links
+				 * @param links Array of six link values (0x100 to 0x8FF)
+				 * @param mag - Magazine number
+         * 
+         */
+				void Fastext(int* links, int mag);
+
 
 
     protected:

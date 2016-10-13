@@ -29,7 +29,8 @@
 #define PAGESTATUS_SUBSTITUTEPAGE   0x0800
 #define PAGESTATUS_C11_SERIALMAG    0x0040
 
-#define MAXROW 27
+// Allow for enhancement packets
+#define MAXROW 29
 
 
 class TTXPage
@@ -221,14 +222,14 @@ class TTXPage
 
     protected:
         int m_cycletimeseconds;     // CT
+        int m_fastextlinks[6];      // FL
+        int m_PageNumber;  					// PN
     private:
         // Private variables
-        int m_PageNumber;  // PN
         // Private objects
         TTXPage* m_SubPage; //!< Member variable "m_SubPage"
         /// @ todo: What about multiple enhancement packets. More than one is allowed.
         TTXLine* m_pLine[MAXROW+1];   // OL. 26 and 27 can be set manually. Keep whatever people put in there.
-        int m_fastextlinks[6];      // FL
 
         std::string m_destination;  // DS
         std::string m_sourcepage;   // SP

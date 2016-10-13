@@ -231,12 +231,46 @@ void Packet::Parity(uint8_t offset)
 	/* DO NOT REVERSE for Raspi. Other devices may need byte endian reversed
 	for (i=0;i<PACKETSIZE;i++)
 	{
-		c=(uint8_t)packet[i];
+		c=(uint8_t)_packet[i];
 		c = (c & 0x0F) << 4 | (c & 0xF0) >> 4;
 		c = (c & 0x33) << 2 | (c & 0xCC) >> 2;
 		c = (c & 0x55) << 1 | (c & 0xAA) >> 1;
-		packet[i]=(char)c;
+		_packet[i]=(char)c;
 	}
 	*/
 } // Parity
+
+void Packet::Fastext(int* links, int mag)
+{
+	unsigned long nLink;
+	// add the designation code
+	char *p;
+	uint8_t i;
+	p=_packet+5;
+	*p++=HamTab[0];	// Designation code 0
+	mag&=0x07;		// Mask the mag just in case. Keep it valid
+	
+	// add the link control byte. This will allow row 24 to show.
+	_packet[42]=HamTab[0x0f];
+
+	// and the page CRC
+	_packet[43]=HamTab[0];	// Don't know how to calculate this.
+	_packet[44]=HamTab[0];
+
+	// for each of the six links
+	for (i=0; i<6; i++)
+	{
+		nLink=links[i];
+		if (nLink == 0) nLink = 0x8ff; // turn zero into 8FF to be ignored
+		
+		// calculate the relative magazine
+		char cRelMag=(nLink/0x100 ^ mag);
+		*p++=HamTab[nLink & 0xF];			// page units
+		*p++=HamTab[(nLink & 0xF0) >> 4];	// page tens
+		*p++=HamTab[0xF];									// subcode S1
+		*p++=HamTab[((cRelMag & 1) << 3) | 7];
+		*p++=HamTab[0xF];
+		*p++=HamTab[((cRelMag & 6) << 1) | 3];
+	}	
+}
 

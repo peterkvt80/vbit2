@@ -37,13 +37,15 @@ TTXLine* TTXPageStream::GetCurrentRow()
 TTXLine* TTXPageStream::GetNextRow()
 {
     // To complicate matters, a non-carousel page just uses GetCurrentRow
-		// but a carousel needs to know what page to look at
+		// but a carousel needs to know what page to look at.
+		// To even further complicate things, this is where the enhanced packets should go.
     // Increment the line
     _lineCounter++;
+		
     // If we did the last line then return NULL.
     if (_lineCounter>=MAXROW)
     {
-        _lineCounter=0;
+        _lineCounter=0;			
         return NULL;
     }
 		if (IsCarousel())

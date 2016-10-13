@@ -44,7 +44,16 @@ TTXPageStream* Mag::GetCarouselPage()
 
 Packet* Mag::GetPacket()
 {
-    // This returns one packet at a time from a page.
+    int thisPage;
+		int thisSubcode;
+		int thisMag;
+		Packet* p=NULL;
+		int thisStatus;		
+		enum State {STATE_HEADER, STATE_FASTEXT, STATE_PACKET26, STATE_PACKET27, STATE_PACKET28, STATE_TEXTROW};
+		static State state=STATE_HEADER;
+		
+		static vbit::Packet* empty=new Packet();
+    // Returns one packet at a time from a page.
     // We enter with _CurrentPage pointing to the first page
     // std::cerr << "[Mag::GetPacket] called " << std::endl;
 
@@ -70,7 +79,7 @@ Packet* Mag::GetPacket()
 */
     // If there is no page, we should send a filler?
     if (_pageSet->size()<1)
-        return new Packet(); // @todo make this a filler (or quiet or NULL)
+        return empty; // @todo make this a filler (or quiet or NULL)
 				// @todo This looks like it might be a memory leak! Maybe keep a quiet packet handy instead of doing new? 
 
 
@@ -79,13 +88,10 @@ Packet* Mag::GetPacket()
 
     TTXLine* txt;
 		
-		txt=_page->GetNextRow();
-
-    _headerFlag=txt==NULL; // if last line was read
-
-		// This is the start of the next page
-    if (_headerFlag)
-    {
+		
+		switch (state)
+		{
+		case STATE_HEADER: // Decide which page goes next
         _page=GetCarouselPage(); // Is there a carousel page due?
 
         if (_page) // Carousel? Step to the next subpage
@@ -119,22 +125,14 @@ Packet* Mag::GetPacket()
             }
         }
 
-/* I don't think this applies any more
-        // If this page is not a single page then skip it.
-        // Send a null to avoid the risk of getting stuck here.
-        if (_page->IsCarousel())
-        {
-            // std::cerr << "[GetPacket] Ignoring carousels for now (todo) " << std::endl;
-            return NULL;
-        }
-*/				
+				
         //std::cerr << "[GetPacket] Need to create header packet now " << std::endl;
         // Assemble the header. (we can simplify this or leave it for the optimiser)
-        int thisPage=_page->GetPageNumber();
+        thisPage=_page->GetPageNumber();
 				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.				
-        int thisSubcode=_page->GetSubCode();
-        int thisStatus=_page->GetPageStatus();
-        Packet* p=new Packet();
+        thisSubcode=_page->GetSubCode();
+        thisStatus=_page->GetPageStatus();
+        p=new Packet();
         p->Header(_magNumber,thisPage,thisSubcode,thisStatus);// loads of stuff to do here!
 
       //p->HeaderText("CEEFAX 1 MPP DAY DD MTH 12:34.56"); // Placeholder 32 characters. This gets replaced later
@@ -143,35 +141,47 @@ Packet* Mag::GetPacket()
 
 
         p->Parity(13);
-        return p; /// @todo Should we do this?
+				state=STATE_FASTEXT;
+				break;
+				
+		case STATE_FASTEXT:
+			std::cerr << "Need to implement Fastext";
+			state=STATE_PACKET26;
+			break;
+		case STATE_PACKET26:
+			std::cerr << "Need to implement Packet26";
+			state=STATE_PACKET27;
+			break;
+		case STATE_PACKET27:
+			std::cerr << "Need to implement packet27";
+			state=STATE_PACKET28;
+			break;
+		case STATE_PACKET28:
+			std::cerr << "Need to implement Packet29";
+			state=STATE_HEADER;
+			break;
+		case STATE_TEXTROW:
+			txt=_page->GetNextRow();
+			if (txt==NULL)
+				state=STATE_HEADER;
+			else
+			{
+				if (txt->GetLine().empty())
+					p=NULL;
+				// @todo Terminating condition
 
-    }
-    else
-		{
-			// std::cerr << "[GetPacket] Sending " << txt->GetLine() << std::endl;
-		}
+				// Assemble the packet
+				thisMag=_magNumber;
+				int thisRow=_page->GetLineCounter(); // The number of the last row received
 
-		// Probably should blank empty lines. More bandwidth but less corruption.
-		if (txt->GetLine().empty())
-			return NULL;
+				Packet* p=new Packet(thisMag, thisRow, txt->GetLine());
+				p->Parity();	
 
-
-
-    // Go to the next page
-    /* if (some terminating condition where we move to the next page
-    if (last line was read)
-    {
-        ++_it;
-        if (_it==_pageSet.end())
-        {
-            _it=_pageSet.begin();
-        }
-        // When we step the iterator we must initialise the iterators on the new page
-        p->SetCurrentPage(p);
-        p->GetCurrentPage()->SetLineCounter(1);
-    }
-*/
-    // std::cerr << "[Mag::GetPacket] Page description=" << _page->GetDescription() << std::endl;
+				_headerFlag=txt==NULL; // if last line was read
+			}
+			
+			break;
+		} // case
 
 //    Dump whole page list for debug purposes
 /*
@@ -181,19 +191,7 @@ Packet* Mag::GetPacket()
     }
 */
 
-    /// What do we need here? Static iterators? Member iterators?
-    // If a page contains more than one subpage it is a carousel. subpage count>1
-    // If a carousel is detected then the page gets a time and a page index.
-    // I suppose we can pop a carousel onto a queue. If the time is passed
-    // the carousel gets sent out and the page index is incremented.
-    // A carousel is skipped in the main sequence.
 
-    // Assemble the packet
-    int thisMag=_magNumber;
-    int thisRow=_page->GetLineCounter(); // The number of the last row received
-
-    Packet* p=new Packet(thisMag, thisRow, txt->GetLine());
-    p->Parity();
 
     return p; /// @todo place holder. Need to implement
 }
