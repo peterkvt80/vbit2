@@ -65,6 +65,7 @@ class Mag
         std::list<TTXPageStream>*  _pageSet; //!< Member variable "_pageSet"
         std::list<TTXPageStream>::iterator _it;
         TTXPageStream* _page; //!< The current page being output
+	
         int _magNumber; //!< The number of this magazine. (where 0 is mag 8)
         bool _headerFlag; //!< True if the last packet was a header
 
@@ -73,7 +74,8 @@ class Mag
          * If there are no carousel pages due then return NULL, which means that the next single page goes instead.
          * @return Carousel page complete with a pointer to the first row of the page. NULL if no carousel is due.
          */
-        TTXPageStream* GetCarousel();
+        // TTXPageStream* GetCarousel();
+				TTXPageStream* GetCarouselPage();				
 
         Carousel* _carousel;
 };

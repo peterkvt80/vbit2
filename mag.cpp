@@ -29,8 +29,8 @@ int Mag::GetPageCount()
     return _pageSet->size();
 }
 
-/** I'd say that this routine is redundant. */
-TTXPageStream* Mag::GetCarousel()
+/** The next page in a carousel */
+TTXPageStream* Mag::GetCarouselPage()
 {
     TTXPageStream* p=_carousel->nextCarousel();
     /*
@@ -71,29 +71,28 @@ Packet* Mag::GetPacket()
     // If there is no page, we should send a filler?
     if (_pageSet->size()<1)
         return new Packet(); // @todo make this a filler (or quiet or NULL)
+				// @todo This looks like it might be a memory leak! Maybe keep a quiet packet handy instead of doing new? 
 
 
     //std::cerr << "[GetPacket] DEBUG DUMP 1 " << std::endl;
     //_page->DebugDump();
 
-    // To begin with, let's not do carousels. Only transmit single pages
-
-    TTXLine* txt=_page->GetNextRow();
-
+    TTXLine* txt;
+		
+		txt=_page->GetNextRow();
 
     _headerFlag=txt==NULL; // if last line was read
 
+		// This is the start of the next page
     if (_headerFlag)
     {
-        // @todo: Consider carousels now
-        _page=GetCarousel();
+        _page=GetCarouselPage(); // Is there a carousel page due?
 
-        // @todo: Otherwise take the next single page
-        // std::cerr << "[GetPacket] HEADER!!! " << std::endl;
-        // We only deal with single pages as this is the main sequence
-        // Iterate to the next page, and loop to beginning if needed
-
-        if (_page==NULL)
+        if (_page) // Carousel? Step to the next subpage
+				{
+					_page->StepNextSubpage();
+				}
+				else  // No carousel? Take the next page in the main sequence
         {
             ++_it;
             if (_it==_pageSet->end())
@@ -104,6 +103,7 @@ Packet* Mag::GetPacket()
             _page=&*_it;
         }
 
+				// When a single page is changed into a carousel
         if (_page->IsCarousel() != _page->GetCarouselFlag())
         {
             _page->SetCarouselFlag(_page->IsCarousel());
@@ -118,18 +118,20 @@ Packet* Mag::GetPacket()
                 exit(3); //
             }
         }
+
+/* I don't think this applies any more
         // If this page is not a single page then skip it.
         // Send a null to avoid the risk of getting stuck here.
-
         if (_page->IsCarousel())
         {
             // std::cerr << "[GetPacket] Ignoring carousels for now (todo) " << std::endl;
             return NULL;
         }
+*/				
         //std::cerr << "[GetPacket] Need to create header packet now " << std::endl;
         // Assemble the header. (we can simplify this or leave it for the optimiser)
         int thisPage=_page->GetPageNumber();
-				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
+				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.				
         int thisSubcode=_page->GetSubCode();
         int thisStatus=_page->GetPageStatus();
         Packet* p=new Packet();
@@ -149,6 +151,7 @@ Packet* Mag::GetPacket()
 			// std::cerr << "[GetPacket] Sending " << txt->GetLine() << std::endl;
 		}
 
+		// Probably should blank empty lines. More bandwidth but less corruption.
 		if (txt->GetLine().empty())
 			return NULL;
 

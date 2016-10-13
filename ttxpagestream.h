@@ -37,14 +37,15 @@ class TTXPageStream : public TTXPage
          */
         void SetCarouselFlag(bool val) { _isCarousel = val; }
 
-        /** Access _CurrentPage
-         * \return The current value of _CurrentPage
-         */
-        TTXPageStream* GetCurrentPage() { return _CurrentPage; }
-        /** Set _CurrentPage
-         * \param val New value to set
-         */
-        void SetCurrentPage(TTXPageStream* val) { _CurrentPage = val; }
+        ///** Access _CurrentPage
+         //* \return The current value of _CurrentPage
+         //*/
+        //TTXPageStream* GetCurrentPage(unsigned int line) { _CurrentPage->SetLineCounter(line);return _CurrentPage; }
+				
+        ///** Set _CurrentPage
+         //* \param val New value to set
+         //*/
+        //void SetCurrentPage(TTXPageStream* val) { _CurrentPage = val; }
 
         /** Access the currently iterated row
          * \return The current row from the current page
@@ -70,15 +71,25 @@ class TTXPageStream : public TTXPage
          *  @return true if it is time to change carousel page
          */
         inline bool Expired(){return _transitionTime<=time(0);};
+				
+        /** Step to the next page in a carousel
+				 *  Updates _CarouselPage;
+         */
+				void StepNextSubpage();
+				
+				/** This is used by mag */
+				TTXPage* GetCarouselPage(){return _CarouselPage;};
 
     protected:
 
     private:
         unsigned int _lineCounter; //!< Member variable "_LineCounter" indexes the line in the page being transmitted
         bool _isCarousel; //!< Member variable "_isCarousel" If
-        TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
+        // TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
 
         time_t _transitionTime; // Records when the next carousel transition is due
+				
+				TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
 };
 
 #endif // _TTXPAGESTREAM_H_

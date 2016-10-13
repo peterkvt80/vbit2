@@ -3,8 +3,8 @@
 TTXPageStream::TTXPageStream() :
      _lineCounter(0),
      _isCarousel(false),
-     _CurrentPage(this),
-     _transitionTime(0)
+     _transitionTime(0),
+		 _CarouselPage(this)
 {
     //ctor
 }
@@ -13,8 +13,8 @@ TTXPageStream::TTXPageStream(std::string filename) :
      TTXPage(filename),
      _lineCounter(0),
      _isCarousel(false),
-     _CurrentPage(this),
-     _transitionTime(0)
+     _transitionTime(0),
+		 _CarouselPage(this)
  {
 
 
@@ -36,7 +36,8 @@ TTXLine* TTXPageStream::GetCurrentRow()
 
 TTXLine* TTXPageStream::GetNextRow()
 {
-    // @todo: To complicate matters
+    // To complicate matters, a non-carousel page just uses GetCurrentRow
+		// but a carousel needs to know what page to look at
     // Increment the line
     _lineCounter++;
     // If we did the last line then return NULL.
@@ -45,5 +46,22 @@ TTXLine* TTXPageStream::GetNextRow()
         _lineCounter=0;
         return NULL;
     }
-    return GetCurrentRow();
+		if (IsCarousel())
+		{
+			//return GetCurrentRow();
+			return _CarouselPage->GetRow(_lineCounter);
+		}
+		else // single page
+		{
+			return GetCurrentRow();
+		}
 }
+
+void TTXPageStream::StepNextSubpage()
+{
+	if (_CarouselPage==NULL) _CarouselPage=this;
+	_CarouselPage=_CarouselPage->Getm_SubPage();
+	if (_CarouselPage==NULL) // Last carousel subpage? Loop to beginning
+		_CarouselPage=this;
+}
+

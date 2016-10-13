@@ -64,7 +64,7 @@ void Service::worker()
 		std::cerr << "[Service::worker] Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
 	}
 
-	int debugMode=5; // 0=normal, 1=debug, 3=magazine debug 4=counter 5=iterate limit
+	int debugMode=0; // 0=normal, 1=debug, 3=magazine debug 4=counter 5=iterate limit
 
 	int debugCounter=0;
 
@@ -121,7 +121,7 @@ void Service::worker()
 			{
 				if (debugMode==4) std::cout << (int)nmag;
 				vbit::Packet* pkt=pMag->GetPacket();
-				if (pkt!=NULL) // Carousel pages will return NULL. They are handled elsewhere. Empty lines are also skipped.
+				if (pkt!=NULL) // How could this be NULL? Not sure
 				{
 					std::string s=pkt->tx();
 					if (s.length()<42)
@@ -170,8 +170,9 @@ void Service::worker()
 					}
 				} // not a null packet
 				else
-                {
-                    if (debugMode==4) std::cout << "C"; // This is where we look at carousels? NO It just means we haven't implemented them yet
+        {
+            //std::cerr << "We got a NULL and we don't like it";
+						// exit(3);
 				}
 			} // not in hold
 			else
@@ -188,7 +189,7 @@ void Service::worker()
                 }
                 if (blocked)
                 {
-                    vbit::Packet* p=new vbit::Packet();
+                    vbit::Packet* p=new vbit::Packet();  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
                     p->PacketQuiet();
                     std::cout << p->tx();
                     // Step the row counter
