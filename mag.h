@@ -24,6 +24,7 @@
 #include <list>
 #include "ttxpagestream.h"
 #include "packet.h"
+#include "carousel.h"
 
 namespace vbit
 {
@@ -73,6 +74,8 @@ class Mag
          * @return Carousel page complete with a pointer to the first row of the page. NULL if no carousel is due.
          */
         TTXPageStream* GetCarousel();
+
+        Carousel* _carousel;
 };
 
 }

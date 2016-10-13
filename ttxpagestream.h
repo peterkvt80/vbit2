@@ -4,6 +4,7 @@
 #include "ttxpage.h"
 
 /** @brief Extends TTXPage to allow Service to iterate through this page.
+ *  It adds iterators to the page and also timing control if it is a carousel.
  */
 class TTXPageStream : public TTXPage
 {
@@ -60,12 +61,24 @@ class TTXPageStream : public TTXPage
          */
         inline bool IsCarousel(){return Getm_SubPage()!=NULL;};
 
+        /** Set the time when this carousel expires
+         *  ...which is the current time plus the cycle time
+         */
+        inline void SetTransitionTime(){_transitionTime=time(0)+m_cycletimeseconds;};
+
+        /** Used to time carousels
+         *  @return true if it is time to change carousel page
+         */
+        inline bool Expired(){return _transitionTime<=time(0);};
+
     protected:
 
     private:
         unsigned int _lineCounter; //!< Member variable "_LineCounter" indexes the line in the page being transmitted
         bool _isCarousel; //!< Member variable "_isCarousel" If
         TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
+
+        time_t _transitionTime; // Records when the next carousel transition is due
 };
 
 #endif // _TTXPAGESTREAM_H_

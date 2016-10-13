@@ -220,6 +220,7 @@ class TTXPage
         inline bool Loaded() const {return m_Loaded;};
 
     protected:
+        int m_cycletimeseconds;     // CT
     private:
         // Private variables
         int m_PageNumber;  // PN
@@ -232,7 +233,6 @@ class TTXPage
         std::string m_destination;  // DS
         std::string m_sourcepage;   // SP
         std::string m_description;  // DE
-        int m_cycletimeseconds;     // CT
         char m_cycletimetype;       // CT
         int m_subcode;              // SC
         int m_pagestatus;           // PS

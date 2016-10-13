@@ -3,7 +3,8 @@
 TTXPageStream::TTXPageStream() :
      _lineCounter(0),
      _isCarousel(false),
-     _CurrentPage(this)
+     _CurrentPage(this),
+     _transitionTime(0)
 {
     //ctor
 }
@@ -12,7 +13,8 @@ TTXPageStream::TTXPageStream(std::string filename) :
      TTXPage(filename),
      _lineCounter(0),
      _isCarousel(false),
-     _CurrentPage(this)
+     _CurrentPage(this),
+     _transitionTime(0)
  {
 
 
@@ -34,6 +36,7 @@ TTXLine* TTXPageStream::GetCurrentRow()
 
 TTXLine* TTXPageStream::GetNextRow()
 {
+    // @todo: To complicate matters
     // Increment the line
     _lineCounter++;
     // If we did the last line then return NULL.

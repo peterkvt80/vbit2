@@ -15,8 +15,11 @@ Configure::Configure(int argc, char** argv) :
 {
 	std::cerr << "[Configure::Configure] Started" << std::endl;
 	strncpy(_configFile,"vbit.conf",MAXPATH-1);
-	//strncpy(_pageDir,"i:\\temp\\teletext",MAXPATH-1); // Can't use ~ because this is not the shell
+#ifdef _WIN32
+	strncpy(_pageDir,"i:\\temp\\teletext",MAXPATH-1);
+#else
 	strcpy(_pageDir,"/home/pi/Pages");
+#endif
 	// This is where the default header template is defined.
 	// Work out the c++ string way of doing this
 	// sprintf(headerTemplate," VBIT-PI %%%%# %%%%a %%d %%%%b%c%%H:%%M/%%S",0x83); // include alpha yellow code

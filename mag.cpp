@@ -13,12 +13,14 @@ Mag::Mag(int mag, std::list<TTXPageStream>* pageSet) :
         //_it->DebugDump();
         _page=&*_it;
     }
+    _carousel=new vbit::Carousel();
     //std::cerr << "[Mag::Mag] exits" << std::endl;
 }
 
 Mag::~Mag()
 {
     //std::cerr << "[Mag::Mag] ~ " << std::endl;
+    delete _carousel;
     //dtor
 }
 
@@ -27,12 +29,20 @@ int Mag::GetPageCount()
     return _pageSet->size();
 }
 
+/** I'd say that this routine is redundant. */
 TTXPageStream* Mag::GetCarousel()
 {
-    return NULL; // @todo Look at the carousel list and see if one is ready go
+    TTXPageStream* p=_carousel->nextCarousel();
+    /*
+    if (p==NULL)
+    {
+        std::cerr << "There are no carousels ready to go at the moment" << std::endl;
+    }
+    */
+    return p; // @todo Look at the carousel list and see if one is ready go
 }
 
-Packet *Mag::GetPacket()
+Packet* Mag::GetPacket()
 {
     // This returns one packet at a time from a page.
     // We enter with _CurrentPage pointing to the first page
@@ -93,11 +103,27 @@ Packet *Mag::GetPacket()
             // Get pointer to the page we are sending
             _page=&*_it;
         }
+
+        if (_page->IsCarousel() != _page->GetCarouselFlag())
+        {
+            _page->SetCarouselFlag(_page->IsCarousel());
+            if (_page->IsCarousel())
+            {
+                // std::cerr << "This page has become a carousel. Add it to the list" << std::endl;
+                _carousel->addPage(_page);
+            }
+            else
+            {
+                std::cerr << "This page has no longer a carousel. Remove it from the list" << std::endl;
+                exit(3); //
+            }
+        }
         // If this page is not a single page then skip it.
         // Send a null to avoid the risk of getting stuck here.
+
         if (_page->IsCarousel())
         {
-            std::cerr << "[GetPacket] Ignoring carousels for now (todo) " << std::endl;
+            // std::cerr << "[GetPacket] Ignoring carousels for now (todo) " << std::endl;
             return NULL;
         }
         //std::cerr << "[GetPacket] Need to create header packet now " << std::endl;

@@ -2,6 +2,8 @@
  */
 #include "service.h"
 
+#include <ctime>
+
 using namespace ttx;
 
 Service::Service()
@@ -62,7 +64,7 @@ void Service::worker()
 		std::cerr << "[Service::worker] Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
 	}
 
-	int debugMode=0; // 0=normal, 1=debug, 3=magazine debug
+	int debugMode=5; // 0=normal, 1=debug, 3=magazine debug 4=counter 5=iterate limit
 
 	int debugCounter=0;
 
@@ -76,6 +78,27 @@ void Service::worker()
                 debugCounter=0;
             }
             debugCounter++;
+        }
+
+        // Hold after n iterations, then exit.
+        if (debugMode==5)
+        {
+            struct timespec rec;
+            int ms=20;
+            rec.tv_sec = ms / 1000;
+            rec.tv_nsec=(ms % 1000) *1000000;
+
+            nanosleep(&rec,NULL);
+
+            std::cerr << "*";
+            debugCounter++;
+            if (debugCounter>1000000)
+            {
+                std::cerr << "Press Key+Return to quit" << std::endl;
+                char c;
+                std::cin >> c;
+                exit(3);
+            }
         }
 
 		// Find the next magazine to put out.
@@ -124,6 +147,8 @@ void Service::worker()
 						break;
                     case 4:
                         std::cout << "P";
+                        break;
+                    case 5:
                         break;
 					default:
 						exit(3);
