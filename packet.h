@@ -93,7 +93,7 @@ class Packet
         void Parity(uint8_t offset=5);
 				
         /** LastPacketWasHeader
-         * Need this to obey transmission rule: After a header packet, wait at least one field before transmitting rows.
+         * Transmission rule: After a header packet, wait at least one field before transmitting rows.
          * @return true if the last packet out was a header packet.
          */
 				bool LastPacketWasHeader(){return _isHeader;};
@@ -105,8 +105,6 @@ class Packet
          * 
          */
 				void Fastext(int* links, int mag);
-
-
 
     protected:
     private:

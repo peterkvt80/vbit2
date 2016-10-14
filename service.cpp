@@ -126,8 +126,9 @@ void Service::worker()
 					std::string s=pkt->tx();
 					if (s.length()<42)
 					{
-						std::cout << "Length=" << s.length() << std::endl;
-						exit(3);
+						// This happens during fastext. Might need to check this
+						//std::cout << "Length=" << s.length() << std::endl;
+						//exit(3);
 					}
 					// Set this to 0=normal 1=debug mode 3=wtf
 					switch (debugMode)
@@ -145,11 +146,11 @@ void Service::worker()
 						else
 							std::cout << (int)nmag << "  ";
 						break;
-                    case 4:
-                        std::cout << "P";
-                        break;
-                    case 5:
-                        break;
+					case 4:
+							std::cout << "P";
+							break;
+					case 5:
+							break;
 					default:
 						exit(3);
 					}
@@ -170,37 +171,38 @@ void Service::worker()
 					}
 				} // not a null packet
 				else
-        {
-            //std::cerr << "We got a NULL and we don't like it";
+        {					
+						// This should only happen for a text row that returns empty
+            // std::cerr << "We got a NULL on mag " << (int)nmag << " and we don't like it";
 						// exit(3);
 				}
 			} // not in hold
 			else
-            {
-                // To avoid a deadlock, we check if everything is in hold
-                bool blocked=true;
-                for (uint8_t i=0;i<STREAMS-1;i++) // Hold does not include stream 9 (subtitles)
-                {
-                    if (hold[i]==false)
-                    {
-                        blocked=false;
-                        break;
-                    }
-                }
-                if (blocked)
-                {
-                    vbit::Packet* p=new vbit::Packet();  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
-                    p->PacketQuiet();
-                    std::cout << p->tx();
-                    // Step the row counter
+      {
+				// To avoid a deadlock, we check if everything is in hold
+				bool blocked=true;
+				for (uint8_t i=0;i<STREAMS-1;i++) // Hold does not include stream 9 (subtitles)
+				{
+						if (hold[i]==false)
+						{
+								blocked=false;
+								break;
+						}
+				}
+				if (blocked)
+				{
+					vbit::Packet* p=new vbit::Packet();  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
+					p->PacketQuiet();
+					std::cout << p->tx();
+					// Step the row counter
 					rowCounter++;
 					if (rowCounter>=16)
 					{
 						rowCounter=0;
 						for (uint8_t i=0;i<STREAMS;i++) hold[i]=0;	// Any holds are released now
 					}
-                } // blocked
-            }
+				} // blocked
+			}
 		} // page count is positive
 
 		// Reset the priority of this magazine

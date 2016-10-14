@@ -80,6 +80,9 @@ class TTXPageStream : public TTXPage
 				
 				/** This is used by mag */
 				TTXPage* GetCarouselPage(){return _CarouselPage;};
+				
+				/** Get the array of 6 fastext links */
+				int* GetLinkSet(){return m_fastextlinks;};
 
     protected:
 

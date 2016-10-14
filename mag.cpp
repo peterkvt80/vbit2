@@ -49,6 +49,7 @@ Packet* Mag::GetPacket()
 		int thisMag;
 		Packet* p=NULL;
 		int thisStatus;		
+		int* links=NULL;
 		enum State {STATE_HEADER, STATE_FASTEXT, STATE_PACKET26, STATE_PACKET27, STATE_PACKET28, STATE_TEXTROW};
 		static State state=STATE_HEADER;
 		
@@ -80,18 +81,17 @@ Packet* Mag::GetPacket()
     // If there is no page, we should send a filler?
     if (_pageSet->size()<1)
         return empty; // @todo make this a filler (or quiet or NULL)
-				// @todo This looks like it might be a memory leak! Maybe keep a quiet packet handy instead of doing new? 
-
 
     //std::cerr << "[GetPacket] DEBUG DUMP 1 " << std::endl;
     //_page->DebugDump();
 
     TTXLine* txt;
 		
-		
+		_headerFlag=false;
 		switch (state)
 		{
 		case STATE_HEADER: // Decide which page goes next
+				_headerFlag=true;
         _page=GetCarouselPage(); // Is there a carousel page due?
 
         if (_page) // Carousel? Step to the next subpage
@@ -120,7 +120,7 @@ Packet* Mag::GetPacket()
             }
             else
             {
-                std::cerr << "This page has no longer a carousel. Remove it from the list" << std::endl;
+                std::cerr << "@todo This page has no longer a carousel. Remove it from the list" << std::endl;
                 exit(3); //
             }
         }
@@ -139,60 +139,55 @@ Packet* Mag::GetPacket()
         p->HeaderText("CEEFAX 1 %%# %%a %d %%b 12:34.56"); // Placeholder 32 characters. This gets replaced later
 
 
-
         p->Parity(13);
 				state=STATE_FASTEXT;
 				break;
 				
 		case STATE_FASTEXT:
-			std::cerr << "Need to implement Fastext";
+			links=_page->GetLinkSet();
+			p=new Packet(); // @TODO. Worry about the heap!
+			p->SetMRAG(_magNumber,27);
+			p->Fastext(links,_magNumber);
 			state=STATE_PACKET26;
 			break;
 		case STATE_PACKET26:
-			std::cerr << "Need to implement Packet26";
+			// std::cerr << "Need to implement Packet26";
 			state=STATE_PACKET27;
-			break;
+			if (false) break; // Put the real code in here
 		case STATE_PACKET27:
-			std::cerr << "Need to implement packet27";
+			//std::cerr << "Need to implement packet27";
 			state=STATE_PACKET28;
-			break;
+			if (false) break; // Put the real code in here
 		case STATE_PACKET28:
-			std::cerr << "Need to implement Packet29";
-			state=STATE_HEADER;
-			break;
+			//std::cerr << "Need to implement Packet 28 ";
+			state=STATE_TEXTROW;
+			if (false) break; // Fall through until we put the real code in here
 		case STATE_TEXTROW:
 			txt=_page->GetNextRow();
 			if (txt==NULL)
 				state=STATE_HEADER;
 			else
 			{
-				if (txt->GetLine().empty())
+				if (txt->GetLine().empty()) // If the row is empty then skip it
+				{
+					// std::cerr << "[Mag::GetPacket] Empty row" << std::endl;
 					p=NULL;
-				// @todo Terminating condition
+				}
+				else
+				{
+					// Assemble the packet
+					thisMag=_magNumber;
+					int thisRow=_page->GetLineCounter(); // The number of the last row received
 
-				// Assemble the packet
-				thisMag=_magNumber;
-				int thisRow=_page->GetLineCounter(); // The number of the last row received
-
-				Packet* p=new Packet(thisMag, thisRow, txt->GetLine());
-				p->Parity();	
-
-				_headerFlag=txt==NULL; // if last line was read
+					p=new Packet(thisMag, thisRow, txt->GetLine());
+					p->Parity();	
+					assert(p->LastPacketWasHeader()!=true);
+				}
 			}
 			
 			break;
 		} // case
 
-//    Dump whole page list for debug purposes
-/*
-    for (_it=thing1;_it!=thing2;++_it)
-    {
-        std::cerr << "[Mag::GetPacket]Filename =" << _it->GetSourcePage() << std::endl;
-    }
-*/
-
-
-
-    return p; /// @todo place holder. Need to implement
+    return p;
 }
 
