@@ -8,24 +8,23 @@ Packet::Packet() : _isHeader(false), _mag(1)
     //ctor
 }
 
-Packet::Packet(char *val) : _isHeader(false), _mag(1)
+Packet::Packet(char *val) : _isHeader(false), _mag(1), _row(99)
 {
     //ctor
     strncpy(_packet,val,45+1);
 }
 
-Packet::Packet(std::string val) : _isHeader(false), _mag(1)
+Packet::Packet(std::string val) : _isHeader(false), _mag(1), _row(99)
 {
     //ctor
     strncpy(_packet,val.c_str(),45+1);
 }
 
-Packet::Packet(int mag, int row, std::string val) : _mag(mag)
+Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag), _row(row)
 {
-	_isHeader=false;
-	SetMRAG(mag, row);
+	SetMRAG(mag, _row);
 	SetPacketText(val);
-	assert(row!=0);
+	assert(_row!=0);
 }
 
 Packet::~Packet()
@@ -65,11 +64,48 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
 	*p++=HamTab[mag%8+((row%2)<<3)]; // mag + bit 3 is the lowest bit of row
 	*p++=HamTab[((row>>1)&0x0f)];
 	_isHeader=row==0;
+	_row=row;
 	_mag=mag;
 } // SetMRAG
 
+
+/** get_offset_time. @todo Convert this to c++
+ * Given a parameter of say %t+02
+ * where str[2] is + or -
+ * str[4:3] is a two digit of half hour offsets from local time (GMT/BST in our case)
+ * @return Local time plus offset as 5 characters in the form 21:30
+ */
+bool Packet::get_offset_time(char* str)
+{
+	char strTime[6];
+	// get the time (UTC I think)
+	time_t rawtime;
+	struct tm *info;
+	time( &rawtime );
+
+	// What is our offset in seconds?
+	int offset=((str[3]-'0')*10+str[4]-'0')*30*60; // @todo We really ought to validate this
+	
+	// Is it negative (west of us?)
+	if (str[2]=='-')
+		offset=-offset;
+	else
+		if (str[2]!='+') return false; // Must be + or -
+		
+	// Add the offset to the time value
+	rawtime+=offset;
+
+	info = localtime( &rawtime );
+
+	strftime(strTime, 21, "%H:%M", info);
+	strncpy(str,strTime,5);
+	return true; // @todo
+}
+
 /* Ideally we would set _packet[0] for other hardware, or _packet[3] for Alistair Buxton raspi-teletext/
- * but hard code this for now */
+ * but hard code this for now
+ * Most of this should be rewritten for c++
+ */
 std::string Packet::tx(bool debugMode)
 {
 	// Get local time
@@ -142,6 +178,54 @@ std::string Packet::tx(bool debugMode)
 			strncpy(&_packet[37],&asctime(timeinfo)[11],8);
 			Parity(13); // redo the parity because substitutions will need processing
 
+		}
+		else if (_row<26) // Other text rows
+		{
+			char *tmpptr;
+			// ======= TEMPERATURE ========
+			#ifndef WIN32
+			char strtemp[]="                    ";
+			for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
+			tmpptr=strstr((char*)_packet,"%%%T");
+			if (tmpptr) {
+				get_temp(strtemp);
+				strncpy(tmpptr,strtemp,4);
+			}
+			#endif
+			// ======= WORLD TIME ========
+			// Special case for world time. Put %t<+|-><hh> to get local time HH:MM offset by +/- half hours
+			for (;;)
+			{
+				tmpptr=strstr((char*) _packet,"%t+");
+				if (!tmpptr) {
+					tmpptr=strstr((char*) _packet,"%t-");
+				}
+				if (tmpptr) {
+					//std::cout << "[test 1]" << _packet << std::endl;
+					get_offset_time(tmpptr);
+					//exit(4);
+				}
+				else
+					break;
+			}		
+			// ======= NETWORK ========
+			#ifndef WIN32
+			// Special case for network address. Put %%%%%%%%%%%%%%n to get network address in form xxx.yyy.zzz.aaa with trailing spaces (15 characters total)
+			tmpptr=strstr((char*)_packet,"%%%%%%%%%%%%%%n");
+			if (tmpptr) {
+				// strncpy(tmpptr,"not yet working",15);
+				get_net(strtemp);
+				strncpy(tmpptr,strtemp,15);
+			}
+			#endif		
+			// ======= TIME AND DATE ========
+			// Special case for system time. Put %%%%%%%%%%%%timedate to get time and date
+			tmpptr=strstr((char*) _packet,"%%%%%%%%%%%%timedate");
+			if (tmpptr) {
+				get_time(strtemp);
+				strncpy(tmpptr,strtemp,20);
+			}			
+			Parity(5); // redo the parity because substitutions will need processing
 		}
 
     if (!debugMode)
@@ -274,3 +358,74 @@ void Packet::Fastext(int* links, int mag)
 	}	
 }
 
+#ifndef WIN32
+/** get_temp
+ *  Pinched from raspi-teletext demo.c
+ * @return Four character temperature in degrees C eg. "45.7"
+ */
+bool Packet::get_temp(char* str)
+{
+    FILE *fp;
+    char *pch;
+		char tmp[100];
+
+    fp = popen("/usr/bin/vcgencmd measure_temp", "r");
+    fgets(tmp, 99, fp);
+    pclose(fp);
+    pch = strtok (tmp,"=\n");
+    pch = strtok (NULL,"=\n");
+		strncpy(str,pch,5);
+		return true; // @todo
+}
+#endif
+
+
+/** get_time
+ *  Pinched from raspi-teletext demo.c
+ * @return Time as 20 characters
+ */
+bool Packet::get_time(char* str)
+{
+    time_t rawtime;
+    struct tm *info;
+
+    time( &rawtime );
+
+    info = localtime( &rawtime );
+
+    strftime(str, 21, "\x02%a %d %b\x03%H:%M/%S", info);
+		return false; // @todo
+}
+
+#ifndef WIN32
+/** get_net
+ *  Pinched from raspi-teletext demo.c
+ * @return network address as 20 characters
+ * Sample response
+ * 3: wlan0    inet 192.168.1.14/24 brd 192.168.1.255 scope global wlan0\       valid_lft forever preferred_lft forever
+ */
+bool Packet::get_net(char* str)
+{
+	FILE *fp;
+	char *pch;
+
+	int n;
+	char temp[100];
+	fp = popen("/sbin/ip -o -f inet addr show scope global", "r");
+	fgets(temp, 99, fp);
+	pclose(fp);
+	pch = strtok (temp," \n/");
+	for (n=1; n<4; n++)
+	{
+			pch = strtok (NULL, " \n/");
+	}
+	// If we don't have a connection established, try not to crash
+	if (pch==NULL)
+	{
+		strcpy(str,"IP address????");
+		return false;
+	}
+	strncpy(str,pch,15);
+	return true; // @todo
+}
+#endif

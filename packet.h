@@ -112,6 +112,14 @@ class Packet
 				bool _isHeader; //<! True if the packet is a header
 				uint8_t _mag;//<! The magazine number this packet belongs to
 				uint32_t _page;//<! The page number this packet belongs to
+				uint8_t _row; //<! Row number				
+				bool get_offset_time(char* str);		
+				bool get_net(char* str);
+				bool get_time(char* str);
+
+#ifndef WIN32
+				bool get_temp(char* str);
+#endif
 };
 
 }
