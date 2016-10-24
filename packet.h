@@ -105,6 +105,16 @@ class Packet
          * 
          */
 				void Fastext(int* links, int mag);
+				
+				/** 
+				 * @return The current row number
+				 */
+				int GetRow(){return _row;};
+				
+				/** 
+				 * @return The current page number
+				 */
+				int GetPage(){return _page;};				
 
     protected:
     private:

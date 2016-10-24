@@ -88,11 +88,21 @@ Packet* Mag::GetPacket()
     TTXLine* txt;
 		
 		_headerFlag=false;
+
+		// If this is row 0, we MUST be doing a header
+		/*
+		if (state==STATE_HEADER)
+		{
+			if (_page->GetLineCounter()>0)
+				std::cerr << "Mag=" << _magNumber << " LineCounter=" << _page->GetLineCounter() << std::endl;
+		}		
+*/
+
 		switch (state)
 		{
 		case STATE_HEADER: // Decide which page goes next
 				_headerFlag=true;
-        _page=GetCarouselPage(); // Is there a carousel page due?
+        _page=GetCarouselPage(); // Is there a carousel page due? 
 
         if (_page) // Carousel? Step to the next subpage
 				{
@@ -108,6 +118,7 @@ Packet* Mag::GetPacket()
             // Get pointer to the page we are sending
             _page=&*_it;
         }
+				_page->SetLineCounter(0);				
 
 				// When a single page is changed into a carousel
         if (_page->IsCarousel() != _page->GetCarouselFlag())
@@ -124,10 +135,8 @@ Packet* Mag::GetPacket()
                 exit(3); //
             }
         }
-
 				
-        //std::cerr << "[GetPacket] Need to create header packet now " << std::endl;
-        // Assemble the header. (we can simplify this or leave it for the optimiser)
+        // Assemble the header. (we can simplify this code or leave it for the optimiser)
         thisPage=_page->GetPageNumber();
 				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.				
         thisSubcode=_page->GetSubCode();
@@ -140,6 +149,8 @@ Packet* Mag::GetPacket()
 
 
         p->Parity(13);
+				assert(p!=NULL);
+
 				state=STATE_FASTEXT;
 				break;
 				
@@ -151,21 +162,22 @@ Packet* Mag::GetPacket()
 			state=STATE_PACKET26;
 			break;
 		case STATE_PACKET26:
-			// std::cerr << "Need to implement Packet26";
 			state=STATE_PACKET27;
 			if (false) break; // Put the real code in here
 		case STATE_PACKET27:
-			//std::cerr << "Need to implement packet27";
 			state=STATE_PACKET28;
 			if (false) break; // Put the real code in here
 		case STATE_PACKET28:
-			//std::cerr << "Need to implement Packet 28 ";
 			state=STATE_TEXTROW;
 			if (false) break; // Fall through until we put the real code in here
 		case STATE_TEXTROW:
 			txt=_page->GetNextRow();
+			// std::cerr << "txt=" << txt->GetLine() << std::endl;
 			if (txt==NULL)
+			{
+				p=NULL;
 				state=STATE_HEADER;
+			}
 			else
 			{
 				if (txt->GetLine().empty()) // If the row is empty then skip it

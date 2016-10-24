@@ -53,7 +53,7 @@ class TTXPageStream : public TTXPage
          */
         TTXLine* GetCurrentRow();
         /** Access the next iterated row
-         * \return The next row from the current page
+         * \return The next row non NULL row from the current page, or NULL if there are no more rows
          */
         TTXLine* GetNextRow();
 

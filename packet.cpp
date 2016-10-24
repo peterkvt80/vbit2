@@ -8,19 +8,19 @@ Packet::Packet() : _isHeader(false), _mag(1)
     //ctor
 }
 
-Packet::Packet(char *val) : _isHeader(false), _mag(1), _row(99)
+Packet::Packet(char *val) : _isHeader(false), _mag(1), _page(999), _row(99)
 {
     //ctor
     strncpy(_packet,val,45+1);
 }
 
-Packet::Packet(std::string val) : _isHeader(false), _mag(1), _row(99)
+Packet::Packet(std::string val) : _isHeader(false), _mag(1), _page(999), _row(99)
 {
     //ctor
     strncpy(_packet,val.c_str(),45+1);
 }
 
-Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag), _row(row)
+Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag), _page(999), _row(row)
 {
 	SetMRAG(mag, _row);
 	SetPacketText(val);

@@ -40,23 +40,26 @@ TTXLine* TTXPageStream::GetNextRow()
 		// but a carousel needs to know what page to look at.
 		// To even further complicate things, this is where the enhanced packets should go.
     // Increment the line
-    _lineCounter++;
+		TTXLine* line=NULL;
+		// Find the next non null line
+		for (_lineCounter++;_lineCounter<MAXROW;_lineCounter++)
+		{
+			if (IsCarousel())
+			{
+				line=_CarouselPage->GetRow(_lineCounter);
+			}
+			else // single page
+			{
+				line=GetCurrentRow();
+			}			
+			if (line!=NULL) // Found a line
+				return line;
+		}
 		
-    // If we did the last line then return NULL.
-    if (_lineCounter>=MAXROW)
-    {
-        _lineCounter=0;			
-        return NULL;
-    }
-		if (IsCarousel())
-		{
-			//return GetCurrentRow();
-			return _CarouselPage->GetRow(_lineCounter);
-		}
-		else // single page
-		{
-			return GetCurrentRow();
-		}
+    // No more lines? return NULL.
+		// std::cerr << " GetNextRow " << _lineCounter << std::endl;
+		_lineCounter=0;			
+		return NULL;
 }
 
 void TTXPageStream::StepNextSubpage()

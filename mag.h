@@ -42,7 +42,7 @@ class Mag
          */
         std::list<TTXPageStream>*  Get_pageSet() { return _pageSet; }
         /** GetPacket
-         * \return the next packet in the magazine stream
+         * \return the next packet in the magazine stream or NULL if this was the last packet
          */
         Packet* GetPacket() ;
         /** Set _pageSet

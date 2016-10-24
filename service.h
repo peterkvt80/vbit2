@@ -2,6 +2,7 @@
 #define _SERVICE_H_
 
 #include <iostream>
+#include <iomanip>
 #include <thread>
 #include "configure.h"
 #include "pagelist.h"

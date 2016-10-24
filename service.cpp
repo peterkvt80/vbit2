@@ -38,7 +38,7 @@ bool Service::run()
 void Service::worker()
 {
     // @todo Put priority into config and add commands to allow updates.
-    char priority[STREAMS]={5,3,3,3,3,2,5,9,1};	// 1=High priority,9=low. Note: priority[0] is mag 8, while priority mag[8] is the newfor stream!
+    char priority[STREAMS]={5,3,3,3,3,4,5,9,1};	// 1=High priority,9=low. Note: priority[0] is mag 8, while priority mag[8] is the newfor stream!
     char priorityCount[STREAMS];
     uint8_t nmag=1;
     vbit::Mag **mag; // Pointer to magazines array
@@ -64,7 +64,7 @@ void Service::worker()
 		std::cerr << "[Service::worker] Mag [" << i << "] count=" << mag[i]->GetPageCount() << std::endl;
 	}
 
-	int debugMode=0; // 0=normal, 1=debug, 3=magazine debug 4=counter 5=iterate limit
+	int debugMode=3; // 0=normal, 1=debug, 3=magazine debug 4=counter 5=iterate limit
 
 	int debugCounter=0;
 
@@ -121,7 +121,7 @@ void Service::worker()
 			{
 				if (debugMode==4) std::cout << (int)nmag;
 				vbit::Packet* pkt=pMag->GetPacket();
-				if (pkt!=NULL) // How could this be NULL? Not sure
+				if (pkt!=NULL) // How could this be NULL? After the last packet of a page has been sent.
 				{
 					std::string s=pkt->tx();
 					if (s.length()<42)
@@ -141,10 +141,16 @@ void Service::worker()
 						std::cout << std::endl;
 						break;
 					case 3:
-						if (pkt->LastPacketWasHeader())
-							std::cout << (int)nmag << "* ";
+						std::cout << std::setfill('0') << std::hex;
+						if (nmag==1) // Filter for mag 1 only
+						{
+							if (pkt->LastPacketWasHeader())
+								std::cout << (int)nmag << "*" << std::setw(2) << pkt->GetPage() << " " << std::dec; // Page number
+							else
+								std::cout << (int)nmag << "-" << std::dec << std::setw(2) << pkt->GetRow()  << " "; // Row number
+						}
 						else
-							std::cout << (int)nmag << "  ";
+							std::cout << "    ";
 						break;
 					case 4:
 							std::cout << "P";
