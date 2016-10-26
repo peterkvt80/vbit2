@@ -16,6 +16,7 @@ namespace ttx
 {
 /** A PageList maintains the set of all teletext pages in a teletext service
  *  It can load, save, add, delete, edit pages.
+ *  Internally each magazine has its own list of pages.
  *
  */
 class PageList

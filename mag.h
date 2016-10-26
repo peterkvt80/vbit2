@@ -28,6 +28,7 @@
 
 namespace vbit
 {
+		enum State {STATE_HEADER, STATE_FASTEXT, STATE_PACKET26, STATE_PACKET27, STATE_PACKET28, STATE_TEXTROW};
 
 class Mag
 {
@@ -60,12 +61,14 @@ class Mag
          */
         inline bool GetHeaderFlag(){return _headerFlag;};
 
+
+
     protected:
     private:
         std::list<TTXPageStream>*  _pageSet; //!< Member variable "_pageSet"
         std::list<TTXPageStream>::iterator _it;
         TTXPageStream* _page; //!< The current page being output
-	
+
         int _magNumber; //!< The number of this magazine. (where 0 is mag 8)
         bool _headerFlag; //!< True if the last packet was a header
 
@@ -75,9 +78,18 @@ class Mag
          * @return Carousel page complete with a pointer to the first row of the page. NULL if no carousel is due.
          */
         // TTXPageStream* GetCarousel();
-				TTXPageStream* GetCarouselPage();				
+				TTXPageStream* GetCarouselPage();
 
         Carousel* _carousel;
+
+        /** temporary debug helper
+        */
+        void _outp(std::string);
+
+        uint8_t _thisRow; // The current line that we are outputting
+        State _state;
+
+
 };
 
 }

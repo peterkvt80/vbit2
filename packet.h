@@ -91,30 +91,30 @@ class Packet
          * @param offset 5 (default) for normal text rows, 13 for headers
          */
         void Parity(uint8_t offset=5);
-				
-        /** LastPacketWasHeader
+
+        /** IsHeader
          * Transmission rule: After a header packet, wait at least one field before transmitting rows.
          * @return true if the last packet out was a header packet.
          */
-				bool LastPacketWasHeader(){return _isHeader;};
-				
+				bool IsHeader(){return _isHeader;};
+
         /** Create a Fastext packet
          * Requires a list of six links
 				 * @param links Array of six link values (0x100 to 0x8FF)
 				 * @param mag - Magazine number
-         * 
+         *
          */
 				void Fastext(int* links, int mag);
-				
-				/** 
+
+				/**
 				 * @return The current row number
 				 */
 				int GetRow(){return _row;};
-				
-				/** 
+
+				/**
 				 * @return The current page number
 				 */
-				int GetPage(){return _page;};				
+				int GetPage(){return _page;};
 
     protected:
     private:
@@ -122,8 +122,8 @@ class Packet
 				bool _isHeader; //<! True if the packet is a header
 				uint8_t _mag;//<! The magazine number this packet belongs to
 				uint32_t _page;//<! The page number this packet belongs to
-				uint8_t _row; //<! Row number				
-				bool get_offset_time(char* str);		
+				uint8_t _row; //<! Row number
+				bool get_offset_time(char* str);
 				bool get_net(char* str);
 				bool get_time(char* str);
 

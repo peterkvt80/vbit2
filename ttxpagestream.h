@@ -19,15 +19,6 @@ class TTXPageStream : public TTXPage
          */
         TTXPageStream(std::string filename);
 
-        /** Access _lineCounter
-         * \return The current value of _lineCounter
-         */
-        unsigned int GetLineCounter() { return _lineCounter; }
-        /** Set _lineCounter
-         * \param val New value to set
-         */
-        void SetLineCounter(unsigned int val) { _lineCounter = val; }
-
         /** Access _isCarousel
          * \return The current value of _isCarousel
          */
@@ -42,20 +33,12 @@ class TTXPageStream : public TTXPage
          //* \return The current value of _CurrentPage
          //*/
         //TTXPageStream* GetCurrentPage(unsigned int line) { _CurrentPage->SetLineCounter(line);return _CurrentPage; }
-				
+
         ///** Set _CurrentPage
          //* \param val New value to set
          //*/
         //void SetCurrentPage(TTXPageStream* val) { _CurrentPage = val; }
 
-        /** Access the currently iterated row
-         * \return The current row from the current page
-         */
-        TTXLine* GetCurrentRow();
-        /** Access the next iterated row
-         * \return The next row non NULL row from the current page, or NULL if there are no more rows
-         */
-        TTXLine* GetNextRow();
 
         /** Is the page a carousel?
          *  Don't confuse this with the _isCarousel flag which is used to mark when a page changes between single/carousel
@@ -72,27 +55,36 @@ class TTXPageStream : public TTXPage
          *  @return true if it is time to change carousel page
          */
         inline bool Expired(){return _transitionTime<=time(0);};
-				
+
         /** Step to the next page in a carousel
 				 *  Updates _CarouselPage;
          */
 				void StepNextSubpage();
-				
+
 				/** This is used by mag */
 				TTXPage* GetCarouselPage(){return _CarouselPage;};
-				
+
 				/** Get the array of 6 fastext links */
 				int* GetLinkSet(){return m_fastextlinks;};
+
+				/** Output a list of pages in this magazine
+				*/
+				void printList();
+
+				/** Get the row from the page.
+        * Carousels and main sequence pages are managed differently
+				*/
+				TTXLine* GetTxRow(uint8_t row);
+
 
     protected:
 
     private:
-        unsigned int _lineCounter; //!< Member variable "_LineCounter" indexes the line in the page being transmitted
         bool _isCarousel; //!< Member variable "_isCarousel" If
         // TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
 
         time_t _transitionTime; // Records when the next carousel transition is due
-				
+
 				TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
 };
 

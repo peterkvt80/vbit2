@@ -66,7 +66,7 @@ int PageList::LoadPageList(std::string filepath)
         _mag[i]=new vbit::Mag(i, &_pageList[i]);
     }
     // Just for testing
-    if (0) for (int i=0;i<8;i++)
+    if (1) for (int i=0;i<8;i++)
     {
         vbit::Mag* m=_mag[i];
         std::list<TTXPageStream>* p=m->Get_pageSet();
@@ -74,7 +74,7 @@ int PageList::LoadPageList(std::string filepath)
         {
             if (&(*it)==NULL)
                 std::cerr << "[PageList::LoadPageList] This can't happen unless something is broken" << std::endl;
-           std::cerr << "[PageList::LoadPageList]Dumping :" << std::endl;
+           // std::cerr << "[PageList::LoadPageList]Dumping :" << std::endl;
            // it->DebugDump();
            std::cerr << "[PageList::LoadPageList] mag["<<i<<"] Filename =" << it->GetSourcePage()  << std::endl;
         }

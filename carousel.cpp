@@ -43,7 +43,6 @@ TTXPageStream* Carousel::nextCarousel()
         {
             std::cerr << "[Carousel::nextCarousel] page " << std::hex << p->GetPageNumber() << std::dec << " cycle time=" << p->GetCycleTime() << std::endl;
             p->SetTransitionTime(); // We found a carousel that is ready to step
-						p->SetLineCounter(0); // Don't need to do this, but just in case
             break;
         }
         p=NULL;

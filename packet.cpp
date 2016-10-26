@@ -6,6 +6,7 @@ using namespace vbit;
 Packet::Packet() : _isHeader(false), _mag(1)
 {
     //ctor
+    SetMRAG(8,25);
 }
 
 Packet::Packet(char *val) : _isHeader(false), _mag(1), _page(999), _row(99)
@@ -85,13 +86,13 @@ bool Packet::get_offset_time(char* str)
 
 	// What is our offset in seconds?
 	int offset=((str[3]-'0')*10+str[4]-'0')*30*60; // @todo We really ought to validate this
-	
+
 	// Is it negative (west of us?)
 	if (str[2]=='-')
 		offset=-offset;
 	else
 		if (str[2]!='+') return false; // Must be + or -
-		
+
 	// Add the offset to the time value
 	rawtime+=offset;
 
@@ -207,7 +208,7 @@ std::string Packet::tx(bool debugMode)
 				}
 				else
 					break;
-			}		
+			}
 			// ======= NETWORK ========
 			#ifndef WIN32
 			// Special case for network address. Put %%%%%%%%%%%%%%n to get network address in form xxx.yyy.zzz.aaa with trailing spaces (15 characters total)
@@ -217,14 +218,14 @@ std::string Packet::tx(bool debugMode)
 				get_net(strtemp);
 				strncpy(tmpptr,strtemp,15);
 			}
-			#endif		
+			#endif
 			// ======= TIME AND DATE ========
 			// Special case for system time. Put %%%%%%%%%%%%timedate to get time and date
 			tmpptr=strstr((char*) _packet,"%%%%%%%%%%%%timedate");
 			if (tmpptr) {
 				get_time(strtemp);
 				strncpy(tmpptr,strtemp,20);
-			}			
+			}
 			Parity(5); // redo the parity because substitutions will need processing
 		}
 
@@ -333,7 +334,7 @@ void Packet::Fastext(int* links, int mag)
 	p=_packet+5;
 	*p++=HamTab[0];	// Designation code 0
 	mag&=0x07;		// Mask the mag just in case. Keep it valid
-	
+
 	// add the link control byte. This will allow row 24 to show.
 	_packet[42]=HamTab[0x0f];
 
@@ -346,7 +347,7 @@ void Packet::Fastext(int* links, int mag)
 	{
 		nLink=links[i];
 		if (nLink == 0) nLink = 0x8ff; // turn zero into 8FF to be ignored
-		
+
 		// calculate the relative magazine
 		char cRelMag=(nLink/0x100 ^ mag);
 		*p++=HamTab[nLink & 0xF];			// page units
@@ -355,7 +356,7 @@ void Packet::Fastext(int* links, int mag)
 		*p++=HamTab[((cRelMag & 1) << 3) | 7];
 		*p++=HamTab[0xF];
 		*p++=HamTab[((cRelMag & 6) << 1) | 3];
-	}	
+	}
 }
 
 #ifndef WIN32

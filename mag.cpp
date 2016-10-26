@@ -3,7 +3,7 @@
 using namespace vbit;
 
 Mag::Mag(int mag, std::list<TTXPageStream>* pageSet) :
-    _pageSet(pageSet), _page(NULL), _magNumber(mag), _headerFlag(false)
+    _pageSet(pageSet), _page(NULL), _magNumber(mag), _headerFlag(false), _thisRow(0), _state(STATE_HEADER)
 {
     //ctor
     if (_pageSet->size()>0)
@@ -48,12 +48,10 @@ Packet* Mag::GetPacket()
 		int thisSubcode;
 		int thisMag;
 		Packet* p=NULL;
-		int thisStatus;		
+		int thisStatus;
 		int* links=NULL;
-		enum State {STATE_HEADER, STATE_FASTEXT, STATE_PACKET26, STATE_PACKET27, STATE_PACKET28, STATE_TEXTROW};
-		static State state=STATE_HEADER;
-		
-		static vbit::Packet* empty=new Packet();
+
+		static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
     // Returns one packet at a time from a page.
     // We enter with _CurrentPage pointing to the first page
     // std::cerr << "[Mag::GetPacket] called " << std::endl;
@@ -78,15 +76,18 @@ Packet* Mag::GetPacket()
         std::list<TTXPageStream> p=m->Get_pageSet();
         for (std::list<TTXPageStream>::iterator it=p.begin();it!=p.end();++it)
 */
-    // If there is no page, we should send a filler?
+    // If there is no page, we should send a filler
     if (_pageSet->size()<1)
-        return empty; // @todo make this a filler (or quiet or NULL)
+    {
+      _outp("V"); // If this goes wrong we are getting _pageSet wrong
+        return filler; // @todo make this a filler (or quiet or NULL)
+    }
 
     //std::cerr << "[GetPacket] DEBUG DUMP 1 " << std::endl;
     //_page->DebugDump();
 
     TTXLine* txt;
-		
+
 		_headerFlag=false;
 
 		// If this is row 0, we MUST be doing a header
@@ -95,21 +96,31 @@ Packet* Mag::GetPacket()
 		{
 			if (_page->GetLineCounter()>0)
 				std::cerr << "Mag=" << _magNumber << " LineCounter=" << _page->GetLineCounter() << std::endl;
-		}		
+		}
 */
-
-		switch (state)
+    std::string s;
+    /*
+    if (_magNumber==5)
+    {
+        std::cout << "*S" << (int)_state << "*";
+    }
+    */
+		switch (_state)
 		{
 		case STATE_HEADER: // Decide which page goes next
+          _outp("h");
 				_headerFlag=true;
-        _page=GetCarouselPage(); // Is there a carousel page due? 
+        _page=GetCarouselPage(); // Is there a carousel page due?
+
 
         if (_page) // Carousel? Step to the next subpage
 				{
+          _outp("c");
 					_page->StepNextSubpage();
 				}
 				else  // No carousel? Take the next page in the main sequence
         {
+          _outp("n");
             ++_it;
             if (_it==_pageSet->end())
             {
@@ -118,7 +129,9 @@ Packet* Mag::GetPacket()
             // Get pointer to the page we are sending
             _page=&*_it;
         }
-				_page->SetLineCounter(0);				
+        assert(_page->GetPageNumber()>>16 == _magNumber); // Make sure that we always point to the correct magazine
+
+				_thisRow=0;
 
 				// When a single page is changed into a carousel
         if (_page->IsCarousel() != _page->GetCarouselFlag())
@@ -135,10 +148,10 @@ Packet* Mag::GetPacket()
                 exit(3); //
             }
         }
-				
+
         // Assemble the header. (we can simplify this code or leave it for the optimiser)
         thisPage=_page->GetPageNumber();
-				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.				
+				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
         thisSubcode=_page->GetSubCode();
         thisStatus=_page->GetPageStatus();
         p=new Packet();
@@ -151,55 +164,71 @@ Packet* Mag::GetPacket()
         p->Parity(13);
 				assert(p!=NULL);
 
-				state=STATE_FASTEXT;
+				_state=STATE_FASTEXT;
 				break;
-				
+
 		case STATE_FASTEXT:
 			links=_page->GetLinkSet();
 			p=new Packet(); // @TODO. Worry about the heap!
 			p->SetMRAG(_magNumber,27);
 			p->Fastext(links,_magNumber);
-			state=STATE_PACKET26;
+			_state=STATE_PACKET26;
 			break;
 		case STATE_PACKET26:
-			state=STATE_PACKET27;
+			_state=STATE_PACKET27;
 			if (false) break; // Put the real code in here
 		case STATE_PACKET27:
-			state=STATE_PACKET28;
+			_state=STATE_PACKET28;
 			if (false) break; // Put the real code in here
 		case STATE_PACKET28:
-			state=STATE_TEXTROW;
+			_state=STATE_TEXTROW;
 			if (false) break; // Fall through until we put the real code in here
 		case STATE_TEXTROW:
-			txt=_page->GetNextRow();
-			// std::cerr << "txt=" << txt->GetLine() << std::endl;
-			if (txt==NULL)
+		  // Find the next row that isn't NULL
+		  for (_thisRow++;_thisRow<=24;_thisRow++)
+      {
+        txt=_page->GetTxRow(_thisRow);
+        if (txt!=NULL)
+                  break;
+      }
+      // Didn't find? End of this page.
+		  if (_thisRow>24 || txt==NULL)
 			{
 				p=NULL;
-				state=STATE_HEADER;
+				_state=STATE_HEADER;
+				_thisRow=0;
+				_outp("H");
 			}
 			else
 			{
-				if (txt->GetLine().empty()) // If the row is empty then skip it
+        _outp("J");
+				if (txt->GetLine().empty() && false) // If the row is empty then skip it (Kill this for now)
 				{
-					// std::cerr << "[Mag::GetPacket] Empty row" << std::endl;
+					// std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
 					p=NULL;
 				}
 				else
 				{
 					// Assemble the packet
 					thisMag=_magNumber;
-					int thisRow=_page->GetLineCounter(); // The number of the last row received
 
-					p=new Packet(thisMag, thisRow, txt->GetLine());
-					p->Parity();	
-					assert(p->LastPacketWasHeader()!=true);
+					p=new Packet(thisMag, _thisRow, txt->GetLine());
+					p->Parity();
+					assert(p->IsHeader()!=true);
 				}
 			}
-			
-			break;
-		} // case
 
+			break;
+		} // switch
+    if (p==NULL) _outp("q");
     return p;
+}
+
+
+void Mag::_outp(std::string s)
+{
+  return;
+  if (_magNumber==5)
+    std::cout << s;
 }
 
