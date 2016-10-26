@@ -96,7 +96,7 @@ void Service::worker()
 
     nanosleep(&rec,NULL);
 
-    std::cerr << "*";
+    // std::cerr << "*";
     debugCounter++;
     if (debugCounter>1000000)
     {
@@ -173,7 +173,7 @@ void Service::worker()
         if (isHeader)
         {
           hold[nmag]=true;
-          std::cerr << "Header wait mode mag=" << (int) nmag << std::endl;
+          // std::cerr << "Header wait mode mag=" << (int) nmag << std::endl;
         }
         rowCounter++;
         if (rowCounter>=16)

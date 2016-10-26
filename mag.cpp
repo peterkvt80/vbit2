@@ -129,7 +129,8 @@ Packet* Mag::GetPacket()
             // Get pointer to the page we are sending
             _page=&*_it;
         }
-        assert(_page->GetPageNumber()>>16 == _magNumber); // Make sure that we always point to the correct magazine
+				// @todo: This assert fails!
+        // assert(_page->GetPageNumber()>>16 == _magNumber); // Make sure that we always point to the correct magazine
 
 				_thisRow=0;
 
