@@ -184,8 +184,8 @@ std::string Packet::tx(bool debugMode)
 		{
 			char *tmpptr;
 			// ======= TEMPERATURE ========
-			#ifndef WIN32
 			char strtemp[]="                    ";
+			#ifndef WIN32
 			for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
 			tmpptr=strstr((char*)_packet,"%%%T");
 			if (tmpptr) {
