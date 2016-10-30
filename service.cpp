@@ -8,47 +8,31 @@ using namespace ttx;
 
 Service::Service()
 {
-	// std::cerr << "[Service::Service] Started" << std::endl;
 }
 
 Service::Service(Configure *configure, PageList *pageList) :
 	_configure(configure),_pageList(pageList)
 {
-	// std::cerr << "[Service::Service] Started (2) " << std::endl;
-//	_pageList->loadPageList(_configure->GetPageDirectory());
-
 }
 
 Service::~Service()
 {
-	// std::cerr << "[Service] Destructor" << std::endl;
 }
 
-bool Service::run()
+int Service::run()
 {
-	std::cerr << "[Service::run] This should start a thread that starts the teletext stream" << std::endl;
-	std::thread t(&Service::worker, this);
-    std::cerr << "[Service::run]Main thread" << std::endl;
-    t.join();
-    std::cerr << "[Service::run]Main thread ended" << std::endl;
-	return false;
-}
+  // @todo Put priority into config and add commands to allow updates.
+  uint8_t priority[STREAMS]={5,3,3,3,3,4,5,9,1};	// 1=High priority,9=low. Note: priority[0] is mag 8, while priority mag[8] is the newfor stream!
+  uint8_t priorityCount[STREAMS];
+  uint8_t nmag=1;
+  vbit::Mag **mag; // Pointer to magazines array
+  vbit::Mag *pMag; // Pointer to the magazine that we are working on
+  uint8_t hold[STREAMS]; /// If hold is set then the magazine can not be sent until the next field
+  std::cerr << "[Service::worker]This is the worker process" << std::endl;
 
+  uint8_t rowCounter=0; // Counts 16 rows to a field
 
-void Service::worker()
-{
-    // @todo Put priority into config and add commands to allow updates.
-    uint8_t priority[STREAMS]={5,3,3,3,3,4,5,9,1};	// 1=High priority,9=low. Note: priority[0] is mag 8, while priority mag[8] is the newfor stream!
-    uint8_t priorityCount[STREAMS];
-    uint8_t nmag=1;
-    vbit::Mag **mag; // Pointer to magazines array
-    vbit::Mag *pMag; // Pointer to the magazine that we are working on
-    uint8_t hold[STREAMS]; /// If hold is set then the magazine can not be sent until the next field
-    std::cerr << "[Service::worker]This is the worker process" << std::endl;
-
-    uint8_t rowCounter=0; // Counts 16 rows to a field
-
-		static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
+  static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
 
 
     // Initialise the priority counts
@@ -227,7 +211,7 @@ void Service::worker()
 			priority[nmag]=1;	// Can't be 0 or that mag will take all the packets
 		priorityCount[nmag]=priority[nmag];	// Reset the priority for the mag that just went out
 	} // while
-
+return 99; // don't really want to return anything
 } // worker
 
 

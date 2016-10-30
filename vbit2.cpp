@@ -7,7 +7,7 @@
  * Example: vbit2 --config teletext/vbit.conf
  * Compiler: c++11
  */
- 
+
 /** ***************************************************************************
  * Description       : Top level teletext stream generator
  * Compiler          : C++
@@ -31,10 +31,11 @@
  * in an action of contract, negligence or other tortious action,
  * arising out of or in connection with the use or performance of
  * this software.
- *************************************************************************** **/ 
+ *************************************************************************** **/
 
 #include "vbit2.h"
 
+using namespace vbit;
 using namespace ttx;
 
 /* Options
@@ -50,11 +51,15 @@ int main(int argc, char** argv)
 	/// @todo option of adding a non standard config path
 	Configure *configure=new Configure(argc, argv);
 	PageList *pageList=new PageList(configure);
-	Service *service=new Service(configure, pageList);
 
-	service->run();
+	std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
+	std::thread serviceThread(&Service::run, Service(configure, pageList));
+
+	monitorThread.join();
+	serviceThread.join();
 
 	std::cout << "VBIT2 ended. Press any key to continue" << std::endl;
     system("pause"); // @todo Only apply this line in debug
+ // return 0;
 }
 

@@ -32,17 +32,10 @@ public:
 	 * Creates a worker thread and does not terminate (at least for now)
 	 * @return Nothing useful yet. Perhaps return an error status if something goes wrong
 	 */
-	bool run();
+	int run();
 private:
 	Configure* _configure; /// Member reference to the configuration settings
 	PageList* _pageList; /// Member reference to the pages list
-
-	/**
-	 * The thread that actually runs the system.
-	 * It generates a packet stream on stdout.
-	 */
-	void worker();
-
 
 };
 
