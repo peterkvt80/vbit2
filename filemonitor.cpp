@@ -78,7 +78,8 @@ void FileMonitor::run()
     while ((dirp = readdir(dp)) != NULL)
     {
       // Select only pages that might be teletext. tti or ttix at the moment.
-      char* p=strstr(dirp->d_name,".tti");
+      char* p=strcasestr(dirp->d_name,".tti");
+			std::cerr << path << "/" << dirp->d_name << std::endl;
       if (p)
       {
         std::string name;
@@ -86,13 +87,10 @@ void FileMonitor::run()
         name+="/";
         name+=dirp->d_name;
         // Find the modification time
-struct tm* clock;               // create a time structure
-
-struct stat attrib;         // create a file attribute structure
-
-stat(name.c_str(), &attrib);     // get the attributes of the file
-
-clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
+				struct tm* clock;               // create a time structure
+				struct stat attrib;         // create a file attribute structure
+				stat(name.c_str(), &attrib);     // get the attributes of the file
+				clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
 
         std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << clock->tm_hour << ":" << clock->tm_min << std::endl;
       }
