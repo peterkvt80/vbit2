@@ -86,15 +86,26 @@ void FileMonitor::run()
         name+="/";
         name+=dirp->d_name;
         // Find the modification time
-struct tm* clock;               // create a time structure
-
-struct stat attrib;         // create a file attribute structure
-
-stat(name.c_str(), &attrib);     // get the attributes of the file
-
-clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
+        struct tm* clock;               // create a time structure
+        struct stat attrib;         // create a file attribute structure
+        stat(name.c_str(), &attrib);     // get the attributes of the file
+        clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
 
         std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << clock->tm_hour << ":" << clock->tm_min << std::endl;
+        // Now we want to process changes
+        // 1) Is it a new page? Then add it.
+        TTXPageStream* p=_pageList->Locate(name);
+        if (p)
+        {
+          std::cerr << dirp->d_name << " was found" << std::endl;
+        }
+        else
+        {
+          std::cerr << dirp->d_name << " not found (is it new?)" << std::endl;
+        }
+
+        // 2) Is it an existing page that has changed?
+        // 3) Are there any pages that no longer exist?
       }
     }
     closedir(dp);
