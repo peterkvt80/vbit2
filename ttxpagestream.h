@@ -1,6 +1,8 @@
 #ifndef _TTXPAGESTREAM_H_
 #define _TTXPAGESTREAM_H_
 
+#include <sys/stat.h>
+
 #include "ttxpage.h"
 #include "packet.h"
 
@@ -76,7 +78,6 @@ class TTXPageStream : public TTXPage
 				*/
 				TTXLine* GetTxRow(uint8_t row);
 
-
     protected:
 
     private:
@@ -86,6 +87,7 @@ class TTXPageStream : public TTXPage
         time_t _transitionTime; // Records when the next carousel transition is due
 
 				TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
+				time_t _modifiedTime;   /// Poll this in case the source file changes
 };
 
 #endif // _TTXPAGESTREAM_H_

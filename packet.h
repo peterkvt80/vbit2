@@ -116,6 +116,12 @@ class Packet
 				 */
 				int GetPage(){return _page;};
 
+				/**
+				 * @brief Same as the row contructor, except it doesn't construct
+				 */
+				void SetRow(int mag, int row, std::string val);
+
+
     protected:
     private:
         char _packet[45]; //!< Member variable "_packet[45]"

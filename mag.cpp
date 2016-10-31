@@ -42,12 +42,11 @@ TTXPageStream* Mag::GetCarouselPage()
     return p; // @todo Look at the carousel list and see if one is ready go
 }
 
-Packet* Mag::GetPacket()
+Packet* Mag::GetPacket(Packet* p)
 {
     int thisPage;
 		int thisSubcode;
 		int thisMag;
-		Packet* p=NULL;
 		int thisStatus;
 		int* links=NULL;
 
@@ -80,7 +79,7 @@ Packet* Mag::GetPacket()
     if (_pageSet->size()<1)
     {
       _outp("V"); // If this goes wrong we are getting _pageSet wrong
-        return filler; // @todo make this a filler (or quiet or NULL)
+        return filler;
     }
 
     //std::cerr << "[GetPacket] DEBUG DUMP 1 " << std::endl;
@@ -155,7 +154,7 @@ Packet* Mag::GetPacket()
 				thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
         thisSubcode=_page->GetSubCode();
         thisStatus=_page->GetPageStatus();
-        p=new Packet();
+        // p=new Packet();
         p->Header(_magNumber,thisPage,thisSubcode,thisStatus);// loads of stuff to do here!
 
       //p->HeaderText("CEEFAX 1 MPP DAY DD MTH 12:34.56"); // Placeholder 32 characters. This gets replaced later
@@ -170,7 +169,7 @@ Packet* Mag::GetPacket()
 
 		case STATE_FASTEXT:
 			links=_page->GetLinkSet();
-			p=new Packet(); // @TODO. Worry about the heap!
+			// p=new Packet(); // @TODO. Worry about the heap!
 			p->SetMRAG(_magNumber,27);
 			p->Fastext(links,_magNumber);
 			_state=STATE_PACKET26;
@@ -213,7 +212,7 @@ Packet* Mag::GetPacket()
 					// Assemble the packet
 					thisMag=_magNumber;
 
-					p=new Packet(thisMag, _thisRow, txt->GetLine());
+					p->SetRow(thisMag, _thisRow, txt->GetLine());
 					p->Parity();
 					assert(p->IsHeader()!=true);
 				}

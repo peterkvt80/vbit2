@@ -30,6 +30,8 @@ int Service::run()
   uint8_t hold[STREAMS]; /// If hold is set then the magazine can not be sent until the next field
   std::cerr << "[Service::worker]This is the worker process" << std::endl;
 
+  vbit::Packet* pkt=new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
+
   uint8_t rowCounter=0; // Counts 16 rows to a field
 
   static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
@@ -111,7 +113,7 @@ int Service::run()
     if (!hold[nmag]) 		// Not in hold
     {
       if (debugMode==4 || debugMode==3) std::cout << " (" << (int)nmag << ") ";
-      vbit::Packet* pkt=pMag->GetPacket();
+      pMag->GetPacket(pkt);
       bool isHeader=false;
       if (pkt!=NULL) // How could this be NULL? After the last packet of a page has been sent.
       {

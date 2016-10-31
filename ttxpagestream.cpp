@@ -13,10 +13,11 @@ TTXPageStream::TTXPageStream(std::string filename) :
      _isCarousel(false),
      _transitionTime(0),
 		 _CarouselPage(this)
- {
-
-
- }
+{
+  struct stat attrib;               // create a file attribute structure
+  stat(filename.c_str(), &attrib);  // get the attributes of the file
+	_modifiedTime=attrib.st_mtime;
+}
 
 TTXPageStream::~TTXPageStream()
 {
@@ -56,6 +57,7 @@ void TTXPageStream::StepNextSubpage()
 
 void TTXPageStream::printList()
 {
-      std::cerr << "DUMP TODO" << std::endl;
+  std::cerr << "DUMP TODO" << std::endl;
 }
+
 

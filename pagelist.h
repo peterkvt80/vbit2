@@ -33,7 +33,12 @@ public:
    */
 	int LoadPageList(std::string filepath);
 
-	inline vbit::Mag **GetMagazines(){vbit::Mag **p=_mag;return p;};
+	vbit::Mag **GetMagazines(){vbit::Mag **p=_mag;return p;};
+
+  /** Return the page object that was loaded from <filename>
+   * @param filename The filename of the page we are looking for.
+   */
+  TTXPageStream* Locate(std::string filename);
 
 private:
 	Configure* _configure; // The configuration object

@@ -4,10 +4,11 @@
 #include <iostream>
 #include <thread>
 #include <list>
+#include <sys/stat.h>
 
 #include "configure.h"
 #include "pagelist.h"
-#include <sys/stat.h>
+
 
 /**
  * @brief Watches for changes to teletext page files and updates the page list as needed

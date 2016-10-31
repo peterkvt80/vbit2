@@ -23,9 +23,15 @@ Packet::Packet(std::string val) : _isHeader(false), _mag(1), _page(999), _row(99
 
 Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag), _page(999), _row(row)
 {
-	SetMRAG(mag, _row);
+	SetMRAG(_mag, _row);
 	SetPacketText(val);
 	assert(_row!=0);
+}
+
+void Packet::SetRow(int mag, int row, std::string val)
+{
+	SetMRAG(mag, row);
+	SetPacketText(val);
 }
 
 Packet::~Packet()
