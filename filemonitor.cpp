@@ -78,8 +78,11 @@ void FileMonitor::run()
     while ((dirp = readdir(dp)) != NULL)
     {
       // Select only pages that might be teletext. tti or ttix at the moment.
+#ifdef _WIN32
+      char* p=strstr(dirp->d_name,".tti");
+#else
       char* p=strcasestr(dirp->d_name,".tti");
-			std::cerr << path << "/" << dirp->d_name << std::endl;
+#endif				std::cerr << path << "/" << dirp->d_name << std::endl;
       if (p)
       {
         std::string name;

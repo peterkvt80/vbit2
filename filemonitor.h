@@ -1,9 +1,12 @@
 #ifndef _FILEMONITOR_H_
 #define _FILEMONITOR_H_
 
+#define _GNU_SOURCE
+
 #include <iostream>
 #include <thread>
 #include <list>
+#include <strings.h>
 #include <sys/stat.h>
 
 #include "configure.h"
