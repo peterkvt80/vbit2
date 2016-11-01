@@ -65,8 +65,6 @@ void FileMonitor::run()
     DIR *dp;
     struct dirent *dirp;
 
-    std::cerr << "tick ";
-
    	// Open the directory
     if ( (dp = opendir(path.c_str())) == NULL)
     {
@@ -79,7 +77,7 @@ void FileMonitor::run()
     {
       // Select only pages that might be teletext. tti or ttix at the moment.
       char* p=strcasestr(dirp->d_name,".tti");
-			std::cerr << path << "/" << dirp->d_name << std::endl;
+//			std::cerr << path << "/" << dirp->d_name << std::endl;
       if (p)
       {
         std::string name;
@@ -92,7 +90,7 @@ void FileMonitor::run()
         stat(name.c_str(), &attrib);     // get the attributes of the file
         clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
 
-        std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << clock->tm_hour << ":" << clock->tm_min << std::endl;
+        std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
         // Now we want to process changes
         // 1) Is it a new page? Then add it.
         TTXPageStream* p=_pageList->Locate(name);
