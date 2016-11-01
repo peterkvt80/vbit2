@@ -60,4 +60,14 @@ void TTXPageStream::printList()
   std::cerr << "DUMP TODO" << std::endl;
 }
 
+bool TTXPageStream::LoadPage(std::string filename)
+{
+  bool Loaded=false;
+    // std::cerr << "[TTXPage] file constructor loading " << filename<< std::endl;
+    //m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
+
+  if (m_LoadTTI(filename))
+      Loaded=true;
+  return Loaded;
+}
 

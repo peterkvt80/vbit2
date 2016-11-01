@@ -78,6 +78,13 @@ class TTXPageStream : public TTXPage
 				*/
 				TTXLine* GetTxRow(uint8_t row);
 
+        // The time that the file was modified.
+				time_t GetModifiedTime(){return _modifiedTime;};
+				void SetModifiedTime(time_t timeVal){_modifiedTime=timeVal;};
+
+				bool LoadPage(std::string filename);
+
+
     protected:
 
     private:

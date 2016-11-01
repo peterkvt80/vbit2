@@ -76,7 +76,11 @@ void FileMonitor::run()
     while ((dirp = readdir(dp)) != NULL)
     {
       // Select only pages that might be teletext. tti or ttix at the moment.
+#ifdef _WIN32
+      char* p=strstr(dirp->d_name,".tti");
+#else
       char* p=strcasestr(dirp->d_name,".tti");
+#endif
 //			std::cerr << path << "/" << dirp->d_name << std::endl;
       if (p)
       {
@@ -90,13 +94,33 @@ void FileMonitor::run()
         stat(name.c_str(), &attrib);     // get the attributes of the file
         clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
 
-        std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
+        // std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
         // Now we want to process changes
         // 1) Is it a new page? Then add it.
         TTXPageStream* p=_pageList->Locate(name);
         if (p)
         {
-          std::cerr << dirp->d_name << " was found" << std::endl;
+          //std::cerr << dirp->d_name << " was found" << std::endl;
+          // Existing page. Has it changed?
+          if (attrib.st_mtime!=p->GetModifiedTime())
+          {
+            std::cerr << "File has been modified" << std::endl;
+            // We just load the new page and update the modified time
+            // This isn't good enough.
+            // We need a mutex or semaphore to lock out this page while we do that
+            // lock
+            p->LoadPage(name); // What if this fails? We can see the bool. What to do ?
+            p->SetModifiedTime(attrib.st_mtime);
+            // unlock
+
+            //Load in the modified file. That should also reset the file time.
+            // 1) Lock the page. We can't transmit it
+            // 2) Remove it from PageList
+            // 3) Delete the page.
+            // 4) Load the updated page
+            // 5) Add it to PageList
+            // 6) Remove the lock
+          }
         }
         else
         {

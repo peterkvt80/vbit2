@@ -121,30 +121,6 @@ class TTXPage
          */
          void SetRow(unsigned int rownumber, std::string line);
 
-        /** Load an EP1 page
-         * \param filename : The source file
-         * \return true if the page was loaded
-         */
-        bool m_LoadEP1(std::string filename);
-
-        /** Load a VTX page
-         * \param filename : The source file
-         * \return true if the page was loaded
-         */
-        bool m_LoadVTX(std::string filename);
-
-        /** Load a TTX page (Cebra)
-         * \param filename : The source file
-         * \return true if the page was loaded
-         */
-        bool m_LoadTTX(std::string filename);
-
-        /** Load a TTI page (MRG Systems)
-         * \param filename : The source file
-         * \return true if the page was loaded
-         */
-        bool m_LoadTTI(std::string filename);
-
         /** Save the whole page set
          * \param filename : The destination file
          * \return false if the save failed
@@ -221,6 +197,12 @@ class TTXPage
         inline bool Loaded() const {return m_Loaded;};
 
     protected:
+        /** Load a TTI page (MRG Systems)
+         * \param filename : The source file
+         * \return true if the page was loaded
+         */
+        bool m_LoadTTI(std::string filename);
+
         int m_cycletimeseconds;     // CT
         int m_fastextlinks[6];      // FL
         int m_PageNumber;  					// PN
@@ -246,6 +228,26 @@ class TTXPage
         std::string m_FormatPageNumber(TTXPage* p); /// \return the page number ready to write to file
         int findPageNumber(char* buf);
         bool m_Loaded;
+        /** Load an EP1 page
+         * \param filename : The source file
+         * \return true if the page was loaded
+         */
+        bool m_LoadEP1(std::string filename);
+
+        /** Load a VTX page
+         * \param filename : The source file
+         * \return true if the page was loaded
+         */
+        bool m_LoadVTX(std::string filename);
+
+        /** Load a TTX page (Cebra)
+         * \param filename : The source file
+         * \return true if the page was loaded
+         */
+        bool m_LoadTTX(std::string filename);
+
+
+
 
 };
 
