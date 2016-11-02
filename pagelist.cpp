@@ -80,6 +80,12 @@ int PageList::LoadPageList(std::string filepath)
 	return 0;
 }
 
+void PageList::AddPage(TTXPageStream* page)
+{
+		int mag=(page->GetPageNumber() >> 16) & 0x7;
+		_pageList[mag].push_back(*page);
+}
+
 TTXPageStream* PageList::Locate(std::string filename)
 {
   // std::cerr << "[PageList::Locate] *** TODO *** " << filename << std::endl;

@@ -1,8 +1,6 @@
 #ifndef _FILEMONITOR_H_
 #define _FILEMONITOR_H_
 
-#define _GNU_SOURCE
-
 #include <iostream>
 #include <thread>
 #include <list>
@@ -11,7 +9,6 @@
 
 #include "configure.h"
 #include "pagelist.h"
-
 
 /**
  * @brief Watches for changes to teletext page files and updates the page list as needed

@@ -55,6 +55,7 @@ std::thread FileMonitor::run()
 
 void FileMonitor::run()
 {
+	// @todo This thread will clash. They need proper protection.
   std::cerr << "[FileMonitor::run] File monitoring started" << std::endl;
 
   std::string path=_configure->GetPageDirectory() ; //
@@ -89,22 +90,21 @@ void FileMonitor::run()
         name+="/";
         name+=dirp->d_name;
         // Find the modification time
-        struct tm* clock;               // create a time structure
         struct stat attrib;         // create a file attribute structure
         stat(name.c_str(), &attrib);     // get the attributes of the file
-        clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
 
+        // struct tm* clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
         // std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
         // Now we want to process changes
         // 1) Is it a new page? Then add it.
         TTXPageStream* p=_pageList->Locate(name);
-        if (p)
+        if (p) // File was found
         {
           //std::cerr << dirp->d_name << " was found" << std::endl;
-          // Existing page. Has it changed?
-          if (attrib.st_mtime!=p->GetModifiedTime())
+          
+          if (attrib.st_mtime!=p->GetModifiedTime()) // File exists. Has it changed?
           {
-            std::cerr << "File has been modified" << std::endl;
+            std::cerr << "File has been modified" << dirp->d_name << std::endl;
             // We just load the new page and update the modified time
             // This isn't good enough.
             // We need a mutex or semaphore to lock out this page while we do that
@@ -124,7 +124,15 @@ void FileMonitor::run()
         }
         else
         {
-          std::cerr << dirp->d_name << " not found (is it new?)" << std::endl;
+          std::cerr << "[FileMonitor::run] " << " Adding a new page" << dirp->d_name << std::endl;
+					// A new file. Create the page object and add it to the page list.
+					if ((p=new TTXPageStream(name)))
+					{
+						//p->SetModifiedTime(attrib.st_mtime); // This line is redundant
+						_pageList->AddPage(p);
+					}
+					else
+						std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;
         }
 
         // 2) Is it an existing page that has changed?

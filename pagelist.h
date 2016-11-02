@@ -40,6 +40,11 @@ public:
    */
   TTXPageStream* Locate(std::string filename);
 
+  /** Add a teletext page to the proper magazine
+   * @param page TTXPageStream object that has already been loaded
+   */
+	void AddPage(TTXPageStream* page);	
+
 private:
 	Configure* _configure; // The configuration object
 	std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
