@@ -8,6 +8,7 @@
 
 /** @brief Extends TTXPage to allow Service to iterate through this page.
  *  It adds iterators to the page and also timing control if it is a carousel.
+ *  It also has features to help add, remove and update pages in a service.
  */
 class TTXPageStream : public TTXPage
 {
@@ -84,17 +85,24 @@ class TTXPageStream : public TTXPage
 
 				bool LoadPage(std::string filename);
 
+				void ClearExistsFlag(){_existsOnDrive=false;};
+				void SetExistsFlag(){_existsOnDrive=true;};
+				bool GetExistsFlag(){return _existsOnDrive;};
 
     protected:
 
     private:
-        bool _isCarousel; //!< Member variable "_isCarousel" If
-        // TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
+			// Carousel control
+			bool _isCarousel; //!< Member variable "_isCarousel" If
+			// TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
 
-        time_t _transitionTime; // Records when the next carousel transition is due
+			time_t _transitionTime; // Records when the next carousel transition is due
 
-				TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
-				time_t _modifiedTime;   /// Poll this in case the source file changes
+			TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
+			
+			// Things that affect the display list
+			time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
+			bool _existsOnDrive;	/// Used to mark if we found the file. (Used to detect deletions)
 };
 
 #endif // _TTXPAGESTREAM_H_

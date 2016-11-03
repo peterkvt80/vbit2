@@ -44,6 +44,13 @@ public:
    * @param page TTXPageStream object that has already been loaded
    */
 	void AddPage(TTXPageStream* page);	
+	
+  /** Clear all the exists flags 
+   */
+	void ClearFlags();
+  /** Delete all pages that no longer exist
+   */
+	void DeleteOldPages();	
 
 private:
 	Configure* _configure; // The configuration object

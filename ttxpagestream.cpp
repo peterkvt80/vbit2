@@ -3,7 +3,8 @@
 TTXPageStream::TTXPageStream() :
      _isCarousel(false),
      _transitionTime(0),
-		 _CarouselPage(this)
+		 _CarouselPage(this),
+		 _existsOnDrive(false)
 {
     //ctor
 }
@@ -12,7 +13,8 @@ TTXPageStream::TTXPageStream(std::string filename) :
      TTXPage(filename),
      _isCarousel(false),
      _transitionTime(0),
-		 _CarouselPage(this)
+		 _CarouselPage(this),
+		 _existsOnDrive(false)
 {
   struct stat attrib;               // create a file attribute structure
   stat(filename.c_str(), &attrib);  // get the attributes of the file

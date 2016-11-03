@@ -72,11 +72,14 @@ void FileMonitor::run()
       std::cerr << "Error(" << errno << ") opening " << path << std::endl;
       return;
     }
+		
+		_pageList->ClearFlags(); // Assume that no files exist
 
     // Load the filenames into a list
     while ((dirp = readdir(dp)) != NULL)
-    {
+    {			
       // Select only pages that might be teletext. tti or ttix at the moment.
+			// strcasestr doesn't seem to be in my Windows compiler.
 #ifdef _WIN32
       char* p=strstr(dirp->d_name,".tti");
 #else
@@ -121,6 +124,7 @@ void FileMonitor::run()
             // 5) Add it to PageList
             // 6) Remove the lock
           }
+					p->SetExistsFlag(); // Mark this page as existing on the drive
         }
         else
         {
@@ -141,6 +145,9 @@ void FileMonitor::run()
     }
     closedir(dp);
     std::cerr << "FINISHED LOADING PAGES" << std::endl;
+		
+		// Delete pages that no longer exist
+		_pageList->DeleteOldPages();
 
     // Wait for ms/1000 seconds
     struct timespec rec;

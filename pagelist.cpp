@@ -104,3 +104,36 @@ TTXPageStream* PageList::Locate(std::string filename)
   }
   return NULL; // @todo placeholder
 }
+
+// Detect pages that have been deleted from the drive
+// Do this by first clearing all the "exists" flags
+// As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
+
+void PageList::ClearFlags()
+{
+  for (int mag=0;mag<8;mag++)
+  {
+    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    {
+      TTXPageStream* ptr;
+      ptr=&(*p);
+			ptr->ClearExistsFlag();
+    }
+  }
+}
+
+void PageList::DeleteOldPages()
+{
+  for (int mag=0;mag<8;mag++)
+  {
+    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    {
+      TTXPageStream* ptr;
+      ptr=&(*p);
+			if (!ptr->GetExistsFlag())
+			{
+				std::cerr << "[PageList::DeleteOldPages] deleting " << ptr->GetSourcePage() << std::endl;
+			}
+    }
+  }
+}
