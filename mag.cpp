@@ -78,7 +78,7 @@ Packet* Mag::GetPacket(Packet* p)
     // If there is no page, we should send a filler
     if (_pageSet->size()<1)
     {
-      _outp("V"); // If this goes wrong we are getting _pageSet wrong
+      //_outp("V"); // If this goes wrong we are getting _pageSet wrong
         return filler;
     }
 
@@ -107,19 +107,28 @@ Packet* Mag::GetPacket(Packet* p)
 		switch (_state)
 		{
 		case STATE_HEADER: // Decide which page goes next
-          _outp("h");
+          //_outp("h");
 				_headerFlag=true;
         _page=GetCarouselPage(); // Is there a carousel page due?
+
+        // Is this page deleted?
+        if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
+        {
+          std::cerr << "[Mag::GetPacket] Delete this carousel" << std::endl;
+          _carousel->deletePage(_page);
+          _page=NULL;
+          // @todo We are not done. This just deletes a pointer to the page. It is still in _pageList
+        }
 
 
         if (_page) // Carousel? Step to the next subpage
 				{
-          _outp("c");
+          //_outp("c");
 					_page->StepNextSubpage();
 				}
 				else  // No carousel? Take the next page in the main sequence
         {
-          _outp("n");
+          //_outp("n");
             ++_it;
             if (_it==_pageSet->end())
             {
@@ -127,6 +136,13 @@ Packet* Mag::GetPacket(Packet* p)
             }
             // Get pointer to the page we are sending
             _page=&*_it;
+            if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+            {
+              _pageSet->remove(*(_it++));
+              _page=NULL;
+              return filler;
+              // Stays in HEADER mode so that we run this again
+            }
         }
 				// @todo: This assert fails!
         // assert(_page->GetPageNumber()>>16 == _magNumber); // Make sure that we always point to the correct magazine
@@ -197,11 +213,11 @@ Packet* Mag::GetPacket(Packet* p)
 				p=NULL;
 				_state=STATE_HEADER;
 				_thisRow=0;
-				_outp("H");
+				//_outp("H");
 			}
 			else
 			{
-        _outp("J");
+        //_outp("J");
 				if (txt->GetLine().empty() && false) // If the row is empty then skip it (Kill this for now)
 				{
 					// std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
@@ -220,7 +236,7 @@ Packet* Mag::GetPacket(Packet* p)
 
 			break;
 		} // switch
-    if (p==NULL) _outp("q");
+    //if (p==NULL) _outp("q");
     return p;
 }
 
@@ -229,6 +245,6 @@ void Mag::_outp(std::string s)
 {
   return;
   if (_magNumber==5)
-    std::cout << s;
+    std::cerr << s;
 }
 

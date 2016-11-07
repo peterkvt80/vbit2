@@ -4,6 +4,8 @@
 #include <iostream>
 #include <iomanip>
 #include <thread>
+#include <ctime>
+
 #include "configure.h"
 #include "pagelist.h"
 #include "packet.h"

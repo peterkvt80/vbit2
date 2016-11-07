@@ -72,12 +72,12 @@ void FileMonitor::run()
       std::cerr << "Error(" << errno << ") opening " << path << std::endl;
       return;
     }
-		
+
 		_pageList->ClearFlags(); // Assume that no files exist
 
     // Load the filenames into a list
     while ((dirp = readdir(dp)) != NULL)
-    {			
+    {
       // Select only pages that might be teletext. tti or ttix at the moment.
 			// strcasestr doesn't seem to be in my Windows compiler.
 #ifdef _WIN32
@@ -104,7 +104,7 @@ void FileMonitor::run()
         if (p) // File was found
         {
           //std::cerr << dirp->d_name << " was found" << std::endl;
-          
+
           if (attrib.st_mtime!=p->GetModifiedTime()) // File exists. Has it changed?
           {
             std::cerr << "File has been modified" << dirp->d_name << std::endl;
@@ -116,15 +116,8 @@ void FileMonitor::run()
             p->SetModifiedTime(attrib.st_mtime);
             // unlock
 
-            //Load in the modified file. That should also reset the file time.
-            // 1) Lock the page. We can't transmit it
-            // 2) Remove it from PageList
-            // 3) Delete the page.
-            // 4) Load the updated page
-            // 5) Add it to PageList
-            // 6) Remove the lock
           }
-					p->SetExistsFlag(); // Mark this page as existing on the drive
+					p->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
         }
         else
         {
@@ -132,26 +125,26 @@ void FileMonitor::run()
 					// A new file. Create the page object and add it to the page list.
 					if ((p=new TTXPageStream(name)))
 					{
-						//p->SetModifiedTime(attrib.st_mtime); // This line is redundant
 						_pageList->AddPage(p);
 					}
 					else
 						std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;
         }
-
-        // 2) Is it an existing page that has changed?
-        // 3) Are there any pages that no longer exist?
       }
     }
     closedir(dp);
-    std::cerr << "FINISHED LOADING PAGES" << std::endl;
-		
-		// Delete pages that no longer exist
+    std::cerr << "[FileMonitor::run] Finished scan" << std::endl;
+
+		// Delete pages that no longer exist (this blocks the thread until the pages are removed)
 		_pageList->DeleteOldPages();
 
-    // Wait for ms/1000 seconds
+    // Wait 5 seconds.
+    // WARNING. We must allow enough time for Service to complete the delete or this process might crash
+    // Sounds like a job for a mutex.
     struct timespec rec;
-    int ms=5000;
+    int ms;
+
+    ms=5000;
     rec.tv_sec = ms / 1000;
     rec.tv_nsec=(ms % 1000) *1000000;
     nanosleep(&rec,NULL);

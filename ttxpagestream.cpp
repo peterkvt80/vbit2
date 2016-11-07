@@ -4,7 +4,7 @@ TTXPageStream::TTXPageStream() :
      _isCarousel(false),
      _transitionTime(0),
 		 _CarouselPage(this),
-		 _existsOnDrive(false)
+		 _fileStatus(NEW)
 {
     //ctor
 }
@@ -14,7 +14,7 @@ TTXPageStream::TTXPageStream(std::string filename) :
      _isCarousel(false),
      _transitionTime(0),
 		 _CarouselPage(this),
-		 _existsOnDrive(false)
+		 _fileStatus(NEW)
 {
   struct stat attrib;               // create a file attribute structure
   stat(filename.c_str(), &attrib);  // get the attributes of the file
@@ -73,3 +73,10 @@ bool TTXPageStream::LoadPage(std::string filename)
   return Loaded;
 }
 
+bool TTXPageStream::operator==(const TTXPageStream& rhs) const
+{
+  // std::cerr << "operator overloaded == " << rhs.GetSourcePage();
+  if (this->GetSourcePage()==rhs.GetSourcePage())
+    return true;
+  return false;
+}

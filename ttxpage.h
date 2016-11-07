@@ -246,9 +246,6 @@ class TTXPage
          */
         bool m_LoadTTX(std::string filename);
 
-
-
-
 };
 
 #endif // TTXPAGE_H

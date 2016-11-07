@@ -14,7 +14,7 @@
 
 namespace ttx
 {
-/** A PageList maintains the set of all teletext pages in a teletext service
+/** @brief A PageList maintains the set of all teletext pages in a teletext service
  *  It can load, save, add, delete, edit pages.
  *  Internally each magazine has its own list of pages.
  *
@@ -43,14 +43,14 @@ public:
   /** Add a teletext page to the proper magazine
    * @param page TTXPageStream object that has already been loaded
    */
-	void AddPage(TTXPageStream* page);	
-	
-  /** Clear all the exists flags 
+	void AddPage(TTXPageStream* page);
+
+  /** Clear all the exists flags
    */
 	void ClearFlags();
   /** Delete all pages that no longer exist
    */
-	void DeleteOldPages();	
+	void DeleteOldPages();
 
 private:
 	Configure* _configure; // The configuration object

@@ -2,8 +2,6 @@
  */
 #include "service.h"
 
-#include <ctime>
-
 using namespace ttx;
 
 Service::Service()
@@ -117,7 +115,7 @@ int Service::run()
       bool isHeader=false;
       if (pkt!=NULL) // How could this be NULL? After the last packet of a page has been sent.
       {
-        isHeader=mag[nmag]->GetHeaderFlag(); // pkt->IsHeader();
+        isHeader=pMag->GetHeaderFlag(); // pkt->IsHeader();
         std::string s=pkt->tx();
         if (s.length()<42)
         {

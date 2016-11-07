@@ -12,97 +12,124 @@
  */
 class TTXPageStream : public TTXPage
 {
-    public:
-        /** Default constructor. Don't call this */
-        TTXPageStream();
-        /** Default destructor */
-        virtual ~TTXPageStream();
+  public:
+    /** Used to mark pages for deleting
+     *  Pages are set to NOTFOUND at the start of each pass
+     *  As pages are matched with files on drive they are set to FOUND
+     *  At the end of a pass the file status is set to MARKED. The Service thread can now delete the page object.
+     */
+    enum Status
+    {
+      NEW,      // Just created
+      NOTFOUND, // Not found yet
+      FOUND,    // Matched on drive
+      MARKED
+    };
 
-        /** The normal constructor
-         */
-        TTXPageStream(std::string filename);
+    /** Default constructor. Don't call this */
+    TTXPageStream();
+    /** Default destructor */
+    virtual ~TTXPageStream();
 
-        /** Access _isCarousel
-         * \return The current value of _isCarousel
-         */
-        bool GetCarouselFlag() { return _isCarousel; }
+    /** The normal constructor
+     */
+    TTXPageStream(std::string filename);
 
-        /** Set _isCarousel
-         * \param val New value to set
-         */
-        void SetCarouselFlag(bool val) { _isCarousel = val; }
+    /** Access _isCarousel
+     * \return The current value of _isCarousel
+     */
+    bool GetCarouselFlag() { return _isCarousel; }
 
-        ///** Access _CurrentPage
-         //* \return The current value of _CurrentPage
-         //*/
-        //TTXPageStream* GetCurrentPage(unsigned int line) { _CurrentPage->SetLineCounter(line);return _CurrentPage; }
+    /** Set _isCarousel
+     * \param val New value to set
+     */
+    void SetCarouselFlag(bool val) { _isCarousel = val; }
 
-        ///** Set _CurrentPage
-         //* \param val New value to set
-         //*/
-        //void SetCurrentPage(TTXPageStream* val) { _CurrentPage = val; }
+    ///** Access _CurrentPage
+     //* \return The current value of _CurrentPage
+     //*/
+    //TTXPageStream* GetCurrentPage(unsigned int line) { _CurrentPage->SetLineCounter(line);return _CurrentPage; }
+
+    ///** Set _CurrentPage
+     //* \param val New value to set
+     //*/
+    //void SetCurrentPage(TTXPageStream* val) { _CurrentPage = val; }
 
 
-        /** Is the page a carousel?
-         *  Don't confuse this with the _isCarousel flag which is used to mark when a page changes between single/carousel
-         * \return True if there are subpages
-         */
-        inline bool IsCarousel(){return Getm_SubPage()!=NULL;};
+    /** Is the page a carousel?
+     *  Don't confuse this with the _isCarousel flag which is used to mark when a page changes between single/carousel
+     * \return True if there are subpages
+     */
+    inline bool IsCarousel(){return Getm_SubPage()!=NULL;};
 
-        /** Set the time when this carousel expires
-         *  ...which is the current time plus the cycle time
-         */
-        inline void SetTransitionTime(){_transitionTime=time(0)+m_cycletimeseconds;};
+    /** Set the time when this carousel expires
+     *  ...which is the current time plus the cycle time
+     */
+    inline void SetTransitionTime(){_transitionTime=time(0)+m_cycletimeseconds;};
 
-        /** Used to time carousels
-         *  @return true if it is time to change carousel page
-         */
-        inline bool Expired(){return _transitionTime<=time(0);};
+    /** Used to time carousels
+     *  @return true if it is time to change carousel page
+     */
+    inline bool Expired(){return _transitionTime<=time(0);};
 
-        /** Step to the next page in a carousel
-				 *  Updates _CarouselPage;
-         */
-				void StepNextSubpage();
+    /** Step to the next page in a carousel
+     *  Updates _CarouselPage;
+     */
+    void StepNextSubpage();
 
-				/** This is used by mag */
-				TTXPage* GetCarouselPage(){return _CarouselPage;};
+    /** This is used by mag */
+    TTXPage* GetCarouselPage(){return _CarouselPage;};
 
-				/** Get the array of 6 fastext links */
-				int* GetLinkSet(){return m_fastextlinks;};
+    /** Get the array of 6 fastext links */
+    int* GetLinkSet(){return m_fastextlinks;};
 
-				/** Output a list of pages in this magazine
-				*/
-				void printList();
+    /** Output a list of pages in this magazine
+    */
+    void printList();
 
-				/** Get the row from the page.
-        * Carousels and main sequence pages are managed differently
-				*/
-				TTXLine* GetTxRow(uint8_t row);
+    /** Get the row from the page.
+    * Carousels and main sequence pages are managed differently
+    */
+    TTXLine* GetTxRow(uint8_t row);
 
-        // The time that the file was modified.
-				time_t GetModifiedTime(){return _modifiedTime;};
-				void SetModifiedTime(time_t timeVal){_modifiedTime=timeVal;};
+    // The time that the file was modified.
+    time_t GetModifiedTime(){return _modifiedTime;};
+    void SetModifiedTime(time_t timeVal){_modifiedTime=timeVal;};
 
-				bool LoadPage(std::string filename);
+    bool LoadPage(std::string filename);
 
-				void ClearExistsFlag(){_existsOnDrive=false;};
-				void SetExistsFlag(){_existsOnDrive=true;};
-				bool GetExistsFlag(){return _existsOnDrive;};
+    /**
+     * @brief Set the flag used to detect file updates
+     * All files that are not MARKED are set NOT FOUND the start of a pass
+     * As files are matched with those on the drive are marked as FOUND
+     * At the end of the pass, any pages that are NOT FOUND are MARKED for delete
+     */
+    void SetState(Status state){_fileStatus=state;};
+    /**
+     * @return Flag used to monitor file status
+     */
+    Status GetStatusFlag(){return _fileStatus;};
 
-    protected:
+    /** Used to enable list->remove
+     */
+    bool operator==(const TTXPageStream& rhs) const;
 
-    private:
-			// Carousel control
-			bool _isCarousel; //!< Member variable "_isCarousel" If
-			// TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
+  protected:
 
-			time_t _transitionTime; // Records when the next carousel transition is due
+  private:
+    // Carousel control
+    bool _isCarousel; //!< Member variable "_isCarousel" If
+    // TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
 
-			TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
-			
-			// Things that affect the display list
-			time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
-			bool _existsOnDrive;	/// Used to mark if we found the file. (Used to detect deletions)
+    time_t _transitionTime; // Records when the next carousel transition is due
+
+    TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
+
+    // Things that affect the display list
+    time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
+    Status _fileStatus;	/// Used to mark if we found the file. (Used to detect deletions)
+
+
 };
 
 #endif // _TTXPAGESTREAM_H_

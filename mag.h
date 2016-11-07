@@ -44,6 +44,7 @@ class Mag
         std::list<TTXPageStream>*  Get_pageSet() { return _pageSet; }
         /** GetPacket
          * \return the next packet in the magazine stream or NULL if this was the last packet
+         * @param p is a packet instance that will be updated
          */
         Packet* GetPacket(Packet* p);
 
