@@ -71,7 +71,7 @@ function exitgo {
 # create a pid file
 if [ -f /var/tmp/vbit2-go.pid ]; then
   OLDPID=\`cat /var/tmp/vbit2-go.pid\`
-  RESULT=\`ps -ef | grep \$OLDPID | grep "go"\`
+  RESULT=\`ps -ef | grep \$OLDPID | grep "vb2"\`
 
   if [ -n "\${RESULT}" ]; then
     echo "Script already running"
@@ -87,13 +87,13 @@ sudo ~/raspi-teletext-master/tvctl on
 
 # This loop restarts the teletext server if it stops.
 # To stop teletext you should kill this process and not vbit2 or raspi.
-until \$HOME/vbit2/vbit2 --dir \$PAGESDIRECTORY | \$HOME/raspi-teletext-master/teletext -; do
+until \$HOME/vbit2/vbit2 2> /dev/null --dir \$PAGESDIRECTORY | \$HOME/raspi-teletext-master/teletext -; do
     trap 'exit' INT HUP TERM
     echo "VBIT2 Server crashed with exit code 0.  Respawning.." >&2
     sleep 1
 done
 EOF
-chmod +x go
+chmod +x vb2
 
 cat > ~/vbit2.sh << EOF
 #!/bin/sh
@@ -116,7 +116,7 @@ case "\$1" in
   stop)
     if [ -f /var/tmp/vbit2-go.pid ]; then
       PID=\`cat /var/tmp/vbit2-go.pid\`
-      RESULT=\`ps -ef | grep \$PID | grep "go"\`
+      RESULT=\`ps -ef | grep \$PID | grep "vb2"\`
 
       if [ "\${RESULT}" ]; then
         kill \$PID
