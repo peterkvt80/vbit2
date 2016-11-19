@@ -236,7 +236,6 @@ std::string Packet::tx(bool debugMode)
 			// %%%V version number eg. 2.00
 			tmpptr=strstr((char*) _packet,"%%%V");
 			if (tmpptr) {
-				get_time(strtemp);
 				strncpy(tmpptr,"2.00",4); // @todo: Move this value to somewhere more obvious
 			}
 			Parity(5); // redo the parity because substitutions will need processing

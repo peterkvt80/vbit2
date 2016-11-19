@@ -43,7 +43,7 @@ class TTXPage
         TTXPage(std::string filename);
 
         /** Default destructor */
-        ~TTXPage();
+        virtual ~TTXPage();
 
 
         /** Copy constructor
