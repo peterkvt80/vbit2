@@ -20,7 +20,7 @@ Service::~Service()
 int Service::run()
 {
   // @todo Put priority into config and add commands to allow updates.
-  uint8_t priority[STREAMS]={5,3,3,3,3,4,5,9,1};	// 1=High priority,9=low. Note: priority[0] is mag 8, while priority mag[8] is the newfor stream!
+  uint8_t priority[STREAMS]={5,3,3,6,3,3,5,9,1};	// 1=High priority,9=low. Note: priority[0] is mag 8, while priority mag[8] is the newfor stream!
   uint8_t priorityCount[STREAMS];
   uint8_t nmag=1;
   vbit::Mag **mag; // Pointer to magazines array

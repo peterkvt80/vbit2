@@ -83,7 +83,7 @@ Packet* Mag::GetPacket(Packet* p)
   //std::cerr << "[GetPacket] DEBUG DUMP 1 " << std::endl;
   //_page->DebugDump();
 
-  TTXLine* txt;
+  TTXLine* txt=NULL;
 
   _headerFlag=false;
 
@@ -186,17 +186,30 @@ Packet* Mag::GetPacket(Packet* p)
     // p=new Packet(); // @TODO. Worry about the heap!
     p->SetMRAG(_magNumber,27);
     p->Fastext(links,_magNumber);
+		txt=_page->GetTxRow(26); // Get txt ready for packet 26 processing
+		//if (txt)
+//			std::cerr << "[A] " << txt->GetLine() << std::endl;
     _state=STATE_PACKET26;
     break;
   case STATE_PACKET26:
-    _state=STATE_PACKET27;
-    if (false) break; // Put the real code in here
+		if (txt)
+		{
+			p->SetRow(_magNumber, 26, txt->GetLine());
+			std::cerr << "[B] " << txt->GetLine() << std::endl;
+			p->Parity();	
+			// Do we have another line?
+			txt=txt->GetNextLine();
+			std::cerr << "*";
+			break;
+		}
+		_state=STATE_PACKET27;
+		break;
   case STATE_PACKET27:
     _state=STATE_PACKET28;
-    if (false) break; // Put the real code in here
+		//	break; // Put the real code in here
   case STATE_PACKET28:
     _state=STATE_TEXTROW;
-    if (false) break; // Fall through until we put the real code in here
+		//	break; // Fall through until we put the real code in here
   case STATE_TEXTROW:
     // Find the next row that isn't NULL
     for (_thisRow++;_thisRow<=24;_thisRow++)

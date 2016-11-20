@@ -525,7 +525,8 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     std::getline(filein, line);
                     if (lineNumber>MAXROW) break;
                     // std::cerr << "reading " << lineNumber << " line=" << line << std::endl;
-                    p->m_pLine[lineNumber]=new TTXLine(line);
+                    // p->m_pLine[lineNumber]=new TTXLine(line);
+										p->SetRow(lineNumber,line);
                     // TODO: Change this implementation to use SetRow
                     // std::cerr << lineNumber << ": OL partly implemented. " << line << std::endl;
                     lines++;
@@ -629,19 +630,32 @@ TTXLine* TTXPage::GetRow(unsigned int row)
         return NULL;
     }
     TTXLine* line=m_pLine[row];
-    // Don't create row 0, as that is special.
-    if (line==NULL && row>0)
+    // Don't create row 0, or enhancement rows as they are special.
+    if (line==NULL && row>0 && row<25)
         line=m_pLine[row]=new TTXLine("                                        ");
     return line;
 }
 
 void TTXPage::SetRow(unsigned int rownumber, std::string line)
 {
-    if (rownumber>MAXROW) return;
-    if (m_pLine[rownumber]==NULL)
-        m_pLine[rownumber]=new TTXLine(line); // Didn't exist before
-    else
-        m_pLine[rownumber]->Setm_textline(line);
+	// assert(rownumber<=MAXROW);
+	if (rownumber>MAXROW) return;
+	if (m_pLine[rownumber]==NULL)
+			m_pLine[rownumber]=new TTXLine(line); // Didn't exist before
+	else
+	{
+		//std::cerr << "[TTXPage::SetRow] row=" << rownumber << std::endl;
+		if (rownumber<25) // Ordinary line
+		{
+			m_pLine[rownumber]->Setm_textline(line);
+		}
+		else // Enhanced packet
+		{
+			std::cerr << "[TTXPage::SetRow] APPEND row=" << rownumber << std::endl;
+			// If the line already exists we want to add the packet rather than overwrite what is already there
+			m_pLine[rownumber]->AppendLine(line);
+		}
+	}
 }
 
 void TTXPage::m_OutputLines(std::ofstream& ttxfile, TTXPage* p)

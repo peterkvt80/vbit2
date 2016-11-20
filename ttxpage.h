@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <iomanip>
 
+#include <assert.h>
+
 #include "ttxcodes.h"
 #include "ttxline.h"
 #include "hamm-tables.h"

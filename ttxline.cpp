@@ -26,19 +26,22 @@
 #include "ttxline.h"
 
 
-TTXLine::TTXLine(std::string const& line):m_textline(line)
+TTXLine::TTXLine(std::string const& line):
+	m_textline(validate(line)),
+	_nextLine(NULL)
+
 {
-    // Also check that it is 40 characters, correctly de-escaped and processed for
-    m_textline=validate(line);
 }
 
-TTXLine::TTXLine():m_textline("                                        ")
+TTXLine::TTXLine():m_textline("                                        "),
+	_nextLine(NULL)
 {
 }
 
 TTXLine::~TTXLine()
 {
-    //dtor
+	if (_nextLine)
+		delete _nextLine;
 }
 
 /** Set m_textline
@@ -229,3 +232,11 @@ std::string TTXLine::GetLine()
 
 
 
+void TTXLine::AppendLine(std::string  const& line)
+{
+	// Seek the end of the list
+	std::cerr << "[TTXLine::AppendLine] called" << std::endl;
+	TTXLine* p;
+	for (p=this;p->_nextLine;p=p->_nextLine);
+	p->_nextLine=new TTXLine(line);
+}

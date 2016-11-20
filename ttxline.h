@@ -68,12 +68,20 @@ class TTXLine
          * \return true if the character position at loc is in an alpha context
          */
         bool IsAlphaMode(int loc);
+				
+				/** Adds line to a linked list
+				 *  This is used for enhanced packets which might require multiples of the same row
+				 */
+				void AppendLine(std::string  const& line);
+				
+				TTXLine* GetNextLine(){return _nextLine;}
 
     protected:
     private:
-        unsigned int m_Counter; //!< Member variable "m_Counter"
-        std::string m_textline;
         std::string validate(std::string const& test);
+
+        std::string m_textline;
+				TTXLine* _nextLine;
 
 };
 
