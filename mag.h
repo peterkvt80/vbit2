@@ -91,6 +91,8 @@ class Mag
         uint8_t _thisRow; // The current line that we are outputting
         State _state;
 
+        TTXLine* _lastTxt; // The text of the last row that we fetched. Used for enhanced packets
+
 
 };
 

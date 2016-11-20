@@ -581,8 +581,11 @@ TTXPage::TTXPage(const TTXPage& other)
         if (m_pLine[i]!=NULL)
             std::cerr << "[copy] Line=" << m_pLine[i]->GetLine() << std::endl;
         */
+
+        /* Don't cover up for missing data. We need to know if a line is left empty
         if (m_pLine[i]==NULL)
             m_pLine[i]=new TTXLine("This is a blank filler line in TTXPage copy constructor");
+        */
     }
     for (int i=0;i<6;i++)
         m_fastextlinks[i]=other.m_fastextlinks[i];      // FL

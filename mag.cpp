@@ -3,7 +3,13 @@
 using namespace vbit;
 
 Mag::Mag(int mag, std::list<TTXPageStream>* pageSet) :
-    _pageSet(pageSet), _page(NULL), _magNumber(mag), _headerFlag(false), _thisRow(0), _state(STATE_HEADER)
+    _pageSet(pageSet),
+    _page(NULL),
+    _magNumber(mag),
+    _headerFlag(false),
+    _thisRow(0),
+    _state(STATE_HEADER),
+    _lastTxt(NULL)
 {
     //ctor
     if (_pageSet->size()>0)
@@ -82,8 +88,6 @@ Packet* Mag::GetPacket(Packet* p)
 
   //std::cerr << "[GetPacket] DEBUG DUMP 1 " << std::endl;
   //_page->DebugDump();
-
-  TTXLine* txt=NULL;
 
   _headerFlag=false;
 
@@ -186,19 +190,19 @@ Packet* Mag::GetPacket(Packet* p)
     // p=new Packet(); // @TODO. Worry about the heap!
     p->SetMRAG(_magNumber,27);
     p->Fastext(links,_magNumber);
-		txt=_page->GetTxRow(26); // Get txt ready for packet 26 processing
-		//if (txt)
-//			std::cerr << "[A] " << txt->GetLine() << std::endl;
+		_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
+		if (_lastTxt)
+			std::cerr << "[A] " << _lastTxt->GetLine() << std::endl;
     _state=STATE_PACKET26;
     break;
   case STATE_PACKET26:
-		if (txt)
+		if (_lastTxt)
 		{
-			p->SetRow(_magNumber, 26, txt->GetLine());
-			std::cerr << "[B] " << txt->GetLine() << std::endl;
-			p->Parity();	
+			p->SetRow(_magNumber, 26, _lastTxt->GetLine());
+			std::cerr << "[B] " << _lastTxt->GetLine() << std::endl;
+			p->Parity();
 			// Do we have another line?
-			txt=txt->GetNextLine();
+			_lastTxt=_lastTxt->GetNextLine();
 			std::cerr << "*";
 			break;
 		}
@@ -214,12 +218,12 @@ Packet* Mag::GetPacket(Packet* p)
     // Find the next row that isn't NULL
     for (_thisRow++;_thisRow<=24;_thisRow++)
     {
-      txt=_page->GetTxRow(_thisRow);
-      if (txt!=NULL)
+      _lastTxt=_page->GetTxRow(_thisRow);
+      if (_lastTxt!=NULL)
                 break;
     }
     // Didn't find? End of this page.
-    if (_thisRow>24 || txt==NULL)
+    if (_thisRow>24 || _lastTxt==NULL)
     {
       p=NULL;
       _state=STATE_HEADER;
@@ -229,7 +233,7 @@ Packet* Mag::GetPacket(Packet* p)
     else
     {
       //_outp("J");
-      if (txt->GetLine().empty() && false) // If the row is empty then skip it (Kill this for now)
+      if (_lastTxt->GetLine().empty() && false) // If the row is empty then skip it (Kill this for now)
       {
         // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
         p=NULL;
@@ -239,7 +243,7 @@ Packet* Mag::GetPacket(Packet* p)
         // Assemble the packet
         thisMag=_magNumber;
 
-        p->SetRow(thisMag, _thisRow, txt->GetLine());
+        p->SetRow(thisMag, _thisRow, _lastTxt->GetLine());
         p->Parity();
         assert(p->IsHeader()!=true);
       }
