@@ -131,6 +131,11 @@ Packet* Mag::GetPacket(Packet* p)
     else  // No carousel? Take the next page in the main sequence
     {
       //_outp("n");
+        if (_it==_pageSet->end())
+        {
+					std::cerr << "This can not happen" << std::endl;
+					exit(0);
+				}
         ++_it;
         if (_it==_pageSet->end())
         {
@@ -187,33 +192,40 @@ Packet* Mag::GetPacket(Packet* p)
 
   case STATE_FASTEXT:
     links=_page->GetLinkSet();
-    // p=new Packet(); // @TODO. Worry about the heap!
     p->SetMRAG(_magNumber,27);
     p->Fastext(links,_magNumber);
 		_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
-		if (_lastTxt)
-			std::cerr << "[A] " << _lastTxt->GetLine() << std::endl;
-    _state=STATE_PACKET26;
+    _state=STATE_PACKET26; 
     break;
   case STATE_PACKET26:
 		if (_lastTxt)
 		{
+			std::cerr << "Packet 26 length=" << _lastTxt->GetLine().length() << std::endl;
 			p->SetRow(_magNumber, 26, _lastTxt->GetLine());
-			std::cerr << "[B] " << _lastTxt->GetLine() << std::endl;
-			p->Parity();
 			// Do we have another line?
 			_lastTxt=_lastTxt->GetNextLine();
 			std::cerr << "*";
 			break;
 		}
-		_state=STATE_PACKET27;
-		break;
+		_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
+		_state=STATE_PACKET27; // Fall through
   case STATE_PACKET27:
-    _state=STATE_PACKET28;
-		//	break; // Put the real code in here
+		if (_lastTxt)
+		{
+			p->SetRow(_magNumber, 27, _lastTxt->GetLine());
+			_lastTxt=_lastTxt->GetNextLine();
+			break;
+		}
+		_lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
+    _state=STATE_PACKET28; // Fall through
   case STATE_PACKET28:
-    _state=STATE_TEXTROW;
-		//	break; // Fall through until we put the real code in here
+		if (_lastTxt)
+		{
+			p->SetRow(_magNumber, 28, _lastTxt->GetLine());
+			_lastTxt=_lastTxt->GetNextLine();
+			break;
+		}
+    _state=STATE_TEXTROW; // Fall through
   case STATE_TEXTROW:
     // Find the next row that isn't NULL
     for (_thisRow++;_thisRow<=24;_thisRow++)

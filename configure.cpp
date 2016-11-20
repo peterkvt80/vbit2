@@ -18,7 +18,7 @@ Configure::Configure(int argc, char** argv) :
 #ifdef _WIN32
 	strncpy(_pageDir,"i:\\temp\\teletext",MAXPATH-1);
 #else
-	strcpy(_pageDir,"/home/pi/Pages");
+	strcpy(_pageDir,"/home/pi/teletext");
 #endif
 	// This is where the default header template is defined.
 	// Work out the c++ string way of doing this

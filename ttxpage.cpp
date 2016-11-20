@@ -29,7 +29,7 @@ bool TTXPage::pageChanged=false;
 
 TTXPage::TTXPage() :
     m_PageNumber(FIRSTPAGE),
-    m_SubPage(NULL),
+    m_SubPage(nullptr),
     m_sourcepage("none"),   //ctor
     m_Loaded(false)
 {
@@ -44,7 +44,7 @@ TTXPage::TTXPage() :
  */
 TTXPage::TTXPage(std::string filename) :
     m_PageNumber(FIRSTPAGE),
-    m_SubPage(NULL),
+    m_SubPage(nullptr),
      m_sourcepage(filename),
      m_Loaded(false)
 {
@@ -80,7 +80,7 @@ void TTXPage::m_Init()
     m_region=0;
     for (int i=0;i<=MAXROW;i++)
     {
-        m_pLine[i]=NULL;
+        m_pLine[i]=nullptr;
     }
     for (int i=0;i<6;i++)
     {
@@ -108,20 +108,20 @@ TTXPage::~TTXPage()
     for (int i=0;i<MAXROW;i++)
     {
         // std::cerr << "Deleting line " << i << std::endl;
-        if (m_pLine[i]!=NULL)
+        if (m_pLine[i]!=nullptr)
         {
             delete m_pLine[i];
-            m_pLine[i]=NULL;
+            m_pLine[i]=nullptr;
         }
     }
 
     /* Does this leave sub pages leaking memory?
        No. The destructor will cascade through the whole chain */
-    if (Getm_SubPage()!=NULL)
+    if (Getm_SubPage()!=nullptr)
     {
         //std::cerr << "~[TTXPage]: " << j << std::endl;
         delete m_SubPage;
-        m_SubPage=NULL;
+        m_SubPage=nullptr;
     }
 }
 
@@ -215,7 +215,7 @@ bool TTXPage::m_LoadVTX(std::string filename)
     p->SetRow(0,"         wxTED mpp DAY dd MTH \x3 hh:nn.ss"); // Overwrite anything in row 0 (usually empty)
     // With a pair of zeros at the end we can skip
     filein.close(); // Not sure that we need to close it
-    p->Setm_SubPage(NULL);
+    p->Setm_SubPage(nullptr);
     TTXPage::pageChanged=false;
     return true;
 }
@@ -244,7 +244,7 @@ bool TTXPage::m_LoadEP1(std::string filename)
     p->SetRow(0,"         wxTED mpp DAY dd MTH \x3 hh:nn.ss"); // Overwrite anything in row 0 (usually empty)
     // With a pair of zeros at the end we can skip
     filein.close(); // Not sure that we need to close it
-    p->Setm_SubPage(NULL);
+    p->Setm_SubPage(nullptr);
     TTXPage::pageChanged=false;
     return true;
 }
@@ -285,7 +285,7 @@ bool TTXPage::m_LoadTTX(std::string filename)
             }
 
             filein.close();
-            p->Setm_SubPage(NULL);
+            p->Setm_SubPage(nullptr);
             TTXPage::pageChanged=false;
             return true;
         }
@@ -314,7 +314,7 @@ bool TTXPage::m_LoadTTX(std::string filename)
             }
 
             filein.close();
-            p->Setm_SubPage(NULL);
+            p->Setm_SubPage(nullptr);
             TTXPage::pageChanged=false;
             return true;
 
@@ -337,7 +337,7 @@ bool TTXPage::m_LoadTTX(std::string filename)
     p->SetRow(0,"         wxTED mpp DAY dd MTH \x3 hh:nn.ss"); // Overwrite anything in row 0 (usually empty)
 
     filein.close();
-    p->Setm_SubPage(NULL);
+    p->Setm_SubPage(nullptr);
     TTXPage::pageChanged=false;
     return true;
 }
@@ -482,7 +482,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     {
                         subpage=line.substr(3,2);
                         // std::cerr << "Subpage=" << subpage << std::endl;
-                        pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),NULL,10);
+                        pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),nullptr,10);
                     }
                     // std::cerr << "PN enters with m_PageNumber=" << std::hex << m_PageNumber << " pageNumber=" << std::hex << pageNumber << std::endl;
                     if (p->m_PageNumber!=FIRSTPAGE) // // Subsequent pages need new page instances
@@ -559,7 +559,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
         if (!found) std::getline(filein, line);
     }
     filein.close(); // Not sure that we need to close it
-    p->Setm_SubPage(NULL);
+    p->Setm_SubPage(nullptr);
     // if (lines>0) std::cerr << "Finished reading TTI page. Line count=" << lines << std::endl;
     TTXPage::pageChanged=false;
     return (lines>0);
@@ -578,12 +578,12 @@ TTXPage::TTXPage(const TTXPage& other)
     {
         m_pLine[i]=other.m_pLine[i];
         /*
-        if (m_pLine[i]!=NULL)
+        if (m_pLine[i]!=nullptr)
             std::cerr << "[copy] Line=" << m_pLine[i]->GetLine() << std::endl;
         */
 
         /* Don't cover up for missing data. We need to know if a line is left empty
-        if (m_pLine[i]==NULL)
+        if (m_pLine[i]==nullptr)
             m_pLine[i]=new TTXLine("This is a blank filler line in TTXPage copy constructor");
         */
     }
@@ -618,7 +618,7 @@ TTXPage* TTXPage::GetPage(unsigned int pageNumber)
 {
     //std::cerr << "[TTXPage::GetPage]" << std::endl;
     TTXPage* p=this;
-    for (;pageNumber>0 && p->m_SubPage!=NULL;p=p->m_SubPage, pageNumber--);
+    for (;pageNumber>0 && p->m_SubPage!=nullptr;p=p->m_SubPage, pageNumber--);
     // Iterate down the page list to find the required page object
     return p;
 }
@@ -630,11 +630,11 @@ TTXLine* TTXPage::GetRow(unsigned int row)
     if (row>MAXROW)
     {
         std::cerr << "[TTXPage::GetRow]Invalid row requested: " << row << std::endl;
-        return NULL;
+        return nullptr;
     }
     TTXLine* line=m_pLine[row];
     // Don't create row 0, or enhancement rows as they are special.
-    if (line==NULL && row>0 && row<25)
+    if (line==nullptr && row>0 && row<25)
         line=m_pLine[row]=new TTXLine("                                        ");
     return line;
 }
@@ -643,7 +643,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 {
 	// assert(rownumber<=MAXROW);
 	if (rownumber>MAXROW) return;
-	if (m_pLine[rownumber]==NULL)
+	if (m_pLine[rownumber]==nullptr)
 			m_pLine[rownumber]=new TTXLine(line); // Didn't exist before
 	else
 	{
@@ -674,7 +674,7 @@ void TTXPage::m_OutputLines(std::ofstream& ttxfile, TTXPage* p)
 
     for (int i=0;i<=MAXROW;i++)
     {
-        if (p->m_pLine[i]!=NULL && !p->m_pLine[i]->IsBlank()) // Skip empty lines
+        if (p->m_pLine[i]!=nullptr && !p->m_pLine[i]->IsBlank()) // Skip empty lines
         {
             // This one for Andreas
 //             std::string s=p->m_pLine[i]->GetMappedline(); // Choose the 7 bit output as it is more useful. TODO: Make this a menu option.
@@ -710,13 +710,13 @@ bool TTXPage::SavePage(std::string filename)
     SetSourcePage(filename);
     // Fix up subcodes.
     // Subcodes need to be ascending starting from 1
-    if (Getm_SubPage()!=NULL)
+    if (Getm_SubPage()!=nullptr)
     {
         // Fix up subcodes.
         // Subcodes need to be ascending starting from 1
         int sc=1;
         int pageNum=this->GetPageNumber() & 0xfff00; // Mask off the original subcode
-        for (TTXPage* p=this;p!=NULL;p=p->m_SubPage)
+        for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
         {
             p->SetSubCode(sc);            // Monotonic subcode
             p->SetPageNumber(pageNum + (sc & 0xff)); // Fix the page number too. (@todo: sc needs to be decimal, not hex)
@@ -748,12 +748,12 @@ bool TTXPage::SavePage(std::string filename)
         }
         ttxfile << std::dec;
         // Now also have to traverse the rest of the page tree
-        if (Getm_SubPage()!=NULL)
+        if (Getm_SubPage()!=nullptr)
         {
             if (Getm_SubPage()->m_subcode>=0) // Shouldn't have to test this!
             {
                 // std::cerr << "m_SubPage=" << std::hex << Getm_SubPage() << std::endl;
-                for (TTXPage* p=this->m_SubPage;p!=NULL;p=p->m_SubPage)
+                for (TTXPage* p=this->m_SubPage;p!=nullptr;p=p->m_SubPage)
                 {
                     m_OutputLines(ttxfile, p);
                     // Subpages now have an identical copy of the main fastext links
@@ -785,10 +785,10 @@ int TTXPage::GetPageCount()
 {
     int count=0;
     int subcode=0;
-    for (TTXPage* p=this;p!=NULL;p=p->m_SubPage)
+    for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
     {
        // std::cerr <<"Get page count happens here, subcode=" << subcode << " " << (int)p << std::endl;
-       if (p!=NULL)
+       if (p!=nullptr)
             p->SetSubCode(subcode++);   // Always redo the subcodes
         count++;
     }
@@ -866,11 +866,11 @@ void TTXPage::DebugDump() const
     std::cerr << "Page:" << std::hex << GetPageNumber() << std::dec << std::endl;
     std::cerr << "File:" << GetSourcePage() << std::endl;
 
-    for (const TTXPage* p=this;p!=NULL;p=p->m_SubPage)
+    for (const TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
         for (int i=0;i<25;i++)
         {
             std::cerr << "Line " << i << ": ";
-            if (p->m_pLine[i]!=NULL)
+            if (p->m_pLine[i]!=nullptr)
                 std::cerr << " text=" << p->m_pLine[i]->GetLine() << std::endl;
         }
 }

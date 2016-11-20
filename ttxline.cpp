@@ -28,13 +28,13 @@
 
 TTXLine::TTXLine(std::string const& line):
 	m_textline(validate(line)),
-	_nextLine(NULL)
+	_nextLine(nullptr)
 
 {
 }
 
 TTXLine::TTXLine():m_textline("                                        "),
-	_nextLine(NULL)
+	_nextLine(nullptr)
 {
 }
 
@@ -166,7 +166,7 @@ char TTXLine::GetCharAt(int xLoc)
     if (m_textline.length()<(uint16_t)xLoc)
     {
         // extend the line to 40 characters
-        std::cout << "[TTXLine::SetCharAt] oops, need to extend this line" << std::endl;
+        std::cerr << "[TTXLine::SetCharAt] oops, need to extend this line" << std::endl;
     }
     return m_textline[xLoc];
 }
@@ -211,7 +211,7 @@ bool TTXLine::IsAlphaMode(int loc)
 
 std::string TTXLine::GetLine()
 {
-    if (this==NULL)
+    if (this==nullptr)
     {
         std::cerr << "[TTXLine::GetLine] this can never happen" << std::endl;
         return "***This is a null object U dun goofed  ***";

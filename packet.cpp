@@ -25,7 +25,7 @@ Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag),
 {
 	SetMRAG(_mag, _row);
 	SetPacketText(val);
-	assert(_row!=0);
+	assert(_row!=0); // Use Header for row 0
 }
 
 void Packet::SetRow(int mag, int row, std::string val)
@@ -248,17 +248,17 @@ std::string Packet::tx(bool debugMode)
     }
     else
     {
-        std::cout << std::setfill('0') <<  std::hex ;
+        std::cerr << std::setfill('0') <<  std::hex ;
         for (int i=0;i<45;i++)
-            std::cout << std::setw(2)  << (int)(_packet[i] & 0xff) << " ";
-        std::cout << std::dec << std::endl;
+            std::cerr << std::setw(2)  << (int)(_packet[i] & 0xff) << " ";
+        std::cerr << std::dec << std::endl;
         for (int i=0;i<45;i++)
         {
             char ch=_packet[i] & 0x7f;
             if (ch<' ') ch='.';
-            std::cout << " " << ch << " ";
+            std::cerr << " " << ch << " ";
         }
-        // std::cout << std::endl;
+        // std::cerr << std::endl;
         return &_packet[3];
     }
 
