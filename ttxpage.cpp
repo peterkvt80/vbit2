@@ -644,13 +644,13 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 	// assert(rownumber<=MAXROW);
 	if (rownumber>MAXROW) return;
 	if (m_pLine[rownumber]==nullptr)
-			m_pLine[rownumber]=new TTXLine(line); // Didn't exist before
+			m_pLine[rownumber]=new TTXLine(line,rownumber<25); // Didn't exist before
 	else
 	{
 		//std::cerr << "[TTXPage::SetRow] row=" << rownumber << std::endl;
 		if (rownumber<25) // Ordinary line
 		{
-			m_pLine[rownumber]->Setm_textline(line);
+			m_pLine[rownumber]->Setm_textline(line, rownumber<25);
 		}
 		else // Enhanced packet
 		{

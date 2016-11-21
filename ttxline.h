@@ -15,7 +15,7 @@ class TTXLine
     public:
         /** Constructors */
         TTXLine();
-        TTXLine(std::string const& line);
+        TTXLine(std::string const& line, bool validate=true);
         // TTXLine(std::string const& line);
         /** Default destructor */
         virtual ~TTXLine();
@@ -24,7 +24,7 @@ class TTXLine
         /** Set m_textline
          * \param val New value to set
          */
-        void Setm_textline(std::string const& val);
+        void Setm_textline(std::string const& val, bool validateLine=true);
 
         /** Access m_textline
          * \return The current value of m_textline
@@ -75,6 +75,8 @@ class TTXLine
 				void AppendLine(std::string  const& line);
 				
 				TTXLine* GetNextLine(){return _nextLine;}
+				
+				void Dump();
 
     protected:
     private:

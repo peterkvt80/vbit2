@@ -52,7 +52,6 @@ Packet* Mag::GetPacket(Packet* p)
 {
   int thisPage;
   int thisSubcode;
-  int thisMag;
   int thisStatus;
   int* links=NULL;
 
@@ -200,7 +199,9 @@ Packet* Mag::GetPacket(Packet* p)
   case STATE_PACKET26:
 		if (_lastTxt)
 		{
-			std::cerr << "Packet 26 length=" << _lastTxt->GetLine().length() << std::endl;
+			std::cerr << "Page=" << std::hex << _page->GetPageNumber() << std::dec << " Packet 26 length=" << _lastTxt->GetLine().length() << std::endl;
+			_lastTxt->Dump();
+			p->SetMRAG(_magNumber,26); // This line *should* be redundant, and it is
 			p->SetRow(_magNumber, 26, _lastTxt->GetLine());
 			// Do we have another line?
 			_lastTxt=_lastTxt->GetNextLine();
@@ -212,6 +213,8 @@ Packet* Mag::GetPacket(Packet* p)
   case STATE_PACKET27:
 		if (_lastTxt)
 		{
+			//std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
+			//_lastTxt->Dump();
 			p->SetRow(_magNumber, 27, _lastTxt->GetLine());
 			_lastTxt=_lastTxt->GetNextLine();
 			break;
@@ -221,6 +224,9 @@ Packet* Mag::GetPacket(Packet* p)
   case STATE_PACKET28:
 		if (_lastTxt)
 		{
+			//std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
+			//_lastTxt->Dump();
+		
 			p->SetRow(_magNumber, 28, _lastTxt->GetLine());
 			_lastTxt=_lastTxt->GetNextLine();
 			break;
@@ -253,9 +259,7 @@ Packet* Mag::GetPacket(Packet* p)
       else
       {
         // Assemble the packet
-        thisMag=_magNumber;
-
-        p->SetRow(thisMag, _thisRow, _lastTxt->GetLine());
+        p->SetRow(_magNumber, _thisRow, _lastTxt->GetLine());
         p->Parity();
         assert(p->IsHeader()!=true);
       }

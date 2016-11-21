@@ -26,11 +26,13 @@
 #include "ttxline.h"
 
 
-TTXLine::TTXLine(std::string const& line):
+TTXLine::TTXLine(std::string const& line, bool validateLine):
 	m_textline(validate(line)),
 	_nextLine(nullptr)
 
 {
+	if (!validateLine)
+		m_textline=line;
 }
 
 TTXLine::TTXLine():m_textline("                                        "),
@@ -47,9 +49,12 @@ TTXLine::~TTXLine()
 /** Set m_textline
  * \param val New value to set
  */
-void TTXLine::Setm_textline(std::string const& val)
+void TTXLine::Setm_textline(std::string const& val, bool validateLine)
 {
+	if (validateLine)
     m_textline = validate(val);
+	else
+    m_textline = val;
 }
 
 /** Validate - given a string, it validates it to ensure that the
@@ -218,10 +223,10 @@ std::string TTXLine::GetLine()
     }
     // If the string is less than 40 characters we need to pad it or get weird render errors
     int len=m_textline.length();
-    if (len<0 || len>40)
+    if (len>40)
     {
         // std::cerr << "[TTXLine::GetLine] len=" << len << std::endl;
-        return ""; // Test this with empty(). We get more flexibility and speed by being able to skip lines.
+        return m_textline.substr(40); 
     }
     if (len<40)
         for (int i=len;i<40;i++)
@@ -238,5 +243,14 @@ void TTXLine::AppendLine(std::string  const& line)
 	std::cerr << "[TTXLine::AppendLine] called" << std::endl;
 	TTXLine* p;
 	for (p=this;p->_nextLine;p=p->_nextLine);
-	p->_nextLine=new TTXLine(line);
+	p->_nextLine=new TTXLine(line,false);
+}
+
+void TTXLine::Dump()
+{
+	for (int i=0;i<40;i++)
+	{
+		std::cerr << std::hex << (int)m_textline[i] << " ";
+	}
+	std::cerr << std::dec << std::endl;
 }
