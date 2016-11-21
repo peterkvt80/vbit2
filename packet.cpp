@@ -30,8 +30,32 @@ Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag),
 
 void Packet::SetRow(int mag, int row, std::string val)
 {
+	int triplet;	
+	int designationcode;	
 	SetMRAG(mag, row);
 	SetPacketText(val);
+
+	// The following block of code is experimental support for page enhancement
+	// packets read from special OL rows in tti page files.
+	// If OL,28, packet is used the page file should not contain a non zero RE,
+	if (row == 26 || row == 28 || row == 29)
+	{
+		// Special handler to allow stuffing enhancement packets in as OL rows
+		// Each 18 bits of data for a triplet is coded in the input line as
+		// three bytes least significant first where each byte contains 6 data
+		// bits in b0-b5.
+		char* p = _packet+5;
+		designationcode = *p & 0x0F;
+		*p++ = HamTab[designationcode]; // designation code is 8/4 hamming coded
+		for (int i = 1; i<=13; i++){
+			triplet = *p++ & 0x3F;
+			triplet |= ((*p++ & 0x3F) << 6);
+			triplet |= ((*p++ & 0x3F) << 12);
+			SetTriplet(i, triplet);
+		}
+	}
+
+	// end of experimental page enhancement code	
 }
 
 Packet::~Packet()
@@ -49,7 +73,7 @@ void Packet::Set_packet(char *val)
 void Packet::SetPacketText(std::string val)
 {
 	_isHeader=false; // Because it can't be a header
-    strncpy(&_packet[5],val.c_str(),40);
+	strncpy(&_packet[5],val.c_str(),40);
 }
 
 // Clear entire packet to 0
@@ -442,3 +466,38 @@ bool Packet::get_net(char* str)
 	return true; // @todo
 }
 #endif
+
+void Packet::SetTriplet(int ix, int triplet)
+{
+	std::cerr << "[Packet::SetTriplet] enters\n";
+	uint8_t t[4];
+	if (ix<1) return;
+	vbi_ham24p(t,triplet);
+	// Now stuff the result in the packet
+	_packet[ix*3+3]=t[0];
+	_packet[ix*3+4]=t[1];
+	_packet[ix*3+5]=t[2];
+}
+
+void Packet::vbi_ham24p(uint8_t *		p, unsigned int c)
+{
+	unsigned int D5_D11;
+	unsigned int D12_D18;
+	unsigned int P5, P6;
+	unsigned int Byte_0;
+
+	Byte_0 = (_vbi_hamm24_fwd_0 [(c >> 0) & 0xFF]
+		  ^ _vbi_hamm24_fwd_1 [(c >> 8) & 0xFF]
+		  ^ _vbi_hamm24_fwd_2 [(c >> 16) & 0x03]);
+	p[0] = Byte_0;
+
+	D5_D11 = (c >> 4) & 0x7F;
+	D12_D18 = (c >> 11) & 0x7F;
+
+	P5 = 0x80 & ~(_vbi_hamm24_inv_par[0][D12_D18] << 2);
+	p[1] = D5_D11 | P5;
+
+	P6 = 0x80 & ((_vbi_hamm24_inv_par[0][Byte_0]
+		      ^ _vbi_hamm24_inv_par[0][D5_D11]) << 2);
+	p[2] = D12_D18 | P6;
+}

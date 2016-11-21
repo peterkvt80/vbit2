@@ -199,9 +199,9 @@ Packet* Mag::GetPacket(Packet* p)
   case STATE_PACKET26:
 		if (_lastTxt)
 		{
-			std::cerr << "Page=" << std::hex << _page->GetPageNumber() << std::dec << " Packet 26 length=" << _lastTxt->GetLine().length() << std::endl;
+			std::cerr << "Mag=" << _magNumber << " Page=" << std::hex << _page->GetPageNumber() << std::dec << " Packet 26 length=" << _lastTxt->GetLine().length() << std::endl;
 			_lastTxt->Dump();
-			p->SetMRAG(_magNumber,26); // This line *should* be redundant, and it is
+			// p->SetMRAG(_magNumber,26); // This line *should* be redundant, and it is
 			p->SetRow(_magNumber, 26, _lastTxt->GetLine());
 			// Do we have another line?
 			_lastTxt=_lastTxt->GetNextLine();
