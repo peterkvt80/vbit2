@@ -30,8 +30,8 @@ Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag),
 
 void Packet::SetRow(int mag, int row, std::string val)
 {
-	int triplet;	
-	int designationcode;	
+	int triplet;
+	int designationcode;
 	SetMRAG(mag, row);
 	SetPacketText(val);
 
@@ -55,7 +55,7 @@ void Packet::SetRow(int mag, int row, std::string val)
 		}
 	}
 
-	// end of experimental page enhancement code	
+	// end of experimental page enhancement code
 }
 
 Packet::~Packet()
@@ -469,6 +469,10 @@ bool Packet::get_net(char* str)
 
 void Packet::SetTriplet(int ix, int triplet)
 {
+  // Data is the first 18 bits of triplet
+  // This gets expanded to 24 bits by adding ham protection.
+  // D=data bit P=Protection bit
+  // P1|P2|D1|P3|D2|D3|D4|P4  D5|D6|D7|D8|D9|D10|D11|P5  D12|D13|D14|D15|D16|D17|D18|P6
 	std::cerr << "[Packet::SetTriplet] enters\n";
 	uint8_t t[4];
 	if (ix<1) return;
@@ -481,15 +485,13 @@ void Packet::SetTriplet(int ix, int triplet)
 
 void Packet::vbi_ham24p(uint8_t *		p, unsigned int c)
 {
-	unsigned int D5_D11;
-	unsigned int D12_D18;
-	unsigned int P5, P6;
-	unsigned int Byte_0;
+	unsigned int D5_D11; /// Four data bits in the second byte
+	unsigned int D12_D18; /// Four data bits in the last byte
+	unsigned int P5, P6; ///Parity bits for Byte 1 and 2
 
-	Byte_0 = (_vbi_hamm24_fwd_0 [(c >> 0) & 0xFF]
+	p[0] = (_vbi_hamm24_fwd_0 [(c >> 0) & 0xFF]
 		  ^ _vbi_hamm24_fwd_1 [(c >> 8) & 0xFF]
 		  ^ _vbi_hamm24_fwd_2 [(c >> 16) & 0x03]);
-	p[0] = Byte_0;
 
 	D5_D11 = (c >> 4) & 0x7F;
 	D12_D18 = (c >> 11) & 0x7F;
