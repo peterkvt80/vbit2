@@ -44,13 +44,13 @@ void Packet::SetRow(int mag, int row, std::string val)
 		// Each 18 bits of data for a triplet is coded in the input line as
 		// three bytes least significant first where each byte contains 6 data
 		// bits in b0-b5.
-		char* p = _packet+5;
-		designationcode = *p & 0x0F;
-		*p++ = HamTab[designationcode]; // designation code is 8/4 hamming coded
+		designationcode = _packet[5] & 0x0F;
+		_packet[5] = HamTab[designationcode]; // designation code is 8/4 hamming coded
+  
 		for (int i = 1; i<=13; i++){
-			triplet = *p++ & 0x3F;
-			triplet |= ((*p++ & 0x3F) << 6);
-			triplet |= ((*p++ & 0x3F) << 12);
+			triplet = _packet[i*3+3] & 0x3F;
+			triplet |= ((_packet[i*3+4]) << 6);
+			triplet |= ((_packet[i*3+5]) << 12);
 			SetTriplet(i, triplet);
 		}
 	}
@@ -272,7 +272,7 @@ std::string Packet::tx(bool debugMode)
     }
     else
     {
-        std::cerr << std::setfill('0') <<  std::hex ;
+        std::cerr << "Packet::tx:" << std::setfill('0') <<  std::hex ;
         for (int i=0;i<45;i++)
             std::cerr << std::setw(2)  << (int)(_packet[i] & 0xff) << " ";
         std::cerr << std::dec << std::endl;
@@ -476,10 +476,26 @@ bool Packet::get_net(char* str)
 
 void Packet::SetTriplet(int ix, int triplet)
 {
-	std::cerr << "[Packet::SetTriplet] enters\n";
+	// std::cerr << "[Packet::SetTriplet] enters\n";
 	uint8_t t[4];
 	if (ix<1) return;
 	vbi_ham24p(t,triplet);
+	// If any of this pops up, we need to handle nulls 
+	if (t[0]==0)
+	{
+		std::cerr << std::hex << "ix=" << ix << " t= " << t[0] << " " << t[1] << " " << t[2] << " " << std::endl;
+		t[0]=0x80;
+	}
+	if (t[1]==0)
+	{
+		std::cerr << "t[1]";
+		t[1]=0x80;
+	}
+	if (t[2]==0) 
+	{
+		std::cerr << "t[2]";
+		t[2]=0x80;
+	}
 	// Now stuff the result in the packet
 	_packet[ix*3+3]=t[0];
 	_packet[ix*3+4]=t[1];
