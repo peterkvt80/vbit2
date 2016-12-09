@@ -666,10 +666,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 void TTXPage::m_OutputLines(std::ofstream& ttxfile, TTXPage* p)
 {
     ttxfile << "PN," << m_FormatPageNumber(p) << "\n";
-    if (p->m_subcode<0)
-        ttxfile << "SC,0000" << "\n";
-    else
-        ttxfile << "SC," << std::dec << std::setw(4) << std::setfill('0') << p->m_subcode << "\n";   // Subcode for these lines
+    ttxfile << "SC," << std::dec << std::setw(4) << std::setfill('0') << p->m_subcode << "\n";   // Subcode for these lines
     ttxfile << "PS," << std::setw(4) << std::setfill('X') << std::hex << p->m_pagestatus << std::endl;
     ttxfile << "RE," << std::setw(1) << std::hex << p->m_region << std::endl;
 
@@ -701,86 +698,80 @@ std::string TTXPage::m_FormatPageNumber(TTXPage* p)
 
 bool TTXPage::SavePageDefault()
 {
-    return SavePage(GetSourcePage());
+  return SavePage(GetSourcePage());
 }
-
 
 /* 8 bit save */
 bool TTXPage::SavePage(std::string filename)
 {
-    std::ofstream ttxfile(filename.c_str()); // TODO: Save and Save as
-    SetSourcePage(filename);
+  std::ofstream ttxfile(filename.c_str()); // TODO: Save and Save as
+  SetSourcePage(filename);
+  // Fix up subcodes.
+  // Subcodes need to be ascending starting from 1
+  if (Getm_SubPage()!=nullptr)
+  {
     // Fix up subcodes.
     // Subcodes need to be ascending starting from 1
+    int sc=1;
+    int pageNum=this->GetPageNumber() & 0xfff00; // Mask off the original subcode
+    for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
+    {
+      p->SetSubCode(sc);            // Monotonic subcode
+      p->SetPageNumber(pageNum + (sc & 0xff)); // Fix the page number too. (@todo: sc needs to be decimal, not hex)
+      sc++;
+    }
+  }
+  if (ttxfile.is_open())
+  {
+    ttxfile << std::dec ;
+    // std::cerr << "[TTXPage::SavePage] filename=" << filename << std::endl;
+    ttxfile << "DE," << m_description << std::endl;
+    //ttxfile << "PN," << std::hex << std::setprecision(5) << m_PageNumber << std::endl;
+    ttxfile << "DS," << m_destination << std::dec << std::endl;
+    ttxfile << "SP," << GetSourcePage() << std::endl; // SP is set every time there is a save
+    ttxfile << "CT," << m_cycletimeseconds << "," << m_cycletimetype << std::dec << std::endl;
+    // My spidey instincts tell me that this code could be factorised
+    m_OutputLines(ttxfile, this);
+    ttxfile << std::hex;
+    // Don't output null links
+    if (m_fastextlinks[0]!=0x8ff)
+    {
+      ttxfile << "FL,"
+      << m_fastextlinks[0] << ","
+      << m_fastextlinks[1] << ","
+      << m_fastextlinks[2] << ","
+      << m_fastextlinks[3] << ","
+      << m_fastextlinks[4] << ","
+      << m_fastextlinks[5] << std::endl;
+    }
+    ttxfile << std::dec;
+    // Now also have to traverse the rest of the page tree
     if (Getm_SubPage()!=nullptr)
     {
-        // Fix up subcodes.
-        // Subcodes need to be ascending starting from 1
-        int sc=1;
-        int pageNum=this->GetPageNumber() & 0xfff00; // Mask off the original subcode
-        for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
-        {
-            p->SetSubCode(sc);            // Monotonic subcode
-            p->SetPageNumber(pageNum + (sc & 0xff)); // Fix the page number too. (@todo: sc needs to be decimal, not hex)
-            sc++;
-        }
-    }
-    if (ttxfile.is_open())
-    {
-        ttxfile << std::dec ;
-        // std::cerr << "[TTXPage::SavePage] filename=" << filename << std::endl;
-        ttxfile << "DE," << m_description << std::endl;
-        //ttxfile << "PN," << std::hex << std::setprecision(5) << m_PageNumber << std::endl;
-        ttxfile << "DS," << m_destination << std::dec << std::endl;
-        ttxfile << "SP," << GetSourcePage() << std::endl; // SP is set every time there is a save
-        ttxfile << "CT," << m_cycletimeseconds << "," << m_cycletimetype << std::dec << std::endl;
-        // My spidey instincts tell me that this code could be factorised
-        m_OutputLines(ttxfile, this);
-        ttxfile << std::hex;
+      // std::cerr << "m_SubPage=" << std::hex << Getm_SubPage() << std::endl;
+      for (TTXPage* p=this->m_SubPage;p!=nullptr;p=p->m_SubPage)
+      {
+        m_OutputLines(ttxfile, p);
+        // Subpages now have an identical copy of the main fastext links
         // Don't output null links
         if (m_fastextlinks[0]!=0x8ff)
         {
-            ttxfile << "FL,"
-            << m_fastextlinks[0] << ","
-            << m_fastextlinks[1] << ","
-            << m_fastextlinks[2] << ","
-            << m_fastextlinks[3] << ","
-            << m_fastextlinks[4] << ","
-            << m_fastextlinks[5] << std::endl;
+          ttxfile << std::hex;
+          ttxfile << "FL,"
+          << m_fastextlinks[0] << ","
+          << m_fastextlinks[1] << ","
+          << m_fastextlinks[2] << ","
+          << m_fastextlinks[3] << ","
+          << m_fastextlinks[4] << ","
+          << m_fastextlinks[5] << std::endl;
+          ttxfile << std::dec;
         }
-        ttxfile << std::dec;
-        // Now also have to traverse the rest of the page tree
-        if (Getm_SubPage()!=nullptr)
-        {
-            if (Getm_SubPage()->m_subcode>=0) // Shouldn't have to test this!
-            {
-                // std::cerr << "m_SubPage=" << std::hex << Getm_SubPage() << std::endl;
-                for (TTXPage* p=this->m_SubPage;p!=nullptr;p=p->m_SubPage)
-                {
-                    m_OutputLines(ttxfile, p);
-                    // Subpages now have an identical copy of the main fastext links
-                    // Don't output null links
-                    if (m_fastextlinks[0]!=0x8ff)
-                    {
-                        ttxfile << std::hex;
-                        ttxfile << "FL,"
-                        << m_fastextlinks[0] << ","
-                        << m_fastextlinks[1] << ","
-                        << m_fastextlinks[2] << ","
-                        << m_fastextlinks[3] << ","
-                        << m_fastextlinks[4] << ","
-                        << m_fastextlinks[5] << std::endl;
-                        ttxfile << std::dec;
-                    }
-                }
-
-            }
-        }
-
+      }
     }
-    else
-        return false; // fail
-    return true; // success
+  }
+  else
+    return false; // fail
+  return true; // success
 }
 
 int TTXPage::GetPageCount()
