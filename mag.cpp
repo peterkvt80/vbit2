@@ -35,22 +35,9 @@ int Mag::GetPageCount()
     return _pageSet->size();
 }
 
-/** The next page in a carousel */
-TTXPageStream* Mag::GetCarouselPage()
-{
-    TTXPageStream* p=_carousel->nextCarousel();
-    /*
-    if (p==NULL)
-    {
-        std::cerr << "There are no carousels ready to go at the moment" << std::endl;
-    }
-    */
-    return p; // @todo Look at the carousel list and see if one is ready go
-}
-
 Packet* Mag::GetPacket(Packet* p)
 {
-  int thisPage;
+  int thisPageNum;
   int thisSubcode;
   int thisStatus;
   int* links=NULL;
@@ -110,7 +97,7 @@ Packet* Mag::GetPacket(Packet* p)
   case STATE_HEADER: // Decide which page goes next
     //_outp("h");
     _headerFlag=true;
-    _page=GetCarouselPage(); // Is there a carousel page due?
+    _page=_carousel->nextCarousel(); // The next carousel page
 
     // Is this page deleted?
     if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
@@ -126,6 +113,8 @@ Packet* Mag::GetPacket(Packet* p)
     {
       //_outp("c");
       _page->StepNextSubpage();
+			// std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl; 
+			
     }
     else  // No carousel? Take the next page in the main sequence
     {
@@ -173,12 +162,20 @@ Packet* Mag::GetPacket(Packet* p)
     }
 
     // Assemble the header. (we can simplify this code or leave it for the optimiser)
-    thisPage=_page->GetPageNumber();
-    thisPage=(thisPage/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
-    thisSubcode=_page->GetSubCode();
+    thisPageNum=_page->GetPageNumber();
+    thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
+    if (_page->IsCarousel())
+		{
+			thisSubcode=_page->GetCarouselPage()->GetSubCode();
+		}
+		else
+		{
+			thisSubcode=_page->GetSubCode();
+		}
+		
     thisStatus=_page->GetPageStatus();
     // p=new Packet();
-    p->Header(_magNumber,thisPage,thisSubcode,thisStatus);// loads of stuff to do here!
+    p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!
 
     p->HeaderText("CEEFAX 1 %%# %%a %d %%b 12:34.56"); // Placeholder 32 characters. This gets replaced later
 

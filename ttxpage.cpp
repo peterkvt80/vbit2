@@ -54,7 +54,9 @@ TTXPage::TTXPage(std::string filename) :
 
     if (!m_Loaded)
         if (m_LoadTTI(filename))
+				{
             m_Loaded=true;
+				}
 
     if (!m_Loaded)
         if (m_LoadVTX(filename))
@@ -502,7 +504,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     // SC,0000
                     std::getline(filein, line);
                     subcode=std::strtol(line.c_str(), &ptr, 16);
-                    //std::cerr << "SC: Subcode=" << subcode << std::endl;;
+                    // std::cerr << "SC: Subcode=" << subcode << std::endl;;
 
                     p->SetSubCode(subcode);
                     break;
@@ -516,7 +518,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                 case 7 : // "MS" - Mask
                     // MS,0
                     // std::cerr << "MS not implemented\n";
-                    std::getline(filein, line);
+                    std::getline(filein, line); // Mask is intended for TED to protecting regions from editing.
                     break;
                 case 8 : // "OL" - Output line
                     // OL,9,ƒA-Z INDEX     ‡199ƒNEWS HEADLINES  ‡101
@@ -792,7 +794,7 @@ int TTXPage::GetPageCount()
             p->SetSubCode(subcode++);   // Always redo the subcodes
         count++;
     }
-    //std::cerr << "GetPageCount returns " << count << std::endl;
+    // std::cerr << "GetPageCount returns " << count << std::endl;
     return count;
 }
 
