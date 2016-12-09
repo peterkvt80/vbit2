@@ -137,14 +137,13 @@ class TTXPage
 
         /** Set the subcode. Subcode is effectively the subpage nummber in a carousel
          * \param subcode : A subcode value from 0000 to FFFF
-         * \return nothing yet
          */
-         void SetSubCode(int subcode) {m_subcode=subcode;}
+         void SetSubCode(unsigned int subcode) {m_subcode=subcode;}
 
         /** Get the subcode
          * \return Subcode value
          */
-         inline int GetSubCode() {return m_subcode;}
+         unsigned int GetSubCode() {return m_subcode;}
 
         /** Copy the metadata from page to here.
          *  Metadata is everything except the actual text lines and the SubPage link.
@@ -219,7 +218,7 @@ class TTXPage
         std::string m_sourcepage;   // SP
         std::string m_description;  // DE
         char m_cycletimetype;       // CT
-        int m_subcode;              // SC
+        unsigned int m_subcode;     // SC
         int m_pagestatus;           // PS
         int m_region;               // RE
         // Private functions

@@ -44,6 +44,8 @@ int PageList::LoadPageList(std::string filepath)
       // If the page loaded, then push it into the appropriate magazine
       if (q->Loaded())
       {
+					q->GetPageCount(); // Use for the side effect of renumbering the subcodes
+
           int mag=(q->GetPageNumber() >> 16) & 0x7;
           _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
       }

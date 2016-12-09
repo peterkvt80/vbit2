@@ -74,14 +74,6 @@ class Mag
         int _magNumber; //!< The number of this magazine. (where 0 is mag 8)
         bool _headerFlag; //!< True if the last packet was a header
 
-        /**
-         * If a carousel page is due to go out we return the page to transmit with pointers set up to the next row.
-         * If there are no carousel pages due then return NULL, which means that the next single page goes instead.
-         * @return Carousel page complete with a pointer to the first row of the page. NULL if no carousel is due.
-         */
-        // TTXPageStream* GetCarousel();
-				TTXPageStream* GetCarouselPage();
-
         Carousel* _carousel;
 
         /** temporary debug helper

@@ -293,11 +293,18 @@ std::string Packet::tx(bool debugMode)
  */
 void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode, unsigned int control)
 {
+#if 1
+	// Show the current header being output
+	if (mag==1 && page==0 /*subcode>0*/)
+	{
+		std::cerr << "mpp=" << (int) mag << std::hex << std::setw(2) << std::setfill('0') << (int)page << " subcode=" << subcode << std::dec << std::endl;
+	}
+#endif	
 	uint8_t cbit;
 	SetMRAG(mag,0);
 	_packet[5]=HamTab[page%0x10];
 	_packet[6]=HamTab[page/0x10];
-	_packet[7]=HamTab[(subcode&0x0f)]; // S1
+	_packet[7]=HamTab[(subcode&0x0f)]; // S1 four bits
 	subcode>>=4;
 	// Map the page settings control bits from MiniTED to actual teletext packet.
 	// To find the MiniTED settings look at the tti format document.
@@ -306,9 +313,9 @@ void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode,
 	// Where ETSI says bit 8,6,4,2 this maps to 4,3,2,1 (where the bits are numbered 1 to 8)
 	cbit=0;
 	if (control & 0x4000) cbit=0x08;	// C4 Erase page
-	_packet[8]=HamTab[(subcode&0x07) | cbit]; // S2 add C4
+	_packet[8]=HamTab[(subcode&0x07) | cbit]; // S2 (3 bits) add C4
 	subcode>>=3;
-	_packet[9]=HamTab[(subcode&0x0f)]; // S3
+	_packet[9]=HamTab[(subcode&0x0f)]; // S3 four bits
 	subcode>>=4;
 	cbit=0;
 	// Not sure if these bits are reversed. C5 and C6 are indistinguishable
