@@ -226,7 +226,7 @@ std::string TTXLine::GetLine()
     if (len>40)
     {
         // std::cerr << "[TTXLine::GetLine] len=" << len << std::endl;
-        return m_textline.substr(40); 
+        return m_textline.substr(40);
     }
     if (len<40)
         for (int i=len;i<40;i++)
@@ -250,7 +250,7 @@ void TTXLine::Dump()
 {
 	for (int i=0;i<40;i++)
 	{
-		std::cerr << std::hex << (int)m_textline[i] << " ";
+		std::cerr << std::hex << std::setw(2) << (int)(m_textline[i] & 0xff) << " ";
 	}
 	std::cerr << std::dec << std::endl;
 }

@@ -777,7 +777,7 @@ bool TTXPage::SavePage(std::string filename)
 int TTXPage::GetPageCount()
 {
     int count=0;
-    int subcode=0;
+    int subcode=1; // Start from 1.
     for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
     {
        // std::cerr <<"Get page count happens here, subcode=" << subcode << " " << (int)p << std::endl;

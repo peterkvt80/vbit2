@@ -1,6 +1,7 @@
 #ifndef TTXLINE_H
 #define TTXLINE_H
 #include <iostream>
+#include <iomanip>
 #include <string>
 
 #include "ttxcodes.h"
@@ -68,14 +69,14 @@ class TTXLine
          * \return true if the character position at loc is in an alpha context
          */
         bool IsAlphaMode(int loc);
-				
+
 				/** Adds line to a linked list
 				 *  This is used for enhanced packets which might require multiples of the same row
 				 */
 				void AppendLine(std::string  const& line);
-				
+
 				TTXLine* GetNextLine(){return _nextLine;}
-				
+
 				void Dump();
 
     protected:
