@@ -293,9 +293,9 @@ std::string Packet::tx(bool debugMode)
  */
 void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode, unsigned int control)
 {
-#if 0
+#if 1
 	// Show the current header being output
-	if (subcode>0)
+	if (mag==1 && page==0 /*subcode>0*/)
 	{
 		std::cerr << "mpp=" << (int) mag << std::hex << std::setw(2) << std::setfill('0') << (int)page << " subcode=" << subcode << std::dec << std::endl;
 	}
