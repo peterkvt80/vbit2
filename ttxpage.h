@@ -136,7 +136,7 @@ class TTXPage
 
 
         /** Set the subcode. Subcode is effectively the subpage nummber in a carousel
-         * \param subcode : A subcode value from 0000 to FFFF
+         * \param subcode : A subcode value from 0000 to 3F7F (maybe we should check this!)
          */
          void SetSubCode(unsigned int subcode) {m_subcode=subcode;}
 
