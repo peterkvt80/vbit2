@@ -133,7 +133,7 @@ void FileMonitor::run()
       }
     }
     closedir(dp);
-    std::cerr << "[FileMonitor::run] Finished scan" << std::endl;
+    // std::cerr << "[FileMonitor::run] Finished scan" << std::endl;
 
 		// Delete pages that no longer exist (this blocks the thread until the pages are removed)
 		_pageList->DeleteOldPages();

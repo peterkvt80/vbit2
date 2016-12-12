@@ -118,7 +118,7 @@ Packet* Mag::GetPacket(Packet* p)
     }
     else  // No carousel? Take the next page in the main sequence
     {
-      std::cerr << "X";
+      // std::cerr << "X";
       if (_it==_pageSet->end())
       {
         std::cerr << "This can not happen" << std::endl;
@@ -140,7 +140,7 @@ Packet* Mag::GetPacket(Packet* p)
         return filler;
         // Stays in HEADER mode so that we run this again
       }
-      if (_page->IsCarousel()) // This should not happen. We should not consider carousels at this point.
+      if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
       {
         // todo:
         // std::cerr << "Page is a carousel. This can not happen" << std::endl;
