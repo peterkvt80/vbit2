@@ -417,7 +417,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
     std::ifstream filein(filename.c_str());
     TTXPage* p=this;
     char * ptr;
-    int subcode;
+    unsigned int subcode;
     std::string subpage;
     int pageNumber;
     char m;
@@ -778,15 +778,15 @@ int TTXPage::GetPageCount()
 {
 	// See Annex A.1 rules
 	int count=0;
-	int subcode; // Start from 1.
+	unsigned int subcode; // Start from 1.
 	int code[4];
 	for (int i=0;i<4;i++) code[i]=0;
 	for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
 	{
 		// Pages intended for display with sub-pages should have sub-pages coded sequentially from Mxx-0001 to
 		// Mxx-0009 and then Mxx-0010 to Mxx-0019 and similarly using the decimal values of sub-code nibbles S2
-		// and S1 to Mxx-0079.	
-		
+		// and S1 to Mxx-0079.
+
 		// Increment the subcode is a baroque way
 		code[3]++;
 		if (code[3]>9)

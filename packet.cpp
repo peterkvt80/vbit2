@@ -30,8 +30,8 @@ Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag),
 
 void Packet::SetRow(int mag, int row, std::string val)
 {
-	int triplet;	
-	int designationcode;	
+	int triplet;
+	int designationcode;
 	SetMRAG(mag, row);
 	SetPacketText(val);
 
@@ -46,7 +46,7 @@ void Packet::SetRow(int mag, int row, std::string val)
 		// bits in b0-b5.
 		designationcode = _packet[5] & 0x0F;
 		_packet[5] = HamTab[designationcode]; // designation code is 8/4 hamming coded
-  
+
 		for (int i = 1; i<=13; i++){
 			triplet = _packet[i*3+3] & 0x3F;
 			triplet |= ((_packet[i*3+4]) << 6);
@@ -55,7 +55,7 @@ void Packet::SetRow(int mag, int row, std::string val)
 		}
 	}
 
-	// end of experimental page enhancement code	
+	// end of experimental page enhancement code
 }
 
 Packet::~Packet()
@@ -295,11 +295,11 @@ void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode,
 {
 #if 1
 	// Show the current header being output
-	if (mag==1 && page==0 /*subcode>0*/)
+	if (mag==1 && page==0x9a /*subcode>0*/)
 	{
 		std::cerr << "mpp=" << (int) mag << std::hex << std::setw(2) << std::setfill('0') << (int)page << " subcode=" << subcode << std::dec << std::endl;
 	}
-#endif	
+#endif
 	uint8_t cbit;
 	SetMRAG(mag,0);
 	_packet[5]=HamTab[page%0x10];
@@ -480,20 +480,20 @@ void Packet::SetTriplet(int ix, int triplet)
 	uint8_t t[4];
 	if (ix<1) return;
 	vbi_ham24p(t,triplet);
-	// If any of this pops up, we need to handle nulls 
+	// If any of this pops up, we need to handle nulls
 	if (t[0]==0)
 	{
-		std::cerr << std::hex << "ix=" << ix << " t= " << t[0] << " " << t[1] << " " << t[2] << " " << std::endl;
+		// std::cerr << std::hex << "ix=" << ix << " t= " << (int)t[0] << " " << (int)t[1] << " " << (int)t[2] << " " << std::endl;
 		t[0]=0x80;
 	}
 	if (t[1]==0)
 	{
-		std::cerr << "t[1]";
+		// std::cerr << "t[1]";
 		t[1]=0x80;
 	}
-	if (t[2]==0) 
+	if (t[2]==0)
 	{
-		std::cerr << "t[2]";
+		// std::cerr << "t[2]";
 		t[2]=0x80;
 	}
 	// Now stuff the result in the packet

@@ -38,7 +38,7 @@ int Mag::GetPageCount()
 Packet* Mag::GetPacket(Packet* p)
 {
   int thisPageNum;
-  int thisSubcode;
+  unsigned int thisSubcode;
   int thisStatus;
   int* links=NULL;
 
@@ -113,31 +113,41 @@ Packet* Mag::GetPacket(Packet* p)
     {
       //_outp("c");
       _page->StepNextSubpage();
-			// std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl; 
-			
+			std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
+
     }
     else  // No carousel? Take the next page in the main sequence
     {
-      //_outp("n");
-        if (_it==_pageSet->end())
-        {
-					std::cerr << "This can not happen" << std::endl;
-					exit(0);
-				}
-        ++_it;
-        if (_it==_pageSet->end())
-        {
-            _it=_pageSet->begin();
-        }
-        // Get pointer to the page we are sending
-        _page=&*_it;
-        if (_page->GetStatusFlag()==TTXPageStream::MARKED)
-        {
-          _pageSet->remove(*(_it++));
-          _page=NULL;
-          return filler;
-          // Stays in HEADER mode so that we run this again
-        }
+      std::cerr << "X";
+      if (_it==_pageSet->end())
+      {
+        std::cerr << "This can not happen" << std::endl;
+        exit(0);
+      }
+      ++_it;
+      if (_it==_pageSet->end())
+      {
+          _it=_pageSet->begin();
+      }
+      // Get pointer to the page we are sending
+      // todo: Find a way to skip carousels without going into an infinite loop
+      _page=&*_it;
+      // If it is marked for deletion, then remove it and send a filler instead.
+      if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+      {
+        _pageSet->remove(*(_it++));
+        _page=NULL;
+        return filler;
+        // Stays in HEADER mode so that we run this again
+      }
+      if (_page->IsCarousel()) // This should not happen. We should not consider carousels at this point.
+      {
+        // todo:
+        // std::cerr << "Page is a carousel. This can not happen" << std::endl;
+        _page=NULL;
+        return NULL;
+      }
+
     }
     // @todo: This assert fails!
     // assert(_page->GetPageNumber()>>16 == _magNumber); // Make sure that we always point to the correct magazine
@@ -172,7 +182,7 @@ Packet* Mag::GetPacket(Packet* p)
 		{
 			thisSubcode=_page->GetSubCode();
 		}
-		
+
     thisStatus=_page->GetPageStatus();
     // p=new Packet();
     p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!
@@ -191,13 +201,13 @@ Packet* Mag::GetPacket(Packet* p)
     p->SetMRAG(_magNumber,27);
     p->Fastext(links,_magNumber);
 		_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
-    _state=STATE_PACKET26; 
+    _state=STATE_PACKET26;
     break;
   case STATE_PACKET26:
 		if (_lastTxt)
 		{
-			std::cerr << "Mag=" << _magNumber << " Page=" << std::hex << _page->GetPageNumber() << std::dec << " Packet 26 length=" << _lastTxt->GetLine().length() << std::endl;
-			_lastTxt->Dump();
+			//std::cerr << "Mag=" << _magNumber << " Page=" << std::hex << _page->GetPageNumber() << std::dec << " Packet 26 length=" << _lastTxt->GetLine().length() << std::endl;
+			//_lastTxt->Dump();
 			// p->SetMRAG(_magNumber,26); // This line *should* be redundant, and it is
 			p->SetRow(_magNumber, 26, _lastTxt->GetLine());
 			// Do we have another line?
@@ -223,7 +233,7 @@ Packet* Mag::GetPacket(Packet* p)
 		{
 			//std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
 			//_lastTxt->Dump();
-		
+
 			p->SetRow(_magNumber, 28, _lastTxt->GetLine());
 			_lastTxt=_lastTxt->GetNextLine();
 			break;

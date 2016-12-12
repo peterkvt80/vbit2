@@ -77,7 +77,7 @@ int Service::run()
 					if (s.length()<42)
 					{
 						// If there is a bug, this will keep the system running by skipping bad packets.
-						std::cerr << "[Service::run] Bad Length=" << s.length() << std::endl;
+						// std::cerr << "[Service::run] Bad Length=" << s.length() << std::endl;
 						//exit(3);
 						//std::cout << (s+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUBWXYZ").substr(0,42); // Transmit the packet
 						//std::cerr << (s+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUBWXYZ").substr(0,42); // Transmit the packet
