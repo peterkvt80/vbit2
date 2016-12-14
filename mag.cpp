@@ -187,7 +187,7 @@ Packet* Mag::GetPacket(Packet* p)
     // p=new Packet();
     p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!
 
-    p->HeaderText("CEEFAX 1 %%# %%a %d %%b 12:34.56"); // Placeholder 32 characters. This gets replaced later
+    p->HeaderText("CEEFAX 1 %%# %%a %d %%b" "\x03" "12:34.56"); // Placeholder 32 characters. This gets replaced later
 
 
     p->Parity(13);
