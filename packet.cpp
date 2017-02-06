@@ -46,13 +46,15 @@ void Packet::SetRow(int mag, int row, std::string val)
 		// bits in b0-b5.
 		designationcode = _packet[5] & 0x0F;
 		_packet[5] = HamTab[designationcode]; // designation code is 8/4 hamming coded
-
+		
+		/* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish)
 		for (int i = 1; i<=13; i++){
+			std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
 			triplet = _packet[i*3+3] & 0x3F;
-			triplet |= ((_packet[i*3+4]) << 6);
-			triplet |= ((_packet[i*3+5]) << 12);
+			triplet |= ((_packet[i*3+4]) & 0x3F) << 6;
+			triplet |= ((_packet[i*3+5]) & 0x3F) << 12;
 			SetTriplet(i, triplet);
-		}
+		}*/
 	}
 
 	// end of experimental page enhancement code
@@ -476,26 +478,10 @@ bool Packet::get_net(char* str)
 
 void Packet::SetTriplet(int ix, int triplet)
 {
-	// std::cerr << "[Packet::SetTriplet] enters\n";
+	//std::cerr << "[Packet::SetTriplet] enters " << std::hex << "ix=" << ix << " triplet=" << triplet << std::endl;
 	uint8_t t[4];
 	if (ix<1) return;
 	vbi_ham24p(t,triplet);
-	// If any of this pops up, we need to handle nulls
-	if (t[0]==0)
-	{
-		// std::cerr << std::hex << "ix=" << ix << " t= " << (int)t[0] << " " << (int)t[1] << " " << (int)t[2] << " " << std::endl;
-		t[0]=0x80;
-	}
-	if (t[1]==0)
-	{
-		// std::cerr << "t[1]";
-		t[1]=0x80;
-	}
-	if (t[2]==0)
-	{
-		// std::cerr << "t[2]";
-		t[2]=0x80;
-	}
 	// Now stuff the result in the packet
 	_packet[ix*3+3]=t[0];
 	_packet[ix*3+4]=t[1];
@@ -523,4 +509,6 @@ void Packet::vbi_ham24p(uint8_t *		p, unsigned int c)
 	P6 = 0x80 & ((_vbi_hamm24_inv_par[0][Byte_0]
 		      ^ _vbi_hamm24_inv_par[0][D5_D11]) << 2);
 	p[2] = D12_D18 | P6;
+	
+	//std::cerr << "[Packet::vbi_ham24p] leaves " << std::hex << (p[0] | (p[1] << 8) | (p[2] << 16)) << std::endl;
 }
