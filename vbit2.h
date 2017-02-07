@@ -8,6 +8,10 @@
 #include "pagelist.h"
 #include "filemonitor.h"
 
+#ifdef WIN32
+#include "fcntl.h"
+#endif
+
 namespace ttx
 {
 }

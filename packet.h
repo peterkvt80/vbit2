@@ -63,7 +63,7 @@ class Packet
          * Sometimes we need to reverse the bit order
          *
          */
-        std::string tx(bool debugMode=false);
+        char* tx(bool debugMode=false);
 
         /** SetMRAG
          * Sets the first five bytes of the packet

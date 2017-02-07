@@ -73,17 +73,9 @@ int Service::run()
 				if (pkt!=NULL) // How could this be NULL? After the last packet of a page has been sent.
 				{
 					isHeader=pMag->GetHeaderFlag(); // pkt->IsHeader();
-					std::string s=pkt->tx();
-					if (s.length()<42)
-					{
-						// If there is a bug, this will keep the system running by skipping bad packets.
-						// std::cerr << "[Service::run] Bad Length=" << s.length() << std::endl;
-						//exit(3);
-						//std::cout << (s+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUBWXYZ").substr(0,42); // Transmit the packet
-						//std::cerr << (s+"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUBWXYZ").substr(0,42); // Transmit the packet
-					}
-					else
-						std::cout << s.substr(0,42); // Transmit the packet
+					
+					std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+					
 					// Was the last packet a header? If so we need to go into hold
 					if (isHeader)
 					{

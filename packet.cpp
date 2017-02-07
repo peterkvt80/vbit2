@@ -47,14 +47,14 @@ void Packet::SetRow(int mag, int row, std::string val)
 		designationcode = _packet[5] & 0x0F;
 		_packet[5] = HamTab[designationcode]; // designation code is 8/4 hamming coded
 		
-		/* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish)
+		/* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish) */
 		for (int i = 1; i<=13; i++){
 			std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
 			triplet = _packet[i*3+3] & 0x3F;
 			triplet |= ((_packet[i*3+4]) & 0x3F) << 6;
 			triplet |= ((_packet[i*3+5]) & 0x3F) << 12;
 			SetTriplet(i, triplet);
-		}*/
+		}
 	}
 
 	// end of experimental page enhancement code
@@ -139,7 +139,7 @@ bool Packet::get_offset_time(char* str)
  * but hard code this for now
  * Most of this should be rewritten for c++
  */
-std::string Packet::tx(bool debugMode)
+char* Packet::tx(bool debugMode)
 {
 	// Get local time
 	time_t rawtime;
