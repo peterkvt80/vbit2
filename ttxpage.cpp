@@ -646,7 +646,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 	// assert(rownumber<=MAXROW);
 	if (rownumber>MAXROW) return;
 	if (m_pLine[rownumber]==nullptr)
-			m_pLine[rownumber]=new TTXLine(line,rownumber<25); // Didn't exist before
+			m_pLine[rownumber]=new TTXLine(line,rownumber<MAXROW); // Didn't exist before
 	else
 	{
 		//std::cerr << "[TTXPage::SetRow] row=" << rownumber << std::endl;

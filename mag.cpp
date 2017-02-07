@@ -192,17 +192,47 @@ Packet* Mag::GetPacket(Packet* p)
 
     p->Parity(13);
     assert(p!=NULL);
-
-    _state=STATE_FASTEXT;
-    break;
-
+	
+	links=_page->GetLinkSet();
+	if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
+		_state=STATE_FASTEXT; // a non zero FL row will override an OL,27 row
+	} else { 
+		_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
+		_state=STATE_PACKET27;
+	}
+	break;
+   
   case STATE_FASTEXT:
-    links=_page->GetLinkSet();
-    p->SetMRAG(_magNumber,27);
-    p->Fastext(links,_magNumber);
+		p->SetMRAG(_magNumber,27);
+		links=_page->GetLinkSet();
+		p->Fastext(links,_magNumber);
+		_lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
+		_state=STATE_PACKET28;
+	break;
+
+  case STATE_PACKET27:
+		if (_lastTxt)
+		{
+			//std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
+			//_lastTxt->Dump();
+			p->SetRow(_magNumber, 27, _lastTxt->GetLine());
+			_lastTxt=_lastTxt->GetNextLine();
+			break;
+		}
+		_lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
+		_state=STATE_PACKET28; // Fall through
+  case STATE_PACKET28:
+		if (_lastTxt)
+		{
+			//std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
+			//_lastTxt->Dump();
+
+			p->SetRow(_magNumber, 28, _lastTxt->GetLine());
+			_lastTxt=_lastTxt->GetNextLine();
+			break;
+		}
 		_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
-    _state=STATE_PACKET26;
-    break;
+		_state=STATE_PACKET26; // Fall through
   case STATE_PACKET26:
 		if (_lastTxt)
 		{
@@ -215,30 +245,7 @@ Packet* Mag::GetPacket(Packet* p)
 			std::cerr << "*";
 			break;
 		}
-		_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
-		_state=STATE_PACKET27; // Fall through
-  case STATE_PACKET27:
-		if (_lastTxt)
-		{
-			//std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
-			//_lastTxt->Dump();
-			p->SetRow(_magNumber, 27, _lastTxt->GetLine());
-			_lastTxt=_lastTxt->GetNextLine();
-			break;
-		}
-		_lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
-    _state=STATE_PACKET28; // Fall through
-  case STATE_PACKET28:
-		if (_lastTxt)
-		{
-			//std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
-			//_lastTxt->Dump();
-
-			p->SetRow(_magNumber, 28, _lastTxt->GetLine());
-			_lastTxt=_lastTxt->GetNextLine();
-			break;
-		}
-    _state=STATE_TEXTROW; // Fall through
+		_state=STATE_TEXTROW; // Fall through
   case STATE_TEXTROW:
     // Find the next row that isn't NULL
     for (_thisRow++;_thisRow<=24;_thisRow++)
