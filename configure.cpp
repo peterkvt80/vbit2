@@ -4,6 +4,17 @@
 
 using namespace ttx;
 
+int Configure::DirExists(char *path){
+	struct stat info;
+	
+	if(stat(path, &info ) != 0)
+		return 0;
+	else if(info.st_mode & S_IFDIR)
+		return 1;
+	else
+		return 0;
+}
+
 Configure::Configure(int argc, char** argv) :
 
 	// settings for generation of packet 8/30
@@ -38,6 +49,11 @@ Configure::Configure(int argc, char** argv) :
 			}
 		}
 	}
+	if (!DirExists(_pageDir)){
+		std::cerr << "[Configure::Configure] " << _pageDir << " does not exist or is not a directory" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	
 	/// @ scan for overriding the configuration file
 	std::cerr << "[Configure::Configure] Pages directory is " << _pageDir << std::endl;
 	std::cerr << "[Configure::Configure] Config file is " << _configFile << std::endl;

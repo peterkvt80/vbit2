@@ -9,6 +9,7 @@
 #include <iostream>
 #include <stdint.h>
 #include <cstring>
+#include <sys/stat.h>
 #define NOCONFIG 1 // failed to open config file
 #define BADCONFIG 2 // config file malformed
 
@@ -30,6 +31,7 @@ public:
 	inline char* GetPageDirectory(){return _pageDir;};
 	
 private:
+	int DirExists(char *path);
 	// template string for generating header packets
 	char headerTemplate[33];
 
