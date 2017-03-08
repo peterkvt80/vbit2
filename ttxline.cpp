@@ -80,14 +80,12 @@ std::string TTXLine::validate(std::string const& val)
         }
         // std::cout << val[i] << std::endl;
 
-        // This code maps nulls to ? which was needed because we used null terminated strings.
         // If we use null terminated strings anywhere it will go wrong.
-        /*
+        // add the parity bit to nulls now so that they make it through the string handling
         if (ch==0x00) // null?
         {
-            ch='?'; // Black text.
+            ch=0x80; // Black text.
         }
-        */
         str[j++]=ch;
     }
     // short line? Remove the text terminator.
