@@ -9,6 +9,7 @@
 #include "tables.h"
 #include "hamm-tables.h"
 #include <assert.h>
+#include "ttxpage.h"
 
 /**
  * Teletext packet.
@@ -120,7 +121,7 @@ class Packet
 				/**
 				 * @brief Same as the row contructor, except it doesn't construct
 				 */
-				void SetRow(int mag, int row, std::string val);
+				void SetRow(int mag, int row, std::string val, int coding);
 
 
     protected:
@@ -130,6 +131,7 @@ private:
 	uint8_t _mag;//<! The magazine number this packet belongs to
 	uint32_t _page;//<! The page number this packet belongs to
 	uint8_t _row; //<! Row number
+	int _coding; // packet coding
 
 	bool get_offset_time(char* str);
 	bool get_net(char* str);

@@ -34,6 +34,8 @@
 // Allow for enhancement packets
 #define MAXROW 29
 
+#define CODING_7BIT_TEXT            0
+#define CODING_13_TRIPLETS          2
 
 class TTXPage
 {
@@ -197,6 +199,8 @@ class TTXPage
 
         inline bool Loaded() const {return m_Loaded;};
 
+        int GetPageCoding() {return m_pagecoding;}
+
     protected:
         /** Load a TTI page (MRG Systems)
          * \param filename : The source file
@@ -221,6 +225,7 @@ class TTXPage
         unsigned int m_subcode;     // SC
         int m_pagestatus;           // PS
         int m_region;               // RE
+        int m_pagecoding;
         // Private functions
         void m_Init();
         void m_OutputLines(std::ofstream& ttxfile, TTXPage* p); /// Send ttx lines to an output stream

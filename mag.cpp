@@ -215,7 +215,7 @@ Packet* Mag::GetPacket(Packet* p)
 		{
 			//std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
 			//_lastTxt->Dump();
-			p->SetRow(_magNumber, 27, _lastTxt->GetLine());
+			p->SetRow(_magNumber, 27, _lastTxt->GetLine(), 0); // TODO coding for navigation packets
 			_lastTxt=_lastTxt->GetNextLine();
 			break;
 		}
@@ -226,9 +226,29 @@ Packet* Mag::GetPacket(Packet* p)
 		{
 			//std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
 			//_lastTxt->Dump();
-
-			p->SetRow(_magNumber, 28, _lastTxt->GetLine());
+			
+			p->SetRow(_magNumber, 28, _lastTxt->GetLine(), CODING_13_TRIPLETS);
 			_lastTxt=_lastTxt->GetNextLine();
+			break;
+		}
+		else if (_page->GetRegion())
+		{
+			// create X/28/0 packet for pages which have a region set with RE in file
+			// it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
+			
+			// this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
+			std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
+			int region = _page->GetRegion();
+			int NOS = (_page->GetPageStatus() & 0x380) >> 7;
+			int language = NOS | (region << 3);
+			int triplet = 0x3C000 | (language << 7); // construct triplet 1
+			val.replace(1,1,1,(triplet & 0x3F) | 0x40);
+			val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
+			val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
+			std::cerr << "region:" << std::hex << region << "nos:" << std::hex << NOS << "triplet:" << std::hex << triplet << std::endl;
+			p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
+			_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
+			_state=STATE_PACKET26;
 			break;
 		}
 		_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
@@ -239,7 +259,7 @@ Packet* Mag::GetPacket(Packet* p)
 			//std::cerr << "Mag=" << _magNumber << " Page=" << std::hex << _page->GetPageNumber() << std::dec << " Packet 26 length=" << _lastTxt->GetLine().length() << std::endl;
 			//_lastTxt->Dump();
 			// p->SetMRAG(_magNumber,26); // This line *should* be redundant, and it is
-			p->SetRow(_magNumber, 26, _lastTxt->GetLine());
+			p->SetRow(_magNumber, 26, _lastTxt->GetLine(), CODING_13_TRIPLETS);
 			// Do we have another line?
 			_lastTxt=_lastTxt->GetNextLine();
 			std::cerr << "*";
@@ -265,7 +285,7 @@ Packet* Mag::GetPacket(Packet* p)
     else
     {
       //_outp("J");
-      if (_lastTxt->GetLine().empty() && false) // If the row is empty then skip it (Kill this for now)
+      if (_lastTxt->IsBlank()) // If the row is empty then skip it
       {
         // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
         p=NULL;
@@ -273,8 +293,9 @@ Packet* Mag::GetPacket(Packet* p)
       else
       {
         // Assemble the packet
-        p->SetRow(_magNumber, _thisRow, _lastTxt->GetLine());
-        p->Parity();
+        p->SetRow(_magNumber, _thisRow, _lastTxt->GetLine(), _page->GetPageCoding());
+        if (_page->GetPageCoding() == CODING_7BIT_TEXT)
+            p->Parity();
         assert(p->IsHeader()!=true);
       }
     }

@@ -28,17 +28,18 @@ Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag),
 	assert(_row!=0); // Use Header for row 0
 }
 
-void Packet::SetRow(int mag, int row, std::string val)
+void Packet::SetRow(int mag, int row, std::string val, int coding)
 {
 	int triplet;
 	int designationcode;
 	SetMRAG(mag, row);
 	SetPacketText(val);
-
+	_coding = coding;
+	
 	// The following block of code is experimental support for page enhancement
 	// packets read from special OL rows in tti page files.
 	// If OL,28, packet is used the page file should not contain a non zero RE,
-	if (row == 26 || row == 28 || row == 29)
+	if (coding == CODING_13_TRIPLETS)
 	{
 		// Special handler to allow stuffing enhancement packets in as OL rows
 		// Each 18 bits of data for a triplet is coded in the input line as
@@ -49,7 +50,7 @@ void Packet::SetRow(int mag, int row, std::string val)
 		
 		/* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish) */
 		for (int i = 1; i<=13; i++){
-			std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
+			//std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
 			triplet = _packet[i*3+3] & 0x3F;
 			triplet |= ((_packet[i*3+4]) & 0x3F) << 6;
 			triplet |= ((_packet[i*3+5]) & 0x3F) << 12;
@@ -212,7 +213,7 @@ char* Packet::tx(bool debugMode)
 			Parity(13); // redo the parity because substitutions will need processing
 
 		}
-		else if (_row<26) // Other text rows
+		else if (_coding == CODING_7BIT_TEXT) // Other text rows
 		{
 			char *tmpptr;
 			// ======= TEMPERATURE ========
@@ -295,13 +296,6 @@ char* Packet::tx(bool debugMode)
  */
 void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode, unsigned int control)
 {
-#if 1
-	// Show the current header being output
-	if (mag==1 && page==0x9a /*subcode>0*/)
-	{
-		std::cerr << "mpp=" << (int) mag << std::hex << std::setw(2) << std::setfill('0') << (int)page << " subcode=" << subcode << std::dec << std::endl;
-	}
-#endif
 	uint8_t cbit;
 	SetMRAG(mag,0);
 	_packet[5]=HamTab[page%0x10];

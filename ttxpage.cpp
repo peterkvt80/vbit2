@@ -95,6 +95,7 @@ void TTXPage::m_Init()
     m_cycletimetype='T';
     m_subcode=-1;
     m_pagestatus=0x8000;
+    m_pagecoding=CODING_7BIT_TEXT;
     instance=instanceCount++;
     TTXPage::pageChanged=false;
 
@@ -527,9 +528,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     std::getline(filein, line);
                     if (lineNumber>MAXROW) break;
                     // std::cerr << "reading " << lineNumber << " line=" << line << std::endl;
-                    // p->m_pLine[lineNumber]=new TTXLine(line);
-										p->SetRow(lineNumber,line);
-                    // TODO: Change this implementation to use SetRow
+                    p->SetRow(lineNumber,line);
                     // std::cerr << lineNumber << ": OL partly implemented. " << line << std::endl;
                     lines++;
                     break;
@@ -599,6 +598,7 @@ TTXPage::TTXPage(const TTXPage& other)
     m_subcode=other.m_subcode;              // SC
     m_pagestatus=other.m_pagestatus;           // PS
     m_region=other.m_region;               // RE
+    m_pagecoding=other.m_pagecoding;
 
         //int instance;
 
@@ -645,6 +645,21 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 {
 	// assert(rownumber<=MAXROW);
 	if (rownumber>MAXROW) return;
+	
+	if (rownumber == 28){
+		int dc = line.at(0) & 0x0F;
+		if (dc == 0 || dc == 2 || dc == 3 || dc == 4){
+			// packet is X/28/0, X/28/2, X/28/3, or X/28/4
+			int triplet = line.at(1) & 0x3F;
+			triplet |= (line.at(2) & 0x3F) << 6;
+			triplet |= (line.at(3) & 0x3F) << 12; // first triplet contains page function and coding
+			
+			m_pagecoding = (triplet & 0x70) >> 4;
+			
+			m_region = 0; // ignore any region from RE line as X/28 sets the character set
+		}
+	}
+	
 	if (m_pLine[rownumber]==nullptr)
 			m_pLine[rownumber]=new TTXLine(line,rownumber<MAXROW); // Didn't exist before
 	else
