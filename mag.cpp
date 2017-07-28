@@ -268,14 +268,14 @@ Packet* Mag::GetPacket(Packet* p)
 		_state=STATE_TEXTROW; // Fall through
   case STATE_TEXTROW:
     // Find the next row that isn't NULL
-    for (_thisRow++;_thisRow<=24;_thisRow++)
+    for (_thisRow++;_thisRow<26;_thisRow++)
     {
       _lastTxt=_page->GetTxRow(_thisRow);
       if (_lastTxt!=NULL)
                 break;
     }
     // Didn't find? End of this page.
-    if (_thisRow>24 || _lastTxt==NULL)
+    if (_thisRow>25 || _lastTxt==NULL)
     {
       p=NULL;
       _state=STATE_HEADER;

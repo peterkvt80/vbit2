@@ -665,9 +665,9 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 	else
 	{
 		//std::cerr << "[TTXPage::SetRow] row=" << rownumber << std::endl;
-		if (rownumber<25) // Ordinary line
+		if (rownumber<26) // Ordinary line
 		{
-			m_pLine[rownumber]->Setm_textline(line, rownumber<25);
+			m_pLine[rownumber]->Setm_textline(line, true);
 		}
 		else // Enhanced packet
 		{
