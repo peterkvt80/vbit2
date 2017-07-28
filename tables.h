@@ -35,13 +35,13 @@
 * Use 2nd half to add even parity
 * Both halves to remove odd parity - signals error if -ve.
 */
-extern const char ParTab[];
+extern const unsigned char ParTab[];
 /*-------------------------------------------
 * Hamming code table
 *		0	  1   2    3    4    5    6    7    8    9    A    B    C    D    E    F */
-extern const char HamTab[];
+extern const unsigned char HamTab[];
 /*-------------------------------------------*/
-extern const char DehamTable[];
+extern const unsigned char DehamTable[];
 /* Hamming decode table
 DHMTBL    0x01,0x80,0x01,0x01,0x80,0x00,0x01,0x80
           0x80,0x02,0x01,0x80,0x0A,0x80,0x80,0x07
@@ -89,10 +89,10 @@ extern unsigned char BitRev[16];
 */
 #define LenMragMagEntry	56
 
-extern const char MragTable[8][LenMragMagEntry];
+extern const unsigned char MragTable[8][LenMragMagEntry];
 /*----------------------------------------------*/
-extern const char TL[];
-extern const char TH[];
+extern const unsigned char TL[];
+extern const unsigned char TH[];
 /*------------------------------------------*/
 /*
 *CRC lookup tables
