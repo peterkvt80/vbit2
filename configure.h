@@ -7,6 +7,7 @@
  */
 
 #include <iostream>
+#include <fstream>
 #include <stdint.h>
 #include <cstring>
 #include <sys/stat.h>
@@ -30,10 +31,15 @@ public:
 	
 	inline char* GetPageDirectory(){return _pageDir;};
 	
+	std::string GetHeaderTemplate(){return _headerTemplate;}
+	
 private:
 	int DirExists(char *path);
+	
+	int LoadConfigFile(std::string filename);
+	
 	// template string for generating header packets
-	char headerTemplate[33];
+	std::string _headerTemplate;
 
 	// settings for generation of packet 8/30
 	uint8_t _multiplexedSignalFlag; 	// 0 indicates teletext is multiplexed with video, 1 means full frame teletext.

@@ -25,6 +25,7 @@
 #include "ttxpagestream.h"
 #include "packet.h"
 #include "carousel.h"
+#include "configure.h"
 
 namespace vbit
 {
@@ -34,7 +35,7 @@ class Mag
 {
     public:
         /** Default constructor */
-        Mag(int mag, std::list<TTXPageStream>* pageSet);
+        Mag(int mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure);
         /** Default destructor */
         virtual ~Mag();
 
@@ -68,6 +69,7 @@ class Mag
     protected:
     private:
         std::list<TTXPageStream>*  _pageSet; //!< Member variable "_pageSet"
+        ttx::Configure* _configure;
         std::list<TTXPageStream>::iterator _it;
         TTXPageStream* _page; //!< The current page being output
 

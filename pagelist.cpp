@@ -64,7 +64,7 @@ int PageList::LoadPageList(std::string filepath)
     pageSet=_pageList[i];
     _mag[i]=new vbit::Mag(pageSet);
 */
-    _mag[i]=new vbit::Mag(i, &_pageList[i]);
+    _mag[i]=new vbit::Mag(i, &_pageList[i], _configure);
   }
   // Just for testing
   if (1) for (int i=0;i<8;i++)

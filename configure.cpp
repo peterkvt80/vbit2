@@ -25,16 +25,15 @@ Configure::Configure(int argc, char** argv) :
 	_NetworkIdentificationCode(0x0000)
 {
 	std::cerr << "[Configure::Configure] Started" << std::endl;
-	strncpy(_configFile,"vbit.conf",MAXPATH-1);
+	strncpy(_configFile,CONFIGFILE,MAXPATH-1);
 #ifdef _WIN32
 	strncpy(_pageDir,"i:\\temp\\teletext",MAXPATH-1);
 #else
 	strcpy(_pageDir,"/home/pi/teletext");
 #endif
 	// This is where the default header template is defined.
-	// Work out the c++ string way of doing this
-	// sprintf(headerTemplate," VBIT-PI %%%%# %%%%a %%d %%%%b%c%%H:%%M/%%S",0x83); // include alpha yellow code
-	//char headerTemplate[33];
+	_headerTemplate = "TEEFAX 1 %%# %%a %d %%b" "\x03" "12:34.56";
+	
 	//char serviceStatusString[21];
 	//Scan the command line for overriding the pages file.
 	std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
@@ -58,6 +57,11 @@ Configure::Configure(int argc, char** argv) :
 	std::cerr << "[Configure::Configure] Pages directory is " << _pageDir << std::endl;
 	std::cerr << "[Configure::Configure] Config file is " << _configFile << std::endl;
 	/// @todo load the configuration file.
+	std::string path;
+	path = _pageDir;
+	path += "/";
+	path += _configFile;
+	LoadConfigFile(path);
 	/// @todo scan the command line for other overrides.
 	std::cerr << "[Configure::Configure] Exits" << std::endl;
 }
@@ -65,4 +69,27 @@ Configure::Configure(int argc, char** argv) :
 Configure::~Configure()
 {
 	std::cerr << "[Configure] Destructor" << std::endl;
+}
+
+int Configure::LoadConfigFile(std::string filename)
+{
+	std::cerr << "[Configure::LoadConfigFile] enters" << std::endl;
+	std::ifstream filein(filename.c_str()); // Open the file
+	
+	if (filein.is_open()){
+		std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
+		
+		std::string line;
+		while (std::getline(filein >> std::ws, line)){
+			if (line.front() != ';'){ // ignore comments
+				std::cerr << "[Configure::LoadConfigFile] config line: " << line << std::endl;
+				/// todo: parsing!
+			}
+		}
+		filein.close();
+		return 0;
+	} else {
+		std::cerr << "[Configure::LoadConfigFile] open failed" << std::endl;
+		return -1;
+	}
 }
