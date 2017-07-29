@@ -108,7 +108,7 @@ TTXPage::~TTXPage()
     std::cerr << "[~TTXPage] " << this->GetSourcePage() << std::endl;
     // This bit causes a lot of grief.
     // Need to be super careful that we don't destroy it. Like if you make a copy then destroy the copy.
-    for (int i=0;i<MAXROW;i++)
+    for (int i=0;i<=MAXROW;i++)
     {
         // std::cerr << "Deleting line " << i << std::endl;
         if (m_pLine[i]!=nullptr)
@@ -575,7 +575,7 @@ TTXPage::TTXPage(const TTXPage& other)
 
     m_PageNumber=other.m_PageNumber;  // PN
     m_SubPage=other.m_SubPage;
-    for (int i=0;i<MAXROW;i++)
+    for (int i=0;i<=MAXROW;i++)
     {
         m_pLine[i]=other.m_pLine[i];
         /*

@@ -32,7 +32,7 @@
 #define PAGESTATUS_C11_SERIALMAG    0x0040
 
 // Allow for enhancement packets
-#define MAXROW 29
+#define MAXROW 28
 
 #define CODING_7BIT_TEXT            0
 #define CODING_13_TRIPLETS          2
