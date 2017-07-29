@@ -60,7 +60,11 @@ Packet* Mag::GetPacket(Packet* p)
    * 6) However, before iterating in step 2, do this every second: Look at the carousel list and for each page decrement their timers.
    * When a page reaches 0 then it is taken as the next page, and its timer reset.
    */
-
+   
+   /* pages can be have varying packet codings for X/1 to X/25. Pages using the standard coding we
+      want to send X/26/0 to X/26/15 first, then X/1 to X/25 afterwards.
+      For pages which carry data not for display in packets X/1 to X/25 however we must send these first (so the packets including any X/26 are all sent in sequential order of packet and designation code
+      Currently any page using a coding other than 7-bit with parity sends in this sequential order */
 /*
         vbit::Mag* m=_mag[i];
         std::list<TTXPageStream> p=m->Get_pageSet();
@@ -252,8 +256,15 @@ Packet* Mag::GetPacket(Packet* p)
 			_state=STATE_PACKET26;
 			break;
 		}
-		_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
-		_state=STATE_PACKET26; // Fall through
+		if (_page->GetPageCoding() == CODING_7BIT_TEXT){
+			// X/26 packets next in normal pages
+			_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
+			_state=STATE_PACKET26; // Fall through
+		} else {
+			// do X/1 to X/25 first and go back to X/26 after
+			_state=STATE_TEXTROW;
+			break;
+		}
   case STATE_PACKET26:
 		if (_lastTxt)
 		{
@@ -266,7 +277,15 @@ Packet* Mag::GetPacket(Packet* p)
 			std::cerr << "*";
 			break;
 		}
-		_state=STATE_TEXTROW; // Fall through
+		if (_page->GetPageCoding() == CODING_7BIT_TEXT){
+			_state=STATE_TEXTROW; // Fall through to text rows on normal pages
+		} else {
+			// otherwise we end the page here
+			p=NULL;
+			_state=STATE_HEADER;
+			_thisRow=0;
+			break;
+		}
   case STATE_TEXTROW:
     // Find the next row that isn't NULL
     for (_thisRow++;_thisRow<26;_thisRow++)
@@ -278,10 +297,17 @@ Packet* Mag::GetPacket(Packet* p)
     // Didn't find? End of this page.
     if (_thisRow>25 || _lastTxt==NULL)
     {
-      p=NULL;
-      _state=STATE_HEADER;
-      _thisRow=0;
-      //_outp("H");
+      if(_page->GetPageCoding() == CODING_7BIT_TEXT){
+        // if this is a normal page we've finished
+        p=NULL;
+        _state=STATE_HEADER;
+        _thisRow=0;
+        //_outp("H");
+      } else {
+        // otherwise go on to X/26
+        _lastTxt=_page->GetTxRow(26);
+        _state=STATE_PACKET26;
+      }
     }
     else
     {
@@ -296,7 +322,7 @@ Packet* Mag::GetPacket(Packet* p)
         // Assemble the packet
         p->SetRow(_magNumber, _thisRow, _lastTxt->GetLine(), _page->GetPageCoding());
         if (_page->GetPageCoding() == CODING_7BIT_TEXT)
-            p->Parity();
+            p->Parity(); // only set parity for normal text rows
         assert(p->IsHeader()!=true);
       }
     }
