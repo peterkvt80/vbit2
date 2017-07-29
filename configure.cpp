@@ -76,14 +76,42 @@ int Configure::LoadConfigFile(std::string filename)
 	std::cerr << "[Configure::LoadConfigFile] enters" << std::endl;
 	std::ifstream filein(filename.c_str()); // Open the file
 	
+	std::vector<std::string>::iterator iter;
+	// these are all the valid strings for config lines
+	std::vector<std::string> nameStrings{"header_template", "initial_teletext_page"};
+	
 	if (filein.is_open()){
 		std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
 		
 		std::string line;
+		std::string name;
+		std::string value;
 		while (std::getline(filein >> std::ws, line)){
 			if (line.front() != ';'){ // ignore comments
-				std::cerr << "[Configure::LoadConfigFile] config line: " << line << std::endl;
 				/// todo: parsing!
+				std::size_t delim = line.find("=", 0);
+				
+				if (delim != std::string::npos){
+					name = line.substr(0, delim);
+					value = line.substr(delim + 1);
+					iter = find(nameStrings.begin(), nameStrings.end(), name);
+					
+					if(iter != nameStrings.end()){
+						// matched string
+						switch(iter - nameStrings.begin() + 1){
+							case 0: // header_template
+								_headerTemplate.assign(value, 0, 32);
+								break;
+							
+							case 1: // initial_teletext_page
+								
+								
+								break;
+						}
+					} else {
+						std::cerr << "[Configure::LoadConfigFile] unrecognised config string: " << name << std::endl;
+					}
+				}
 			}
 		}
 		filein.close();

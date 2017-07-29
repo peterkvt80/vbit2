@@ -11,8 +11,8 @@
 #include <stdint.h>
 #include <cstring>
 #include <sys/stat.h>
-#define NOCONFIG 1 // failed to open config file
-#define BADCONFIG 2 // config file malformed
+#include <vector>
+#include <algorithm>
 
 #define CONFIGFILE "vbit.conf" // default config file name
 #define MAXPATH 132
