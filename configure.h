@@ -47,7 +47,7 @@ private:
 	uint8_t _initialPage;
 	uint16_t _initialSubcode;
 	uint16_t _NetworkIdentificationCode;
-	char _serviceStatusString[21];
+	std::string _serviceStatusString;
 	char _configFile[MAXPATH]; /// Configuration file name --config
 	char _pageDir[MAXPATH]; /// Configuration file name --dir
 };

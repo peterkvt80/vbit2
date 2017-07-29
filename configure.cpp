@@ -22,7 +22,8 @@ Configure::Configure(int argc, char** argv) :
 	_initialMag(1),
 	_initialPage(0x00),
 	_initialSubcode(0x3F7F),
-	_NetworkIdentificationCode(0x0000)
+	_NetworkIdentificationCode(0x0000),
+	_serviceStatusString(19, ' ')
 {
 	std::cerr << "[Configure::Configure] Started" << std::endl;
 	strncpy(_configFile,CONFIGFILE,MAXPATH-1);
@@ -34,7 +35,6 @@ Configure::Configure(int argc, char** argv) :
 	// This is where the default header template is defined.
 	_headerTemplate = "TEEFAX 1 %%# %%a %d %%b" "\x03" "%H:%M.%S";
 	
-	//char serviceStatusString[21];
 	//Scan the command line for overriding the pages file.
 	std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
 	if (argc>1)
@@ -73,7 +73,6 @@ Configure::~Configure()
 
 int Configure::LoadConfigFile(std::string filename)
 {
-	std::cerr << "[Configure::LoadConfigFile] enters" << std::endl;
 	std::ifstream filein(filename.c_str()); // Open the file
 	
 	std::vector<std::string>::iterator iter;
@@ -90,28 +89,64 @@ int Configure::LoadConfigFile(std::string filename)
 			if (line.front() != ';'){ // ignore comments
 				/// todo: parsing!
 				std::size_t delim = line.find("=", 0);
+				int error = 0;
 				
 				if (delim != std::string::npos){
 					name = line.substr(0, delim);
 					value = line.substr(delim + 1);
 					iter = find(nameStrings.begin(), nameStrings.end(), name);
-					
 					if(iter != nameStrings.end()){
 						// matched string
-						switch(iter - nameStrings.begin() + 1){
+						switch(iter - nameStrings.begin()){
 							case 0: // header_template
 								_headerTemplate.assign(value, 0, 32);
 								break;
 							
 							case 1: // initial_teletext_page
-								
-								
+								if (value.size() >= 3){
+									size_t idx;
+									int magpage;
+									int subcode;
+									try {
+										magpage = stoi(std::string(value, 0, 3), &idx, 16);
+									} catch (const std::invalid_argument& ia) {
+										error = 1;
+										break;
+									}
+									if (magpage < 0x100 || magpage > 0x8FF || (magpage & 0xFF) == 0xFF){
+										error = 1;
+										break;
+									}
+									if (value.size() > 3){
+										if ((value.size() != 8) || (value.at(idx) != ':')){
+											error = 1;
+											break;
+										}
+										try {
+											subcode = stoi(std::string(value, 4, 4), &idx, 16);
+										} catch (const std::invalid_argument& ia) {
+											error = 1;
+											break;
+										}
+										if (subcode < 0x0000 || subcode > 0x3F7F || subcode & 0xC080){
+											error = 1;
+											break;
+										}
+										_initialSubcode = subcode;
+									}
+									_initialMag = magpage / 0x100;
+									_initialPage = magpage % 0x100;
+									break;
+								} 
+								error = 1;
 								break;
 						}
 					} else {
-						std::cerr << "[Configure::LoadConfigFile] unrecognised config string: " << name << std::endl;
+						error = 1; // unrecognised config line
 					}
 				}
+				if (error)
+					std::cerr << "[Configure::LoadConfigFile] invalid config line: " << line << std::endl;
 			}
 		}
 		filein.close();
