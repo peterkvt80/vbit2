@@ -32,7 +32,7 @@ Configure::Configure(int argc, char** argv) :
 	strcpy(_pageDir,"/home/pi/teletext");
 #endif
 	// This is where the default header template is defined.
-	_headerTemplate = "TEEFAX 1 %%# %%a %d %%b" "\x03" "12:34.56";
+	_headerTemplate = "TEEFAX 1 %%# %%a %d %%b" "\x03" "%H:%M.%S";
 	
 	//char serviceStatusString[21];
 	//Scan the command line for overriding the pages file.

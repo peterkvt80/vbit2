@@ -191,7 +191,7 @@ Packet* Mag::GetPacket(Packet* p)
     p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
 
 
-    p->Parity(13);
+    //p->Parity(13); // don't apply parity here it will screw up the template. parity for the header is done by tx() later
     assert(p!=NULL);
 	
 	links=_page->GetLinkSet();

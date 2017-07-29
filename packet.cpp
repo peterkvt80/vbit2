@@ -148,10 +148,6 @@ char* Packet::tx(bool debugMode)
 	time(&rawtime);
 	timeinfo=localtime(&rawtime);
 
-	// @todo: Get these from the locale!
-	const char *dayNames[] = { "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-	const char *monthNames[] = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-
     // @TODO: parity
 		if (_isHeader) // We can do header substitutions
 		{
@@ -175,42 +171,86 @@ char* Packet::tx(bool debugMode)
 				//std::cerr << "[Packet::tx]ptr[2]=" << ptr2[2] << std::endl;
 			}
 
-			// Day of week. Mon, Tue etc. Use %%a
-			ptr2=strstr(_packet,"%%a");
+			char tmpstr[11];
+			ptr2=strstr(_packet,"%%a");	// Tue
 			if (ptr2)
 			{
-				int day=timeinfo->tm_wday;
-				ptr2[0]=dayNames[day][0];
-				ptr2[1]=dayNames[day][1];
-				ptr2[2]=dayNames[day][2];
+				strftime(tmpstr,10,"%a",timeinfo);
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
+				ptr2[2]=tmpstr[2];
 			}
-
-			// Date 2 digits, leading 0 %d
-			ptr2=strstr(_packet,"%d");
+				
+			ptr2=strstr(_packet,"%%b"); // Jan
 			if (ptr2)
 			{
-				int date=timeinfo->tm_mday;
-				ptr2[0]='0'+date/10;
-				ptr2[1]='0'+date%10;
+				strftime(tmpstr,10,"%b",timeinfo);
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
+				ptr2[2]=tmpstr[2];
 			}
-
-			// Month: Three characters in locale format %%b
-			ptr2=strstr(_packet,"%%b");
+			
+			ptr2=strstr(_packet,"%d");	// day of month with leading zero
 			if (ptr2)
 			{
-				int month=timeinfo->tm_mon;
-				ptr2[0]=monthNames[month][0];
-				ptr2[1]=monthNames[month][1];
-				ptr2[2]=monthNames[month][2];
+				strftime(tmpstr,10,"%d",timeinfo);
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
+			}
+			
+			ptr2=strstr(_packet,"%e");	// day of month with no leading zero
+			if (ptr2)
+			{
+				#ifdef WIN32
+				strftime(tmpstr,10,"%#d",timeinfo);
+				#else
+				strftime(tmpstr,10,"%e",timeinfo);
+				#endif
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
+			}		
+
+			ptr2=strstr(_packet,"%m");	// month number with leading 0
+			if (ptr2)
+			{
+				strftime(tmpstr,10,"%m",timeinfo);
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
 			}
 
-				// @todo See buffer.c for additional codes that have not been implemented
-
-
-			// Hardcode the time for now
-			// std::cerr << "[Packet::tx]" << asctime(timeinfo) << std::endl;
-			strncpy(&_packet[37],&asctime(timeinfo)[11],8);
-			Parity(13); // redo the parity because substitutions will need processing
+			ptr2=strstr(_packet,"%y");	// year. 2 digits
+			if (ptr2)
+			{
+				strftime(tmpstr,10,"%y",timeinfo);
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
+			}
+			
+			ptr2=strstr(_packet,"%H");	// hour.
+			if (ptr2)
+			{
+				strftime(tmpstr,10,"%H",timeinfo);
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
+			}
+			
+			ptr2=strstr(_packet,"%M");	// minutes.
+			if (ptr2)
+			{
+				strftime(tmpstr,10,"%M",timeinfo);
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
+			}
+			
+			ptr2=strstr(_packet,"%S");	// seconds.
+			if (ptr2)
+			{
+				strftime(tmpstr,10,"%S",timeinfo);
+				ptr2[0]=tmpstr[0];
+				ptr2[1]=tmpstr[1];
+			}
+			
+			Parity(13); // apply parity to the text of the header
 
 		}
 		else if (_coding == CODING_7BIT_TEXT) // Other text rows

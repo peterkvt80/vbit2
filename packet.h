@@ -1,14 +1,14 @@
 #ifndef _PACKET_H_
 #define _PACKET_H_
 
-#include <stdint.h>
+#include <cstdint>
 #include <iostream>
 #include <iomanip>
-#include <string.h>
-#include <time.h>
+#include <cstring>
+#include <ctime>
 #include "tables.h"
 #include "hamm-tables.h"
-#include <assert.h>
+#include <cassert>
 #include "ttxpage.h"
 
 /**
