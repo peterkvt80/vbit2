@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <vector>
 #include <algorithm>
+#include <stdexcept>
 
 #define CONFIGFILE "vbit.conf" // default config file name
 #define MAXPATH 132
