@@ -34,9 +34,9 @@ unzip -o pages.zip
 #teefax pages
 svn checkout http://teastop.plus.com/svn/teletext/ ~/teletext
 
-# TODO install default config files
-#cp ~/vbit/example-vbit.conf ~/Pages/vbit.conf
-#cp ~/vbit/example-vbit.conf ~/teletext/vbit.conf
+# install default config files
+cp ~/vbit/example-vbit.conf ~/Pages/vbit.conf
+cp ~/vbit/example-vbit.conf ~/teletext/vbit.conf
 
 #TODO make the updater scripts
 #cd ~/vbit

@@ -312,7 +312,7 @@ Packet* Mag::GetPacket(Packet* p)
     else
     {
       //_outp("J");
-      if (_lastTxt->IsBlank()) // If the row is empty then skip it
+      if (_lastTxt->IsBlank() && _configure->GetRowAdaptive()) // If the row is empty then skip it
       {
         // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
         p=NULL;

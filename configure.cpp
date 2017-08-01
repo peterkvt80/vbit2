@@ -16,7 +16,7 @@ int Configure::DirExists(char *path){
 }
 
 Configure::Configure(int argc, char** argv) :
-
+	
 	// settings for generation of packet 8/30
 	_multiplexedSignalFlag(0),
 	_initialMag(1),
@@ -34,6 +34,8 @@ Configure::Configure(int argc, char** argv) :
 #endif
 	// This is where the default header template is defined.
 	_headerTemplate = "TEEFAX 1 %%# %%a %d %%b" "\x03" "%H:%M.%S";
+	
+	_rowAdaptive = false;
 	
 	//Scan the command line for overriding the pages file.
 	std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
@@ -77,7 +79,7 @@ int Configure::LoadConfigFile(std::string filename)
 	
 	std::vector<std::string>::iterator iter;
 	// these are all the valid strings for config lines
-	std::vector<std::string> nameStrings{"header_template", "initial_teletext_page"};
+	std::vector<std::string> nameStrings{"header_template", "initial_teletext_page", "row_adaptive_mode"};
 	
 	if (filein.is_open()){
 		std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
@@ -139,6 +141,18 @@ int Configure::LoadConfigFile(std::string filename)
 									break;
 								} 
 								error = 1;
+								break;
+							
+							case 2: // row_adaptive_mode
+								if (!value.compare("true")){
+									_rowAdaptive = true;
+									std::cerr << "row adaptive true" << std::endl;
+								} else if (!value.compare("false")){
+									_rowAdaptive = false;
+									std::cerr << "row adaptive false" << std::endl;
+								} else {
+									error = 1;
+								}
 								break;
 						}
 					} else {
