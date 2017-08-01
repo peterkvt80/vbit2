@@ -671,7 +671,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 		}
 		else // Enhanced packet
 		{
-			std::cerr << "[TTXPage::SetRow] APPEND row=" << rownumber << std::endl;
+			//std::cerr << "[TTXPage::SetRow] APPEND row=" << rownumber << std::endl;
 			// If the line already exists we want to add the packet rather than overwrite what is already there
 			m_pLine[rownumber]->AppendLine(line);
 		}

@@ -238,7 +238,7 @@ std::string TTXLine::GetLine()
 void TTXLine::AppendLine(std::string  const& line)
 {
 	// Seek the end of the list
-	std::cerr << "[TTXLine::AppendLine] called" << std::endl;
+	//std::cerr << "[TTXLine::AppendLine] called" << std::endl;
 	TTXLine* p;
 	for (p=this;p->_nextLine;p=p->_nextLine);
 	p->_nextLine=new TTXLine(line,false);

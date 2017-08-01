@@ -38,7 +38,7 @@ Configure::Configure(int argc, char** argv) :
 	_rowAdaptive = false;
 	
 	//Scan the command line for overriding the pages file.
-	std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
+	//std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
 	if (argc>1)
 	{
 		for (int i=1;i<argc-1;i++)
@@ -65,7 +65,6 @@ Configure::Configure(int argc, char** argv) :
 	path += _configFile;
 	LoadConfigFile(path);
 	/// @todo scan the command line for other overrides.
-	std::cerr << "[Configure::Configure] Exits" << std::endl;
 }
 
 Configure::~Configure()
@@ -146,10 +145,8 @@ int Configure::LoadConfigFile(std::string filename)
 							case 2: // row_adaptive_mode
 								if (!value.compare("true")){
 									_rowAdaptive = true;
-									std::cerr << "row adaptive true" << std::endl;
 								} else if (!value.compare("false")){
 									_rowAdaptive = false;
-									std::cerr << "row adaptive false" << std::endl;
 								} else {
 									error = 1;
 								}
