@@ -40,14 +40,27 @@ class Newfor
 		 */ 
 		void SubtitleOnair(char* response);		
 		int SoftelPageInit(char* cmd);
+		
 		/** InitNewfor
 		 * Initialise the subtitle buffer
 		 */
 		void InitNewfor();
+
 		/** 
 		 * Clear down subtitles immediately
 		 */ 
 		void SubtitleOffair();
+
+    /**
+	  * Start of a Subtitle Data command
+	  * @return Row count 1..7, or 0 if invalid
+	  */		
+	  int GetRowCount(char* cmd);
+
+		/**
+		 * Creates a packet of Newfor data.
+		 */
+		void saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd);
 		
 
   private:	
@@ -76,16 +89,8 @@ class Newfor
 // extern bufferpacket packetCache[1]; // Commands are read into here, and transferred out when OnAir 
 
 
-/**
- * Start of a Subtitle Data command
- * @return Row count 1..7, or 0 if invalid
- */
-int GetRowCount(char* cmd);
 
-/**
- * Creates a packet of of Newfor data.
- */
-void saveSubtitleRow(uint8_t mag, uint8_t row,char* cmd);
+
 
 };
 

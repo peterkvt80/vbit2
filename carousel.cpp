@@ -5,12 +5,12 @@ using namespace vbit;
 Carousel::Carousel()
 {
     //ctor
-    std::cerr << "[Carousel::Carousel] enters" << std::endl;
+    //std::cerr << "[Carousel::Carousel] enters" << std::endl;
 }
 
 Carousel::~Carousel()
 {
-    std::cerr << "[Carousel::Carousel] deleted";
+    //std::cerr << "[Carousel::Carousel] deleted";
     //dtor
 }
 
@@ -19,12 +19,12 @@ void Carousel::addPage(TTXPageStream* p)
     // @todo Don't allow duplicate entries
     p->SetTransitionTime();
     _carouselList.push_front(p);
-    std::cerr << "[Carousel::addPage]";
+    //std::cerr << "[Carousel::addPage]";
 }
 
 void Carousel::deletePage(TTXPageStream* p)
 {
-    std::cerr << "[Carousel::deletePage]";
+    //std::cerr << "[Carousel::deletePage]";
     _carouselList.remove(p);
 }
 
@@ -41,7 +41,7 @@ TTXPageStream* Carousel::nextCarousel()
 
         if (p->Expired())
         {
-            std::cerr << "[Carousel::nextCarousel] page " << std::hex << p->GetPageNumber() << std::dec << " cycle time=" << p->GetCycleTime() << std::endl;
+            //std::cerr << "[Carousel::nextCarousel] page " << std::hex << p->GetPageNumber() << std::dec << " cycle time=" << p->GetCycleTime() << std::endl;
             p->SetTransitionTime(); // We found a carousel that is ready to step
             break;
         }

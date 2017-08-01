@@ -2,13 +2,17 @@
 #include <string.h>
 
 
-
 #include "TCPClient.h"
 
 using namespace vbit;
 
-void DieWithError(char *errorMessage);  /* Error handling function */
+static int
+vbi_unham8			(unsigned int		c)
+{
+	return _vbi_hamm8_inv[(uint8_t) c];
+}
 
+// @todo None of these statics should be here. Should all be member variables, most in a TTXPage object
 
 static char* pCmd;
 
@@ -18,7 +22,21 @@ static char* pkt;
 
 static int rowAddress; // The address of this row
 
-void command(char* cmd, char* response)
+TCPClient::TCPClient()
+{
+}
+
+TCPClient::~TCPClient()
+{
+}
+
+void TCPClient::DieWithError(std::string errorMessage)
+{
+    perror(errorMessage.c_str());
+    exit(1);
+}
+
+void TCPClient::command(char* cmd, char* response)
 {
 	switch (cmd[0])
 	{
@@ -40,25 +58,10 @@ void TCPClient::clearCmd(void)
 	*_cmd=0;
 }
 
-// Normal command mode
-#define MODENORMAL 0
-#define MODESOFTELPAGEINIT 1
-// Get row count
-#define MODEGETROWCOUNT 3
-// Get a row of data
-#define MODEGETROW 4
-// Display the row
-#define MODESUBTITLEONAIR 5
-// Clear down
-#define MODESUBTITLEOFFAIR 6
-#define MODESUBTITLEDATAHIGHNYBBLE 7
-#define MODESUBTITLEDATALOWNYBBLE 8
-
-
 /** AddChar
  * Add a char to the command buffer and call command when we get CR 
  * There is only a response if a command needs to send something back.
- * If the first character is a Nu4 character then the data is parsed as Nu4.
+ * If the first character is a Newfor character then the data is parsed as Nu4.
  * Commands that are not Newfor are MODENORMAL. They are stateless (so far)
  * The state machine for OnAir and OffAir is not needed as they happen immediately.
  * MODESOFTELPAGEINIT sets a char count and when it gets the four chars it resets.
@@ -88,14 +91,14 @@ void TCPClient::addChar(char ch, char* response)
 				break;
 			case 0x10 :
 				// Put the subtitle on air immediately
-				SubtitleOnair(response);
+				newfor.SubtitleOnair(response);
 //				strcpy(response, "On Air");
 				mode=MODENORMAL;			
 				clearCmd();
 				return;
 			case 0x18 :
 				// Remove the subtitle immediately
-				SubtitleOffair();
+				newfor.SubtitleOffair();
 				strcpy(response, "[addChar]Clear");
 				clearCmd();
 				mode=MODENORMAL;			
@@ -122,7 +125,7 @@ void TCPClient::addChar(char ch, char* response)
 		charCount--;
 		if (!charCount)
 		{
-			int page=SoftelPageInit(_cmd);
+			int page=newfor.SoftelPageInit(_cmd);
 			sprintf(response,"[addChar]MODESOFTELPAGEINIT Set page=%03x",page);
 			// Now that we are done, set up for the next command
 			mode=MODENORMAL;
@@ -131,8 +134,11 @@ void TCPClient::addChar(char ch, char* response)
 		break;
 	case MODEGETROWCOUNT:
 		*pCmd++=ch;
-		n=GetRowCount(_cmd);
-	    sprintf(response,"[addChar]Row count=%d\n",n);
+		{
+		  char* p=_cmd;
+		  n=newfor.GetRowCount(p);
+		}
+	  sprintf(response,"[addChar]Row count=%d\n",n);
 		mode=MODESUBTITLEDATAHIGHNYBBLE;
 		_row=n;
 		break;
@@ -156,7 +162,7 @@ void TCPClient::addChar(char ch, char* response)
 		{
 			sprintf(response,"[addChar] MODEGETROW_row=%d\n",_row);
 			// Generate the teletext packet
-			saveSubtitleRow(8,rowAddress,pkt);
+			newfor.saveSubtitleRow(8,rowAddress,pkt);
 			if (_row>1) // Next row
 			{
 				_row--;

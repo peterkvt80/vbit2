@@ -41,6 +41,7 @@
 #include <stdint.h>
 
 #include "newfor.h"
+#include "hamm-tables.h"
 
 namespace vbit
 {
@@ -51,12 +52,32 @@ class TCPClient
     TCPClient();
    ~TCPClient();
    void Handler(int clntSocket);
+	 
   private:
 		static const uint8_t MAXCMD=128;
     static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */	
+		
+// Normal command mode
+		static const uint8_t MODENORMAL=0;
+		static const uint8_t MODESOFTELPAGEINIT=1;
+// Get row count
+		static const uint8_t MODEGETROWCOUNT=3;
+// Get a row of data
+		static const uint8_t MODEGETROW=4;
+// Display the row
+		static const uint8_t MODESUBTITLEONAIR=5;
+// Clear down
+		static const uint8_t MODESUBTITLEOFFAIR=6;
+		static const uint8_t MODESUBTITLEDATAHIGHNYBBLE=7;
+		static const uint8_t MODESUBTITLEDATALOWNYBBLE=8;
+		
 	  char _cmd[MAXCMD];		
     void clearCmd(void);
     void addChar(char ch, char* response);
+		Newfor newfor;
+		void command(char* cmd, char* response);
+		void DieWithError(std::string errorMessage);
+		
 		
 }; // TCPClient
 
