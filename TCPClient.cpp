@@ -12,17 +12,8 @@ vbi_unham8			(unsigned int		c)
 	return _vbi_hamm8_inv[(uint8_t) c];
 }
 
-// @todo None of these statics should be here. Should all be member variables, most in a TTXPage object
-
-static char* pCmd;
-
-static int _row; // Row counter
-
-static char* pkt;
-
-static int rowAddress; // The address of this row
-
-TCPClient::TCPClient()
+TCPClient::TCPClient() :
+	_pCmd(_cmd)
 {
 }
 
@@ -56,6 +47,7 @@ void TCPClient::command(char* cmd, char* response)
 void TCPClient::clearCmd(void)
 {
 	*_cmd=0;
+	_pCmd=_cmd;
 }
 
 /** AddChar
@@ -72,13 +64,14 @@ void TCPClient::addChar(char ch, char* response)
 {
 	static int mode=MODENORMAL;
 	static int charCount=0;
-	int n;
+
 	response[0]=0;
+	// std::cerr << "[TCPClient::addChar] ch=" << ((int)ch) << " mode=" << mode << std::endl;
 	switch (mode)
 	{
 	case MODENORMAL :
-		pkt=_cmd;
-		if (pCmd==_cmd) // On the first character we check if it is a Softel
+		_pkt=_cmd;
+		if (_pCmd==_cmd) // On the first character we check if it is a Softel
 		{
 			switch (ch)
 			{
@@ -91,14 +84,15 @@ void TCPClient::addChar(char ch, char* response)
 				break;
 			case 0x10 :
 				// Put the subtitle on air immediately
-				newfor.SubtitleOnair(response);
-//				strcpy(response, "On Air");
-				mode=MODENORMAL;			
+				_newfor.SubtitleOnair(response);
+				// std::cerr << "[TCPClient::addChar] On air" << std::endl;
 				clearCmd();
+				mode=MODENORMAL;			
 				return;
 			case 0x18 :
 				// Remove the subtitle immediately
-				newfor.SubtitleOffair();
+				// std::cerr << "[TCPClient::addChar] Subtitle Off" << std::endl;
+				_newfor.SubtitleOffair();
 				strcpy(response, "[addChar]Clear");
 				clearCmd();
 				mode=MODENORMAL;			
@@ -107,62 +101,71 @@ void TCPClient::addChar(char ch, char* response)
 		} // If first character
 		if (ch!='\n' && ch!='\r')
 		{
-			*pCmd++=ch;
+			*_pCmd++=ch;
+			*_pCmd=0;
 			if (response) response[0]=0;
+			// std::cerr << "[TCPClient::addChar] accumulate cmd=" << _cmd << std::endl;
 		}
 		else
 		{
-			// Got a complete command
-			// printf("cmd=%s\n",_cmd);
+			// Got a complete non-newfor command
+			std::cerr << "[TCPClient::addChar] finished cmd=" << _cmd << std::endl;
 			command(_cmd, response);
 			clearCmd();
 			mode=MODENORMAL;			
 		}
 		break;
+	// Message type 1 - Set subtitle page.
 	case MODESOFTELPAGEINIT:	// We get four more characters and then the page is set	
 		// @todo If a nybble fails deham or isn't in range we should return nack
-		*pCmd++=ch;
+  	std::cerr << "[TCPClient::addChar] Page init char=" << ((int)ch) << std::endl;
+		*_pCmd++=ch;
 		charCount--;
+		// The last time around we have the completed command
 		if (!charCount)
 		{
-			int page=newfor.SoftelPageInit(_cmd);
+			int page=_newfor.SoftelPageInit(_cmd);
 			sprintf(response,"[addChar]MODESOFTELPAGEINIT Set page=%03x",page);
+			std::cerr << "[TCPClient::addChar] Softel page init response=" << response << std::endl;
 			// Now that we are done, set up for the next command
-			mode=MODENORMAL;
 			clearCmd();
+			mode=MODENORMAL;
 		}
 		break;
-	case MODEGETROWCOUNT:
-		*pCmd++=ch;
+	case MODEGETROWCOUNT: // Subtitle rows follow this
+		*_pCmd++=ch;
 		{
 		  char* p=_cmd;
-		  n=newfor.GetRowCount(p);
+		  _row=_newfor.GetRowCount(p);
 		}
-	  sprintf(response,"[addChar]Row count=%d\n",n);
+	  sprintf(response,"[TCPClient::addChar] MODEGETROWCOUNT =%d\n",_row);
+  	std::cerr << response << std::endl;
 		mode=MODESUBTITLEDATAHIGHNYBBLE;
-		_row=n;
 		break;
 	case MODESUBTITLEDATAHIGHNYBBLE:
-		*pCmd++=ch;
+		*_pCmd++=ch;
 		charCount=40;
 		mode=MODESUBTITLEDATALOWNYBBLE;
-		rowAddress=vbi_unham8(ch)*16; // @todo Check validity
+		_rowAddress=vbi_unham8(ch)*16; // @todo Check validity
 		break;
 	case MODESUBTITLEDATALOWNYBBLE:
-		*pCmd++=ch;
-		rowAddress+=vbi_unham8(ch); // @todo Check validity
-	    sprintf(response,"[addChar]MODESUBTITLEDATALOWNYBBLE row=%d\n",rowAddress);
+		*_pCmd++=ch;
+		_rowAddress+=vbi_unham8(ch); // @todo Check validity
+	  sprintf(response,"[addChar]MODESUBTITLEDATALOWNYBBLE _rowAddress=%d\n",_rowAddress);
+		// std::cerr << response << std::endl;
 		mode=MODEGETROW;
-		pkt=pCmd; // Save the start of this packet
+		_pkt=_pCmd; // Save the start of this packet
 		break;
 	case MODEGETROW:
-		*pCmd++=ch;
+		*_pCmd++=ch;
+		*_pCmd=0;	// cap off the string
 		charCount--;
 		if (charCount<=0) // End of line?
 		{
-			sprintf(response,"[addChar] MODEGETROW_row=%d\n",_row);
+			sprintf(response,"[TCPClient::addChar] MODEGETROW _rowAddress=%d _pkt=%s\n",_rowAddress,_pkt);
+			std::cerr << response << std::endl;
 			// Generate the teletext packet
-			newfor.saveSubtitleRow(8,rowAddress,pkt);
+			_newfor.saveSubtitleRow(8,_rowAddress,_pkt);
 			if (_row>1) // Next row
 			{
 				_row--;
@@ -182,34 +185,34 @@ void TCPClient::addChar(char ch, char* response)
 
 
 /** HandleTCPClient
- *  Commands will come in here.
+ *  Commands come in here.
  * They need to be accumulated and when we have a complete line, send it to a command interpreter.
  */
 void TCPClient::Handler(int clntSocket)
 {
-  char echoBuffer[RCVBUFSIZE];        /* Buffer for echo string */
+	char echoBuffer[RCVBUFSIZE];        /* Buffer for echo string */
 	char response[RCVBUFSIZE];
   int recvMsgSize;                    /* Size of received message */
 	int i;
 	clearCmd();
+	std::cerr << "[TCPClient::Handler]" << std::endl;
 	
-    /* Send received string and receive again until end of transmission */
-    for (recvMsgSize=1;recvMsgSize > 0;)      /* zero indicates end of transmission */
-    {
-        /* See if there is more data to receive */
-        if ((recvMsgSize = recv(clntSocket, echoBuffer, RCVBUFSIZE, 0)) < 0)
-            DieWithError("recv() failed");
+  /* Send received string and receive again until end of transmission */
+  for (recvMsgSize=1;recvMsgSize > 0;)      /* zero indicates end of transmission */
+  {
+    /* See if there is more data to receive */
+    if ((recvMsgSize = recv(clntSocket, echoBuffer, RCVBUFSIZE, 0)) < 0)
+      DieWithError("recv() failed");
 		for (i=0;i<recvMsgSize;i++)
 		{
 			addChar(echoBuffer[i], response);
-				if (*response) send(clntSocket, response, strlen(response), 0);
+	   	if (*response) send(clntSocket, response, strlen(response), 0);
 		}
-        /* Echo message back to client */
-        //if (send(clntSocket, echoBuffer, recvMsgSize, 0) != recvMsgSize)
-        //    DieWithError("send() failed");
-    }
+			/* Echo message back to client */
+			//if (send(clntSocket, echoBuffer, recvMsgSize, 0) != recvMsgSize)
+			//    DieWithError("send() failed");
+  }
 
-    close(clntSocket);    /* Close client socket */
-	// printf("Done Handle TCP\n");
+  close(clntSocket);    /* Close client socket */
 }
 

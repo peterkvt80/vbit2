@@ -55,6 +55,7 @@ Newfor::~Newfor()
  * 2: Page number hundreds hammed. 1..8
  * 3: Page number tens hammed
  * Although it says HTU, in keeping with the standard we will work in hex.
+ * @return The decoded page number
  */
 int Newfor::SoftelPageInit(char* cmd)
 {
@@ -78,12 +79,14 @@ int Newfor::SoftelPageInit(char* cmd)
   if (n<0 || n>0x0f) return 0x903;
   page+=n;
   _page=page;
+	ttxpage.SetPageNumber(page*0x100);
   return page;
 }
 
 void Newfor::SubtitleOnair(char* response)
 {
-  std::cerr << "[Newfor::SubtitleOnair] This is where we will ship the subtitle out TBA" << std::endl;
+	int row;
+  std::cerr << "[Newfor::SubtitleOnair] page=" << std::hex << ttxpage.GetPageNumber() << std::dec << std::endl;
 
 	// OLD CODE
 	// What page is the subtitle on? THIS IS IN THE WRONG PLACE! Ideally we will already have a header and placed it in the cache
@@ -92,7 +95,7 @@ void Newfor::SubtitleOnair(char* response)
 	//mag=(_page/0xff) & 0x07;
 	//page=_page & 0xff;
 	// First packet needs to be the header. Could well want suppress header too.
-	//sprintf(response,"[SubtitleOnair]mag=%1x page=%02x",mag,page);
+	// sprintf(response,"[SubtitleOnair]mag=%1x page=%02x",mag,page);
 	// PacketHeader(packet, mag, page, 0, 0x0002, "test");
 	//PacketHeader(packet, mag, page, 0, 0x4002); // Dummy
 	// dumpPacket(packet);
@@ -105,12 +108,28 @@ void Newfor::SubtitleOnair(char* response)
 //	}
 	//  \OLD CODE
 	
-	std::cerr << "[Newfor::SubtitleOnair]" << std::endl;
-	strcpy(response,"Response not implemented, sorry");
+	strcpy(response,"Response not implemented, sorry\n");
 	
 	// At this point ttxpage is ready to go.
 	// Somehow we need to get it to the service thread.
+	
+	// For now lets just print out rows
+	for (row=0;row<24;row++)
+	{
+		std::string line=ttxpage.GetRow(row)->GetLine();
+		if (line!="" && line!="                                        ")
+		{
+		  std::cerr << "[Newfor::SubtitleOnair] row=" << row << " line=" << line << std::endl;
+		}
+	}
 
+	// After we have displayed the subs we might want to save them for a re-transmitted
+	// but instead we will clear out everything.
+	for (int i=0;i<24;i++)
+	{
+			ttxpage.SetRow(i,"");
+	}
+	
 }
 
 void Newfor::SubtitleOffair()
@@ -153,6 +172,10 @@ int Newfor::GetRowCount(char* cmd)
 }
 
 /**
+ * @brief Decode the rowaddress and row packet part of a Type 2 message.
+ * @param mag - This is irrelevant as mag is set up in a Type 1 message
+ * @param row - The row number on which to display the subtitle
+ * @param cmd - The row text
  * @brief Save a row of data when a Newfor command is completed
  */
 void Newfor::saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd)
@@ -169,5 +192,6 @@ void Newfor::saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd)
 	\OLD CODE */
 
 	// What @todo about the mag?
+	// std::cerr << "[Newfor::saveSubtitleRow] cmd=" << cmd << std::endl;
 	ttxpage.SetRow(row, cmd);
 }

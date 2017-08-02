@@ -101,11 +101,13 @@ void Command::run()
 			
 	while(1)
 	{
+    std::cerr << "[Command::run] Ready for a client to connect" << std::endl;
 
 		/* Wait for a client to connect */
 		if ((clientSock = accept(serverSock, (struct sockaddr *) &echoClntAddr, 
 							   &clntLen)) < 0)
 			DieWithError("accept() failed");
+    std::cerr << "[Command::run] Connected" << std::endl;
 
 		/* clientSock is connected to a client! */
 

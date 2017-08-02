@@ -107,7 +107,7 @@ Packet* Mag::GetPacket(Packet* p)
     // Is this page deleted?
     if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
     {
-      std::cerr << "[Mag::GetPacket] Delete this carousel" << std::endl;
+      //std::cerr << "[Mag::GetPacket] Delete this carousel" << std::endl;
       _carousel->deletePage(_page);
       _page=NULL;
       // @todo We are not done. This just deletes a pointer to the page. It is still in _pageList
@@ -118,7 +118,7 @@ Packet* Mag::GetPacket(Packet* p)
     {
       //_outp("c");
       _page->StepNextSubpage();
-			std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
+			//std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
 
     }
     else  // No carousel? Take the next page in the main sequence
@@ -171,7 +171,7 @@ Packet* Mag::GetPacket(Packet* p)
       else
       {
         // @todo Implement this
-        std::cerr << "@todo This page has no longer a carousel. Remove it from the list" << std::endl;
+        //std::cerr << "@todo This page has no longer a carousel. Remove it from the list" << std::endl;
         //exit(3); //
       }
     }
@@ -250,7 +250,7 @@ Packet* Mag::GetPacket(Packet* p)
 			val.replace(1,1,1,(triplet & 0x3F) | 0x40);
 			val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
 			val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
-			std::cerr << "region:" << std::hex << region << "nos:" << std::hex << NOS << "triplet:" << std::hex << triplet << std::endl;
+			// std::cerr << "region:" << std::hex << region << "nos:" << std::hex << NOS << "triplet:" << std::hex << triplet << std::endl;
 			p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
 			_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
 			_state=STATE_PACKET26;
@@ -274,7 +274,7 @@ Packet* Mag::GetPacket(Packet* p)
 			p->SetRow(_magNumber, 26, _lastTxt->GetLine(), CODING_13_TRIPLETS);
 			// Do we have another line?
 			_lastTxt=_lastTxt->GetNextLine();
-			std::cerr << "*";
+			// std::cerr << "*";
 			break;
 		}
 		if (_page->GetPageCoding() == CODING_7BIT_TEXT){

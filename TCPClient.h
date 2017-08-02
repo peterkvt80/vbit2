@@ -54,6 +54,7 @@ class TCPClient
    void Handler(int clntSocket);
 	 
   private:
+		// Constants
 		static const uint8_t MAXCMD=128;
     static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */	
 		
@@ -71,13 +72,21 @@ class TCPClient
 		static const uint8_t MODESUBTITLEDATAHIGHNYBBLE=7;
 		static const uint8_t MODESUBTITLEDATALOWNYBBLE=8;
 		
-	  char _cmd[MAXCMD];		
+		// Variables
+	  char _cmd[MAXCMD];	/// command buffer
+		char* _pCmd;		/// Pointer into the command buffer
+		Newfor _newfor;
+		int _row; // Row counter
+		char* _pkt;	// A teletext packet (one row of VBI)
+    int _rowAddress; // The address of this row
+		
+
+		
+		// Functions
     void clearCmd(void);
     void addChar(char ch, char* response);
-		Newfor newfor;
 		void command(char* cmd, char* response);
-		void DieWithError(std::string errorMessage);
-		
+		void DieWithError(std::string errorMessage);		
 		
 }; // TCPClient
 
