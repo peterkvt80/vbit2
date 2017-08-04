@@ -33,7 +33,8 @@ vbi_unham8			(unsigned int		c)
 
 
 Newfor::Newfor()
-{	
+{
+		ttxpage.SetSubCode(0);
 }
 
 Newfor::~Newfor()
@@ -85,8 +86,7 @@ int Newfor::SoftelPageInit(char* cmd)
 
 void Newfor::SubtitleOnair(char* response)
 {
-	int row;
-  std::cerr << "[Newfor::SubtitleOnair] page=" << std::hex << ttxpage.GetPageNumber() << std::dec << std::endl;
+  // std::cerr << "[Newfor::SubtitleOnair] page=" << std::hex << ttxpage.GetPageNumber() << std::dec << std::endl;
 
 	// OLD CODE
 	// What page is the subtitle on? THIS IS IN THE WRONG PLACE! Ideally we will already have a header and placed it in the cache
@@ -113,16 +113,8 @@ void Newfor::SubtitleOnair(char* response)
 	// At this point ttxpage is ready to go.
 	// Somehow we need to get it to the service thread.
 	
-	// For now lets just print out rows
-	for (row=0;row<24;row++)
-	{
-		std::string line=ttxpage.GetRow(row)->GetLine();
-		if (line!="" && line!="                                        ")
-		{
-		  std::cerr << "[Newfor::SubtitleOnair] row=" << row << " line=" << line << std::endl;
-		}
-	}
-
+	ttxpage.SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
+	
 	// After we have displayed the subs we might want to save them for a re-transmitted
 	// but instead we will clear out everything.
 	for (int i=0;i<24;i++)
@@ -134,7 +126,7 @@ void Newfor::SubtitleOnair(char* response)
 
 void Newfor::SubtitleOffair()
 {
-	std::cerr << "[Newfor;:SubtitleOnair]" << std::endl;
+	std::cerr << "[Newfor;:SubtitleOffair]" << std::endl;
 // Construct a header for _page with the erase flag set.
 //  
 /* OLD CODE

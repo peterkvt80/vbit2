@@ -31,6 +31,7 @@ TTXPage::TTXPage() :
     m_PageNumber(FIRSTPAGE),
     m_SubPage(nullptr),
     m_sourcepage("none"),   //ctor
+		m_subcode(0),
     m_Loaded(false)
 {
     m_Init();
@@ -45,8 +46,9 @@ TTXPage::TTXPage() :
 TTXPage::TTXPage(std::string filename) :
     m_PageNumber(FIRSTPAGE),
     m_SubPage(nullptr),
-     m_sourcepage(filename),
-     m_Loaded(false)
+    m_sourcepage(filename),
+ 		m_subcode(0),
+    m_Loaded(false)
 {
     // std::cerr << "[TTXPage] file constructor loading " << filename<< std::endl;
     m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
@@ -93,7 +95,6 @@ void TTXPage::m_Init()
     m_description="Description goes here";
     m_cycletimeseconds=8;
     m_cycletimetype='T';
-    m_subcode=-1;
     m_pagestatus=0x8000;
     m_pagecoding=CODING_7BIT_TEXT;
     instance=instanceCount++;

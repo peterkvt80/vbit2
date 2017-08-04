@@ -118,7 +118,7 @@ void TCPClient::addChar(char ch, char* response)
 	// Message type 1 - Set subtitle page.
 	case MODESOFTELPAGEINIT:	// We get four more characters and then the page is set	
 		// @todo If a nybble fails deham or isn't in range we should return nack
-  	std::cerr << "[TCPClient::addChar] Page init char=" << ((int)ch) << std::endl;
+  	// std::cerr << "[TCPClient::addChar] Page init char=" << ((int)ch) << std::endl;
 		*_pCmd++=ch;
 		charCount--;
 		// The last time around we have the completed command
@@ -126,7 +126,7 @@ void TCPClient::addChar(char ch, char* response)
 		{
 			int page=_newfor.SoftelPageInit(_cmd);
 			sprintf(response,"[addChar]MODESOFTELPAGEINIT Set page=%03x",page);
-			std::cerr << "[TCPClient::addChar] Softel page init response=" << response << std::endl;
+			// std::cerr << "[TCPClient::addChar] Softel page init response=" << response << std::endl;
 			// Now that we are done, set up for the next command
 			clearCmd();
 			mode=MODENORMAL;
@@ -139,7 +139,7 @@ void TCPClient::addChar(char ch, char* response)
 		  _row=_newfor.GetRowCount(p);
 		}
 	  sprintf(response,"[TCPClient::addChar] MODEGETROWCOUNT =%d\n",_row);
-  	std::cerr << response << std::endl;
+  	// std::cerr << response << std::endl;
 		mode=MODESUBTITLEDATAHIGHNYBBLE;
 		break;
 	case MODESUBTITLEDATAHIGHNYBBLE:
@@ -163,7 +163,7 @@ void TCPClient::addChar(char ch, char* response)
 		if (charCount<=0) // End of line?
 		{
 			sprintf(response,"[TCPClient::addChar] MODEGETROW _rowAddress=%d _pkt=%s\n",_rowAddress,_pkt);
-			std::cerr << response << std::endl;
+			// std::cerr << response << std::endl;
 			// Generate the teletext packet
 			_newfor.saveSubtitleRow(8,_rowAddress,_pkt);
 			if (_row>1) // Next row
@@ -195,7 +195,7 @@ void TCPClient::Handler(int clntSocket)
   int recvMsgSize;                    /* Size of received message */
 	int i;
 	clearCmd();
-	std::cerr << "[TCPClient::Handler]" << std::endl;
+	// std::cerr << "[TCPClient::Handler]" << std::endl;
 	
   /* Send received string and receive again until end of transmission */
   for (recvMsgSize=1;recvMsgSize > 0;)      /* zero indicates end of transmission */
