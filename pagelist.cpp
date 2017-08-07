@@ -19,7 +19,7 @@ PageList::PageList(Configure *configure) :
 
 PageList::~PageList()
 {
-	std::cerr << "[PageList] Destructor" << std::endl;
+	// std::cerr << "[PageList] Destructor" << std::endl;
 }
 
 int PageList::LoadPageList(std::string filepath)
@@ -52,7 +52,7 @@ int PageList::LoadPageList(std::string filepath)
     }
 	}
 	closedir(dp);
-  std::cerr << "[PageList::LoadPageList]FINISHED LOADING PAGES" << std::endl;
+  // std::cerr << "[PageList::LoadPageList]FINISHED LOADING PAGES" << std::endl;
 
 	// How many files did we accept?
 	for (int i=0;i<8;i++)
@@ -142,7 +142,7 @@ void PageList::DeleteOldPages()
       ptr=&(*p);
       if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
       {
-				std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
+				// std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
 				// Pages marked here get deleted in the Service thread
         ptr->SetState(TTXPageStream::MARKED);
       }

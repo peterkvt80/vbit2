@@ -13,7 +13,7 @@
  * advertising or publicity pertaining to distribution of the
  * software without specific, written prior permission.
  *
- * The author disclaim all warranties with regard to this
+ * The author disclaims all warranties with regard to this
  * software, including all implied warranties of merchantability
  * and fitness.  In no event shall the author be liable for any
  * special, indirect or consequential damages or any damages
@@ -31,6 +31,7 @@ TTXPage::TTXPage() :
     m_PageNumber(FIRSTPAGE),
     m_SubPage(nullptr),
     m_sourcepage("none"),   //ctor
+		m_subcode(0),
     m_Loaded(false)
 {
     m_Init();
@@ -45,8 +46,9 @@ TTXPage::TTXPage() :
 TTXPage::TTXPage(std::string filename) :
     m_PageNumber(FIRSTPAGE),
     m_SubPage(nullptr),
-     m_sourcepage(filename),
-     m_Loaded(false)
+    m_sourcepage(filename),
+ 		m_subcode(0),
+    m_Loaded(false)
 {
     // std::cerr << "[TTXPage] file constructor loading " << filename<< std::endl;
     m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
@@ -93,7 +95,6 @@ void TTXPage::m_Init()
     m_description="Description goes here";
     m_cycletimeseconds=8;
     m_cycletimetype='T';
-    m_subcode=-1;
     m_pagestatus=0x8000;
     m_pagecoding=CODING_7BIT_TEXT;
     instance=instanceCount++;
@@ -477,7 +478,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                         break;
                     pageNumber=std::strtol(line.c_str(), &ptr, 16);
                     // std::cerr << "Line=" << line << " " << "line length=" << line.length() << std::endl;
-                    if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
+                    if (line.length()<5 && pageNumber<0x8ff) // Page number without subpage? Shouldn't happen but you never know.
                     {
                         pageNumber*=0x100;
                     }

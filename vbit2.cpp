@@ -57,9 +57,12 @@ int main(int argc, char** argv)
 
 	std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
 	std::thread serviceThread(&Service::run, Service(configure, pageList));
-
+	std::thread commandThread(&Command::run, Command((uint32_t)5570));
+	
+  // The threads should never stop, but just in case...
 	monitorThread.join();
 	serviceThread.join();
+	commandThread.join();
 
 	std::cout << "VBIT2 ended. Press any key to continue" << std::endl;
     system("pause"); // @todo Only apply this line in debug

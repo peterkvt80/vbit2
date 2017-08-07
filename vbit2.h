@@ -7,6 +7,7 @@
 #include "configure.h"
 #include "pagelist.h"
 #include "filemonitor.h"
+#include "command.h"
 
 #ifdef WIN32
 #include "fcntl.h"

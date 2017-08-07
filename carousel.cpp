@@ -1,3 +1,4 @@
+
 #include "carousel.h"
 
 using namespace vbit;
@@ -10,7 +11,7 @@ Carousel::Carousel()
 
 Carousel::~Carousel()
 {
-    std::cerr << "[Carousel::Carousel] deleted";
+    //std::cerr << "[Carousel::Carousel] deleted";
     //dtor
 }
 
@@ -24,7 +25,7 @@ void Carousel::addPage(TTXPageStream* p)
 
 void Carousel::deletePage(TTXPageStream* p)
 {
-    std::cerr << "[Carousel::deletePage]";
+    //std::cerr << "[Carousel::deletePage]";
     _carouselList.remove(p);
 }
 

@@ -107,7 +107,7 @@ Packet* Mag::GetPacket(Packet* p)
     // Is this page deleted?
     if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
     {
-      std::cerr << "[Mag::GetPacket] Delete this carousel" << std::endl;
+      //std::cerr << "[Mag::GetPacket] Delete this carousel" << std::endl;
       _carousel->deletePage(_page);
       _page=NULL;
       // @todo We are not done. This just deletes a pointer to the page. It is still in _pageList
@@ -171,7 +171,7 @@ Packet* Mag::GetPacket(Packet* p)
       else
       {
         // @todo Implement this
-        std::cerr << "@todo This page has no longer a carousel. Remove it from the list" << std::endl;
+        //std::cerr << "@todo This page has no longer a carousel. Remove it from the list" << std::endl;
         //exit(3); //
       }
     }
@@ -274,7 +274,7 @@ Packet* Mag::GetPacket(Packet* p)
 			p->SetRow(_magNumber, 26, _lastTxt->GetLine(), CODING_13_TRIPLETS);
 			// Do we have another line?
 			_lastTxt=_lastTxt->GetNextLine();
-			//std::cerr << "*";
+			// std::cerr << "*";
 			break;
 		}
 		if (_page->GetPageCoding() == CODING_7BIT_TEXT){
