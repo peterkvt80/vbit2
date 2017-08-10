@@ -31,11 +31,11 @@ void TCPClient::command(char* cmd, char* response)
 {
 	switch (cmd[0])
 	{
-	case 'T' :; 
+	case 'T' :;
 		if (response) strcpy(response,"T not implemented\n");
 		break;
-		
-	case 'Y' : 
+
+	case 'Y' :
 		if (response) strcpy(response,"VBIT620\n");
 		break;
 	case 0x0e:
@@ -51,7 +51,7 @@ void TCPClient::clearCmd(void)
 }
 
 /** AddChar
- * Add a char to the command buffer and call command when we get CR 
+ * Add a char to the command buffer and call command when we get CR
  * There is only a response if a command needs to send something back.
  * If the first character is a Newfor character then the data is parsed as Nu4.
  * Commands that are not Newfor are MODENORMAL. They are stateless (so far)
@@ -80,14 +80,14 @@ void TCPClient::addChar(char ch, char* response)
 				charCount=4;
 				break;
 			case 0x0f :
-				mode=MODEGETROWCOUNT; // n and n*(rowhigh, rowlow, 40 bytes) 
+				mode=MODEGETROWCOUNT; // n and n*(rowhigh, rowlow, 40 bytes)
 				break;
 			case 0x10 :
 				// Put the subtitle on air immediately
 				_newfor.SubtitleOnair(response);
 				// std::cerr << "[TCPClient::addChar] On air" << std::endl;
 				clearCmd();
-				mode=MODENORMAL;			
+				mode=MODENORMAL;
 				return;
 			case 0x18 :
 				// Remove the subtitle immediately
@@ -95,7 +95,7 @@ void TCPClient::addChar(char ch, char* response)
 				_newfor.SubtitleOffair();
 				strcpy(response, "[addChar]Clear");
 				clearCmd();
-				mode=MODENORMAL;			
+				mode=MODENORMAL;
 				return;
 			}
 		} // If first character
@@ -112,11 +112,11 @@ void TCPClient::addChar(char ch, char* response)
 			std::cerr << "[TCPClient::addChar] finished cmd=" << _cmd << std::endl;
 			command(_cmd, response);
 			clearCmd();
-			mode=MODENORMAL;			
+			mode=MODENORMAL;
 		}
 		break;
 	// Message type 1 - Set subtitle page.
-	case MODESOFTELPAGEINIT:	// We get four more characters and then the page is set	
+	case MODESOFTELPAGEINIT:	// We get four more characters and then the page is set
 		// @todo If a nybble fails deham or isn't in range we should return nack
   	// std::cerr << "[TCPClient::addChar] Page init char=" << ((int)ch) << std::endl;
 		*_pCmd++=ch;
@@ -176,11 +176,11 @@ void TCPClient::addChar(char ch, char* response)
 				// Now that we are done, set up for the next command
 				sprintf(response,"subtitle data complete\n");
 				mode=MODENORMAL;
-				clearCmd();				
+				clearCmd();
 			}
 		}
 		break;
-	} // State machine switch			
+	} // State machine switch
 }
 
 
@@ -196,7 +196,7 @@ void TCPClient::Handler(int clntSocket)
 	int i;
 	clearCmd();
 	// std::cerr << "[TCPClient::Handler]" << std::endl;
-	
+
   /* Send received string and receive again until end of transmission */
   for (recvMsgSize=1;recvMsgSize > 0;)      /* zero indicates end of transmission */
   {
@@ -213,6 +213,10 @@ void TCPClient::Handler(int clntSocket)
 			//    DieWithError("send() failed");
   }
 
+#ifdef WIN32
+  // @todo What is the Windows way?
+#else
   close(clntSocket);    /* Close client socket */
+#endif // WIN32
 }
 
