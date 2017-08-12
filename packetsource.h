@@ -46,7 +46,7 @@
 #ifndef _PACKETSOURCE_H_
 #define _PACKETSOURCE_H_
 
-#include "packet.h"
+#include <packet.h>
 
 namespace vbit{
 
@@ -70,7 +70,8 @@ enum Event
   EVENT_P830_FORMAT_2_LABEL_2,
   EVENT_P830_FORMAT_2_LABEL_3,
   EVENT_SUBTITLE,
-  EVENT_DATABROADCAST
+  EVENT_DATABROADCAST,
+  EVENT_NUMBER_ITEMS
 }  ;
 
 
@@ -88,13 +89,18 @@ class PacketSource
     virtual Packet* GetPacket()=0;
 
     /** Is there a packet ready to go? */
-    virtual bool IsReady(); // Don't need to Pure this. Just report a member bool
+    virtual bool IsReady(){return _readyFlag;};
 
     /** Report that an event happened */
-    virtual void SetEvent(Event event); // Don't need to Pure this. All packet sources can use the same code
+    void SetEvent(Event event); // All packet sources can use the same code
+    void ClearEvent(Event event){_eventList[event]=false;}; // All packet sources can use the same code
+    bool GetEvent(Event event){return _eventList[event];};
 
   protected:
+     bool _readyFlag;
+
   private:
+     bool _eventList[EVENT_NUMBER_ITEMS];
 };
 
 } // vbit namespace

@@ -2,30 +2,35 @@
 
 using namespace vbit;
 
-PacketSource::PacketSource()
+PacketSource::PacketSource() :
+  _readyFlag(false)
 {
   //ctor
+  // This could be in the initializer list BUT does not work in Visual C++
+  for (int i=0;i<EVENT_NUMBER_ITEMS;i++)
+  {
+    _eventList[i]=false;
+  }
+
 }
 
 PacketSource::~PacketSource()
 {
-  //dtor
+  //dtor. Probably nothing to do here
 }
 
-
+/** Need to override this function in a child class
+ *  The implementation here is useless so don't call it. In fact I should remove it to avoid confusion.
+ */
 Packet* PacketSource::GetPacket()
 {
   Packet* pkt=new Packet(8,25,"                                        ");
-  // Do your stuff
   return pkt;
-}
-
-bool PacketSource::IsReady()
-{
-  return false; // @todo This will probably just return a member bool
 }
 
 void PacketSource::SetEvent(Event event)
 {
-  //@todo Use event to clear the event flags which may have been set by the packet source being in wait.
+  // An event is recorded by setting the corresponding flag
+  // GetPacket() will clear any event flags when it needs to wait.
+  _eventList[event]=true;
 }
