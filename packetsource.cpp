@@ -22,10 +22,10 @@ PacketSource::~PacketSource()
 /** Need to override this function in a child class
  *  The implementation here is useless so don't call it. In fact I should remove it to avoid confusion.
  */
-Packet* PacketSource::GetPacket()
+Packet* PacketSource::GetPacket(Packet* p)
 {
-  Packet* pkt=new Packet(8,25,"                                        ");
-  return pkt;
+  p=new Packet(8,25,"                                        ");
+  return p;
 }
 
 void PacketSource::SetEvent(Event event)

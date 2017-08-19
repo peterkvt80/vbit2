@@ -48,7 +48,8 @@
 
 #include <packet.h>
 
-namespace vbit{
+namespace vbit
+{
 
 /** @brief Events are used to trigger packet sources so that they may proceed
  *  @description Different packet sources use different timing schemes.
@@ -86,7 +87,7 @@ class PacketSource
     /** Get the next packet
      *  @return The next packet OR if IsReady() would return false then a filler packet
      */
-    virtual Packet* GetPacket()=0;
+    virtual Packet* GetPacket(Packet* p)=0;
 
     /** Is there a packet ready to go? */
     virtual bool IsReady(){return _readyFlag;};

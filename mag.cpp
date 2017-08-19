@@ -1,3 +1,5 @@
+/// @todo THIS MODULE WILL BE REDUNDANT AUG 2017
+
 #include "mag.h"
 
 using namespace vbit;
@@ -60,7 +62,7 @@ Packet* Mag::GetPacket(Packet* p)
    * 6) However, before iterating in step 2, do this every second: Look at the carousel list and for each page decrement their timers.
    * When a page reaches 0 then it is taken as the next page, and its timer reset.
    */
-   
+
    /* pages can be have varying packet codings for X/1 to X/25. Pages using the standard coding we
       want to send X/26/0 to X/26/15 first, then X/1 to X/25 afterwards.
       For pages which carry data not for display in packets X/1 to X/25 however we must send these first (so the packets including any X/26 are all sent in sequential order of packet and designation code
@@ -197,16 +199,16 @@ Packet* Mag::GetPacket(Packet* p)
 
     //p->Parity(13); // don't apply parity here it will screw up the template. parity for the header is done by tx() later
     assert(p!=NULL);
-	
+
 	links=_page->GetLinkSet();
 	if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
 		_state=STATE_FASTEXT; // a non zero FL row will override an OL,27 row
-	} else { 
+	} else {
 		_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
 		_state=STATE_PACKET27;
 	}
 	break;
-   
+
   case STATE_FASTEXT:
 		p->SetMRAG(_magNumber,27);
 		links=_page->GetLinkSet();
@@ -231,7 +233,7 @@ Packet* Mag::GetPacket(Packet* p)
 		{
 			//std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
 			//_lastTxt->Dump();
-			
+
 			p->SetRow(_magNumber, 28, _lastTxt->GetLine(), CODING_13_TRIPLETS);
 			_lastTxt=_lastTxt->GetNextLine();
 			break;
@@ -240,7 +242,7 @@ Packet* Mag::GetPacket(Packet* p)
 		{
 			// create X/28/0 packet for pages which have a region set with RE in file
 			// it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
-			
+
 			// this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
 			std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
 			int region = _page->GetRegion();
