@@ -16,6 +16,8 @@
 
 /// Eight magazines and subtitles (maybe other packets too)
 #define STREAMS 9
+/// Strictly these should ODD/EVEN VBI line counts as in general they would be different.
+#define LINESPERFIELD 16
 
 namespace ttx
 {
@@ -45,13 +47,23 @@ public:
 	 */
 	int run();
 private:
-  // Member variables
+  // Member variables that define the service
 	Configure* _configure; /// Member reference to the configuration settings
 	PageList* _pageList; /// Member reference to the pages list
 
+	// Member variables for event management
+	uint8_t _lineCounter; // Which VBI line are we on? Used to signal a new field.
+	uint8_t _fieldCounter; // Which field? Used to time packet 8/30
+	std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
+
 	// Member functions
-	std::list<vbit::PacketSource*> _Sources;
-	void _register(vbit::PacketSource *src);
+	void _register(vbit::PacketSource *src); /// Register packet sources
+
+  /**
+   * @brief Check if anything changed, and if so signal the event to the packet sources.
+   * Must be called once per transmitted row so that it can maintain a field count
+   */
+	void _updateEvents();
 
 };
 

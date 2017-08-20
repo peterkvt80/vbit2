@@ -10,7 +10,10 @@ Service::Service()
 }
 
 Service::Service(Configure *configure, PageList *pageList) :
-	_configure(configure),_pageList(pageList)
+	_configure(configure),
+	_pageList(pageList),
+	_lineCounter(0),
+	_fieldCounter(0)
 {
   // @todo Put priority into config and add commands to allow updates.
   uint8_t priority[8]={5,3,3,6,3,3,5,9};	// 1=High priority,9=low. Note: priority[0] is mag 8
@@ -38,119 +41,97 @@ void Service::_register(PacketSource *src)
 int Service::run()
 {
   std::cerr << "[Service::worker]This is the worker process" << std::endl;
-  uint8_t nmag=1;
-  vbit::Mag **mag; // Pointer to magazines array
-  vbit::Mag *pMag; // Pointer to the magazine that we are working on
-  uint8_t priorityCount[STREAMS]; // Will be handled by the packet sources themselves.
-
-  uint8_t hold[STREAMS]; /// If hold is set then the magazine can not be sent until the next field
+  std::list<vbit::PacketSource*>::const_iterator iterator=_Sources.begin(); // Iterator for packet sources
 
   vbit::Packet* pkt=new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
 
-  uint8_t rowCounter=0; // Counts 16 rows to a field
-
   static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
-
-
-    // Initialise the priority counts
-    /*
-	for (uint8_t i=0;i<STREAMS-1;i++)
-	{
-		hold[i]=0;
-		priorityCount[i]=priority[i];
-	}
-	*/
-
-	// Get the magazines
-	// mag=_pageList->GetMagazines();
 
   std::cerr << "[Service::worker]Loop starts" << std::endl;
 	while(1) // normal
 	{
 	  // If counters (or other trigger) causes an event then send the events
-	  // Iterate through the packet sources
-	  //   Check if there is a packet available
-	  //   If there is then send it
-	  // update the counters.
+    _updateEvents(); // Must only call this ONCE per transmitted row
 
-		// Find the next magazine to put out.
-		// We decrement the priority count for each magazine until one reaches 0.
-		for (;priorityCount[nmag]>0;nmag=(nmag+1)%(STREAMS-1)) /// @todo Subtitles need stream 8. But we can't access magazine 9
-		{
-			priorityCount[nmag]--;
-		}
-		pMag=mag[nmag];
+	  // Iterate through the packet sources until we get a packet to transmit
 
-		// If the magazine has no pages it can be put into hold.
-		// @todo Subtitles are an exception. They should not have a page but they could be skipped.
-		if (pMag->GetPageCount()<1)
-		{
-			hold[nmag]=true;
-			priorityCount[nmag]=127; // Slow down this empty stream
-		}
-		else
-		{
-			if (!hold[nmag]) 		// Not in hold
-			{
-				pMag->GetPacket(pkt); // YEAH. Don't do this!!!!
-				bool isHeader=false;
-				if (pkt!=NULL) // How could this be NULL? After the last packet of a page has been sent.
-				{
-					isHeader=pMag->GetHeaderFlag(); // pkt->IsHeader();
+    vbit::PacketSource* p;
+	  do
+    {
+      if (iterator==_Sources.end())
+      {
+        iterator=_Sources.begin();
+        // @todo Count iterations here and break out with a filler to prevent a deadlock
+      }
+      p=(*iterator);
+      ++iterator;
+    }
+    while (!p->IsReady());
 
-					std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+    p->GetPacket(pkt); // @todo Don't annoy Alistair by putting this bug back in
 
-					// Was the last packet a header? If so we need to go into hold
-					if (isHeader)
-					{
-						hold[nmag]=true;
-						// std::cerr << "Header wait mode mag=" << (int) nmag << std::endl;
-					}
-					rowCounter++;
-					if (rowCounter>=16)
-					{
-						rowCounter=0;
-						for (uint8_t i=0;i<STREAMS-1;i++) hold[i]=0;	// Any holds are released now
-						// Should put packet 8/30 stuff here as in vbit stream.c
-					}
-				} // not a null packet
-				else
-				{
-					// After a GetPacket returns NULL (after the page runs out of packets)
-				}
-			} // not in hold
-			else
-			{
-				// To avoid a deadlock, we check if everything is in hold
-				bool blocked=true;
-				for (uint8_t i=0;i<STREAMS-1;i++) // Hold does not include stream 9 (subtitles)
-				{
-					if (hold[i]==false)
-					{
-						blocked=false;
-						break;
-					}
-				}
-				if (blocked)
-				{
-					std::cout << filler->tx();
-					// Step the row counter
-					rowCounter++;
-					if (rowCounter>=16)
-					{
-						rowCounter=0;
-						for (uint8_t i=0;i<STREAMS;i++) hold[i]=0;	// Any holds are released now
-					}
-				} // blocked
-			}
-		} // page count is positive
 
-		// Reset the priority of this magazine
-		if (priority[nmag]==0)
-			priority[nmag]=1;	// Can't be 0 or that mag will take all the packets
-		priorityCount[nmag]=priority[nmag];	// Reset the priority for the mag that just went out
+    // Transmit the packet
+    // @todo Does this code make sense?
+    if (pkt!=NULL) // How could this be NULL? After the last packet of a page has been sent.
+    {
+      std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+    }
+    else
+    {
+      std::cout << filler->tx();
+    } // blocked
+
 	} // while
 	return 99; // don't really want to return anything
 } // worker
 
-
+void Service::_updateEvents()
+{
+  // Step the counters
+  _lineCounter++;
+  if (_lineCounter%LINESPERFIELD==0)
+  {
+    _lineCounter=0;
+    _fieldCounter++;
+    if (_fieldCounter>=50)
+    {
+      _fieldCounter=0;
+      // Could implement a seconds counter here if we needed it
+    }
+    // New field, so set the FIELD event in all the sources.
+    for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
+    {
+      (*iterator)->SetEvent(EVENT_FIELD);
+    }
+    // Packet 830?
+    if (_fieldCounter%10==0)
+    {
+      Event ev;
+      switch (_fieldCounter/10)
+      {
+      case 0:
+        ev=EVENT_P830_FORMAT_1;
+        break;
+      case 1:
+        ev=EVENT_P830_FORMAT_2_LABEL_0;
+        break;
+      case 2:
+        ev=EVENT_P830_FORMAT_2_LABEL_1;
+        break;
+      case 3:
+        ev=EVENT_P830_FORMAT_2_LABEL_2;
+        break;
+      case 4:
+        ev=EVENT_P830_FORMAT_2_LABEL_3;
+        break;
+      }
+      for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
+      {
+        (*iterator)->SetEvent(ev);
+      }
+    }
+  }
+  // @todo Subtitle events. Flag when a subtitle is ready to go up
+  // @todo Databroadcast events. Flag when there is data in the buffer.
+}
