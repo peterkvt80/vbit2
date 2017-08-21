@@ -27,6 +27,7 @@ Service::Service(Configure *configure, PageList *pageList) :
     _register(new PacketMag(mag,p,_configure,priority[mag]));
   }
   // @todo Add packet sources for subtitles, databroadcast and packet 830
+  _register(new Packet830());
 }
 
 Service::~Service()
@@ -52,7 +53,7 @@ int Service::run()
   std::cerr << "[Service::run]Loop starts" << std::endl;
 	while(1) // normal
 	{
-    std::cerr << "[Service::run]iterates. VBI line=" << (int) _lineCounter << " (int) field=" << (int) _fieldCounter << std::endl;
+    //std::cerr << "[Service::run]iterates. VBI line=" << (int) _lineCounter << " (int) field=" << (int) _fieldCounter << std::endl;
 	  // If counters (or other trigger) causes an event then send the events
     _updateEvents(); // Must only call this ONCE per transmitted row
 

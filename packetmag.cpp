@@ -67,6 +67,7 @@ Packet* PacketMag::GetPacket(Packet* p)
   switch (_state)
   {
     case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
+		  std::cerr << "TRACE-H " << std::endl;
       ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
 
       _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
@@ -160,15 +161,89 @@ Packet* PacketMag::GetPacket(Packet* p)
     //p->Parity(13); // don't apply parity here it will screw up the template. parity for the header is done by tx() later
     assert(p!=NULL);
 
-	links=_page->GetLinkSet();
-	if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
-		_state=PACKETSTATE_FASTEXT; // a non zero FL row will override an OL,27 row
-	} else {
-		_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
-		_state=PACKETSTATE_PACKET27;
-	}
+		links=_page->GetLinkSet();
+		if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
+			_state=PACKETSTATE_FASTEXT; // a non zero FL row will override an OL,27 row
+		} else {
+			_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
+			_state=PACKETSTATE_PACKET27; // intentional fall through
+		}
       break;
+		case PACKETSTATE_PACKET27:
+				  std::cerr << "TRACE-27 " << std::endl;
+
+			if (_lastTxt)
+			{
+				//std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
+				//_lastTxt->Dump();
+				p->SetRow(_magNumber, 27, _lastTxt->GetLine(), 0); // TODO coding for navigation packets
+				_lastTxt=_lastTxt->GetNextLine();
+				break;
+			}
+			_lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
+			_state=PACKETSTATE_PACKET28; // Fall through
+		case PACKETSTATE_PACKET28:
+				  std::cerr << "TRACE-28 " << std::endl;
+
+			if (_lastTxt)
+			{
+				//std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
+				//_lastTxt->Dump();
+
+				p->SetRow(_magNumber, 28, _lastTxt->GetLine(), CODING_13_TRIPLETS);
+				_lastTxt=_lastTxt->GetNextLine();
+				break;
+			}
+			else if (_page->GetRegion())
+			{
+				// create X/28/0 packet for pages which have a region set with RE in file
+				// it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
+
+				// this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
+				std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
+				int region = _page->GetRegion();
+				int NOS = (_page->GetPageStatus() & 0x380) >> 7;
+				int language = NOS | (region << 3);
+				int triplet = 0x3C000 | (language << 7); // construct triplet 1
+				val.replace(1,1,1,(triplet & 0x3F) | 0x40);
+				val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
+				val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
+				//std::cerr << "[Mag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
+				p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
+				_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
+				_state=PACKETSTATE_PACKET26;
+				break;
+			}
+			if (_page->GetPageCoding() == CODING_7BIT_TEXT){
+				// X/26 packets next in normal pages
+				_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
+				_state=PACKETSTATE_PACKET26; // Fall through
+			} else {
+				// do X/1 to X/25 first and go back to X/26 after
+				_state=PACKETSTATE_TEXTROW;
+				break;
+			}			
+		case PACKETSTATE_PACKET26:
+			if (_lastTxt)
+			{
+				p->SetRow(_magNumber, 26, _lastTxt->GetLine(), CODING_13_TRIPLETS);
+				// Do we have another line?
+				_lastTxt=_lastTxt->GetNextLine();
+				// std::cerr << "*";
+				break;
+			}
+			if (_page->GetPageCoding() == CODING_7BIT_TEXT){
+				_state=PACKETSTATE_TEXTROW; // Fall through to text rows on normal pages
+			} else {
+				// otherwise we end the page here
+				p=nullptr;
+				_state=PACKETSTATE_HEADER;
+				_thisRow=0;
+				break;
+			}			
     case PACKETSTATE_TEXTROW:
+		  std::cerr << "TRACE-T " << std::endl;
+
       // Find the next row that isn't NULL
       for (_thisRow++;_thisRow<26;_thisRow++)
       {
@@ -214,6 +289,8 @@ Packet* PacketMag::GetPacket(Packet* p)
       }
       break;
     case PACKETSTATE_FASTEXT:
+				  std::cerr << "TRACE-F " << std::endl;
+
 //      std::cerr << "PACKETSTATE_FASTEXT enters" << std::endl;
       p->SetMRAG(_magNumber,27);
       links=_page->GetLinkSet();
@@ -222,7 +299,12 @@ Packet* PacketMag::GetPacket(Packet* p)
       _state=PACKETSTATE_PACKET28;
 //      std::cerr << "PACKETSTATE_FASTEXT exits" << std::endl;
       break;
+
+
+			
   default:
+	std::cerr << "TRACE-OOPS " << std::endl;
+
     _state=PACKETSTATE_HEADER;// For now, do the next page
     // Other packets that Alistair will want implemented go here
   }

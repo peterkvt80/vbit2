@@ -1,7 +1,7 @@
 #ifndef PACKETMAG_H
 #define PACKETMAG_H
 #include <list>
-#include <PacketSource.h>
+#include <packetsource.h>
 #include "ttxpagestream.h"
 #include "carousel.h"
 #include "configure.h"

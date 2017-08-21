@@ -10,10 +10,10 @@
 #include "configure.h"
 #include "pagelist.h"
 #include "packet.h"
-#include "mag.h" // @todo THIS WILL BE REDUNDANT
-#include "packetsource.h"
-#include "packetmag.h"
-
+// #include "mag.h" // @todo THIS WILL BE REDUNDANT
+#include <packetsource.h>
+#include <packetmag.h>
+#include <packet830.h>
 /// Eight magazines and subtitles (maybe other packets too)
 #define STREAMS 9
 /// Strictly these should ODD/EVEN VBI line counts as in general they would be different.
