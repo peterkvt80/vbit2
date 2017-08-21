@@ -89,8 +89,11 @@ class PacketSource
      */
     virtual Packet* GetPacket(Packet* p)=0;
 
-    /** Is there a packet ready to go? */
-    virtual bool IsReady(){return _readyFlag;};
+    /** Is there a packet ready to go?
+     *  @param force - If true and the next packet's priority is holding it, then allow the packet to go anyway. Default false.
+     *  @return true if there is a packet ready to go.
+     */
+    virtual bool IsReady(bool force=false)=0; // {return _readyFlag;};
 
     /** Report that an event happened */
     void SetEvent(Event event); // All packet sources can use the same code

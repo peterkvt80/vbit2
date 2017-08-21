@@ -34,7 +34,7 @@ FileMonitor::FileMonitor(Configure *configure, PageList *pageList) :
 }
 
 FileMonitor::FileMonitor()
-  : _pageList(NULL)
+  : _pageList(nullptr)
 {
   //ctor
 }
@@ -146,6 +146,6 @@ void FileMonitor::run()
     ms=5000;
     rec.tv_sec = ms / 1000;
     rec.tv_nsec=(ms % 1000) *1000000;
-    nanosleep(&rec,NULL);
+    nanosleep(&rec,nullptr);
   }
 } // run

@@ -12,7 +12,7 @@ Mag::Mag(int mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure) 
     _headerFlag(false),
     _thisRow(0),
     _state(STATE_HEADER),
-    _lastTxt(NULL)
+    _lastTxt(0)
 {
     //ctor
     if (_pageSet->size()>0)
@@ -111,7 +111,7 @@ Packet* Mag::GetPacket(Packet* p)
     {
       //std::cerr << "[Mag::GetPacket] Delete this carousel" << std::endl;
       _carousel->deletePage(_page);
-      _page=NULL;
+      _page=nullptr;
       // @todo We are not done. This just deletes a pointer to the page. It is still in _pageList
     }
 
@@ -143,7 +143,7 @@ Packet* Mag::GetPacket(Packet* p)
       if (_page->GetStatusFlag()==TTXPageStream::MARKED)
       {
         _pageSet->remove(*(_it++));
-        _page=NULL;
+        _page=nullptr;
         return filler;
         // Stays in HEADER mode so that we run this again
       }
@@ -151,8 +151,8 @@ Packet* Mag::GetPacket(Packet* p)
       {
         // todo:
         // std::cerr << "Page is a carousel. This can not happen" << std::endl;
-        _page=NULL;
-        return NULL;
+        _page=nullptr;
+        return nullptr;
       }
 
     }
@@ -283,7 +283,7 @@ Packet* Mag::GetPacket(Packet* p)
 			_state=STATE_TEXTROW; // Fall through to text rows on normal pages
 		} else {
 			// otherwise we end the page here
-			p=NULL;
+			p=nullptr;
 			_state=STATE_HEADER;
 			_thisRow=0;
 			break;
@@ -301,7 +301,7 @@ Packet* Mag::GetPacket(Packet* p)
     {
       if(_page->GetPageCoding() == CODING_7BIT_TEXT){
         // if this is a normal page we've finished
-        p=NULL;
+        p=nullptr;
         _state=STATE_HEADER;
         _thisRow=0;
         //_outp("H");
@@ -317,7 +317,7 @@ Packet* Mag::GetPacket(Packet* p)
       if (_lastTxt->IsBlank() && _configure->GetRowAdaptive()) // If the row is empty then skip it
       {
         // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
-        p=NULL;
+        p=nullptr;
       }
       else
       {

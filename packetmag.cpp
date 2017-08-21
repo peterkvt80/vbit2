@@ -9,14 +9,14 @@ using namespace vbit;
 PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, uint8_t priority) :
     _pageSet(pageSet),
     _configure(configure),
-    _page(NULL),
+    _page(nullptr),
     _magNumber(mag),
     _priority(priority),
     _priorityCount(priority),
     _headerFlag(false),
     _state(PACKETSTATE_HEADER),
     _thisRow(0),
-    _lastTxt(NULL)
+    _lastTxt(nullptr)
 {
   //ctor
   if (_pageSet->size()>0)
@@ -38,6 +38,7 @@ PacketMag::~PacketMag()
 // @todo Invent a packet sequencer similar to mag.cpp which this will replace
 Packet* PacketMag::GetPacket(Packet* p)
 {
+  std::cerr << "[PacketMag::GetPacket] mag=" << _magNumber << " state=" << _state << std::endl;
   int thisPageNum;
   unsigned int thisSubcode;
   int thisStatus;
@@ -46,11 +47,16 @@ Packet* PacketMag::GetPacket(Packet* p)
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
 
   // We should only call GetPacket if IsReady has returned true
+
+  /* Nice to have a safety net
+   * but without the previous value of the force flag this can give a false positive.
+
   if (!IsReady())
   {
       std::cerr << "[PacketMag::GetPacket] Packet not ready. This must not happen" << std::endl;
       exit(0);
   }
+  */
 
   // If there is no page, we should send a filler
   if (_pageSet->size()<1)
@@ -63,7 +69,7 @@ Packet* PacketMag::GetPacket(Packet* p)
     case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
       ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
 
-      _page=_carousel->nextCarousel(); // The next carousel page
+      _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
 
       // But before that, do some housekeeping
 
@@ -71,7 +77,7 @@ Packet* PacketMag::GetPacket(Packet* p)
       if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
       {
         _carousel->deletePage(_page);
-        _page=NULL;
+        _page=nullptr;
       }
 
       if (_page) // Carousel? Step to the next subpage
@@ -85,7 +91,7 @@ Packet* PacketMag::GetPacket(Packet* p)
       {
         if (_it==_pageSet->end())
         {
-          std::cerr << "This can not happen" << std::endl;
+          std::cerr << "This can not happen (we can't get the next page?)" << std::endl;
           exit(0);
         }
         ++_it;
@@ -100,17 +106,17 @@ Packet* PacketMag::GetPacket(Packet* p)
         if (_page->GetStatusFlag()==TTXPageStream::MARKED)
         {
           _pageSet->remove(*(_it++));
-          _page=NULL;
+          _page=nullptr;
           return filler;
           // Stays in HEADER mode so that we run this again
         }
         if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
         {
-          std::cerr << "This can not happen" << std::endl;
-          exit(0);
+          std::cerr << "This can not happen. Carousel found but it isn't a carousel?" << std::endl;
+          // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
           // Page is a carousel. This can not happen
-          //_page=NULL;
-          //return NULL;
+          _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
+          return nullptr;
         }
       }
     _thisRow=0;
@@ -166,16 +172,20 @@ Packet* PacketMag::GetPacket(Packet* p)
       // Find the next row that isn't NULL
       for (_thisRow++;_thisRow<26;_thisRow++)
       {
+        std::cerr << "*";
         _lastTxt=_page->GetTxRow(_thisRow);
         if (_lastTxt!=NULL)
                   break;
       }
+      std::cerr << std::endl;
+      std::cerr << "[PacketMag::GetPacket] TEXT ROW sending row" << _thisRow << std::endl;
+
       // Didn't find? End of this page.
       if (_thisRow>25 || _lastTxt==NULL)
       {
         if(_page->GetPageCoding() == CODING_7BIT_TEXT){
           // if this is a normal page we've finished
-          p=NULL;
+          p=nullptr;
           _state=PACKETSTATE_HEADER;
           _thisRow=0;
           //_outp("H");
@@ -191,7 +201,7 @@ Packet* PacketMag::GetPacket(Packet* p)
         if (_lastTxt->IsBlank() && _configure->GetRowAdaptive()) // If the row is empty then skip it
         {
           // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
-          p=NULL;
+          p=nullptr;
         }
         else
         {
@@ -204,11 +214,13 @@ Packet* PacketMag::GetPacket(Packet* p)
       }
       break;
     case PACKETSTATE_FASTEXT:
+//      std::cerr << "PACKETSTATE_FASTEXT enters" << std::endl;
       p->SetMRAG(_magNumber,27);
       links=_page->GetLinkSet();
       p->Fastext(links,_magNumber);
       _lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
       _state=PACKETSTATE_PACKET28;
+//      std::cerr << "PACKETSTATE_FASTEXT exits" << std::endl;
       break;
   default:
     _state=PACKETSTATE_HEADER;// For now, do the next page
@@ -221,19 +233,31 @@ Packet* PacketMag::GetPacket(Packet* p)
 /** Is there a packet ready to go?
  *  If the ready flag is set
  *  and the priority count allows a packet to go out
+ *  @param force - If true AND if the next packet is being held back due to priority, send the packet anyway
  */
-bool PacketMag::IsReady()
+bool PacketMag::IsReady(bool force)
 {
-  // This happens unless we have just sent out a header
-  if (GetEvent(EVENT_FIELD))
+  bool result=false;
+  // We can always send something unless
+  // 1) We have just sent out a header and are waiting on a new field
+  // 2) There are no pages
+  if ( ((GetEvent(EVENT_FIELD)) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
   {
     // If we send a header we want to wait for this to get set GetEvent(EVENT_FIELD)
     _priorityCount--;
-    if (_priorityCount==0)
+    if (_priorityCount==0 || force)
     {
       _priorityCount=_priority;
-      return true;
+      result=true;
     }
   }
-  return false;
+  /*
+  std::cerr << "[PacketMag::IsReady] exits."
+    " mag=" << _magNumber <<
+    " force=" << force <<
+    " result=" << result <<
+    " EVENT_FIELD=" << GetEvent(EVENT_FIELD) <<
+    std::endl;
+    */
+  return result;
 };

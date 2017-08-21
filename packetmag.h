@@ -24,8 +24,7 @@ class PacketMag : public PacketSource
      */
     Packet* GetPacket(Packet* p) override;
 
-    bool IsReady();
-
+    bool IsReady(bool force=false);
 
   protected:
 

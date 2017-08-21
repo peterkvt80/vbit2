@@ -65,12 +65,12 @@ class TTXPageStream : public TTXPage
     /** Set the time when this carousel expires
      *  ...which is the current time plus the cycle time
      */
-    inline void SetTransitionTime(){_transitionTime=time(0)+m_cycletimeseconds;};
+    inline void SetTransitionTime(){_transitionTime=time(nullptr)+m_cycletimeseconds;};
 
     /** Used to time carousels
      *  @return true if it is time to change carousel page
      */
-    inline bool Expired(){return _transitionTime<=time(0);};
+    inline bool Expired(){return _transitionTime<=time(nullptr);};
 
     /** Step to the next page in a carousel
      *  Updates _CarouselPage;

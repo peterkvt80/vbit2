@@ -8,8 +8,8 @@ PageList::PageList(Configure *configure) :
 	_configure(configure)
 {
   for (int i=0;i<8;i++)
-      _mag[i]=NULL;
-	if (_configure==NULL)
+      _mag[i]=nullptr;
+	if (_configure==nullptr)
 	{
 		std::cerr << "NULL configuration object" << std::endl;
 		return;
