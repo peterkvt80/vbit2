@@ -12,8 +12,9 @@ vbi_unham8			(unsigned int		c)
 	return _vbi_hamm8_inv[(uint8_t) c];
 }
 
-TCPClient::TCPClient() :
-	_pCmd(_cmd)
+TCPClient::TCPClient(PacketSubtitle* subtitle) :
+	_pCmd(_cmd),
+	_newfor(subtitle)
 {
 }
 

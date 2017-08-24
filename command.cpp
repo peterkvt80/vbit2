@@ -32,8 +32,9 @@
 
 using namespace vbit;
 
-Command::Command(const uint32_t port=5570) :
-	_portNumber(port)
+Command::Command(const uint32_t port=5570, PacketSubtitle* subtitle=nullptr) :
+	_portNumber(port),
+	_client(subtitle)
 {
     // Constructor
 		// Start a listener thread
@@ -97,8 +98,6 @@ void Command::run()
 	/* Set the size of the in-out parameter */
 	clntLen = sizeof(echoClntAddr);
 
-	TCPClient client;
-
 	while(1)
 	{
     std::cerr << "[Command::run] Ready for a client to connect" << std::endl;
@@ -113,7 +112,7 @@ void Command::run()
 
 		// printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
 
-		client.Handler(clientSock);
+		_client.Handler(clientSock);
 
 	}
 }

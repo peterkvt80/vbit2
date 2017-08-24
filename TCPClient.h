@@ -43,21 +43,23 @@
 #include "newfor.h"
 #include "hamm-tables.h"
 
+#include "packetsubtitle.h"
+
 namespace vbit
 {
 
 class TCPClient
 {
   public:
-    TCPClient();
+    TCPClient(PacketSubtitle* subtitle);
    ~TCPClient();
    void Handler(int clntSocket);
-	 
+
   private:
 		// Constants
 		static const uint8_t MAXCMD=128;
-    static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */	
-		
+    static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */
+
 // Normal command mode
 		static const uint8_t MODENORMAL=0;
 		static const uint8_t MODESOFTELPAGEINIT=1;
@@ -71,7 +73,7 @@ class TCPClient
 		static const uint8_t MODESUBTITLEOFFAIR=6;
 		static const uint8_t MODESUBTITLEDATAHIGHNYBBLE=7;
 		static const uint8_t MODESUBTITLEDATALOWNYBBLE=8;
-		
+
 		// Variables
 	  char _cmd[MAXCMD];	/// command buffer
 		char* _pCmd;		/// Pointer into the command buffer
@@ -79,15 +81,14 @@ class TCPClient
 		int _row; // Row counter
 		char* _pkt;	// A teletext packet (one row of VBI)
     int _rowAddress; // The address of this row
-		
 
-		
+
 		// Functions
     void clearCmd(void);
     void addChar(char ch, char* response);
 		void command(char* cmd, char* response);
-		void DieWithError(std::string errorMessage);		
-		
+		void DieWithError(std::string errorMessage);
+
 }; // TCPClient
 
 } // End of namespace vbit

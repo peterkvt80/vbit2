@@ -26,8 +26,9 @@ Service::Service(Configure *configure, PageList *pageList) :
     std::list<TTXPageStream>* p=m->Get_pageSet();
     _register(new PacketMag(mag,p,_configure,priority[mag]));
   }
-  // @todo Add packet sources for subtitles, databroadcast and packet 830
+  // Add packet sources for subtitles, databroadcast and packet 830
   _register(new Packet830());
+  _register(_subtitle=new PacketSubtitle());
 }
 
 Service::~Service()
@@ -123,7 +124,7 @@ void Service::_updateEvents()
     {
       _fieldCounter=0;
       seconds++;
-      std::cerr << "Seconds=" << seconds << std::endl;
+      // std::cerr << "Seconds=" << seconds << std::endl;
       // Could implement a seconds counter here if we needed it
 
 

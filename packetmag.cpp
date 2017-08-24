@@ -38,7 +38,7 @@ PacketMag::~PacketMag()
 // @todo Invent a packet sequencer similar to mag.cpp which this will replace
 Packet* PacketMag::GetPacket(Packet* p)
 {
-  std::cerr << "[PacketMag::GetPacket] mag=" << _magNumber << " state=" << _state << std::endl;
+  // std::cerr << "[PacketMag::GetPacket] mag=" << _magNumber << " state=" << _state << std::endl;
   int thisPageNum;
   unsigned int thisSubcode;
   int thisStatus;
@@ -67,7 +67,7 @@ Packet* PacketMag::GetPacket(Packet* p)
   switch (_state)
   {
     case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
-		  std::cerr << "TRACE-H " << std::endl;
+		  //std::cerr << "TRACE-H " << std::endl;
       ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
 
       _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
@@ -113,7 +113,7 @@ Packet* PacketMag::GetPacket(Packet* p)
         }
         if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
         {
-          std::cerr << "This can not happen. Carousel found but it isn't a carousel?" << std::endl;
+          //std::cerr << "This can not happen. Carousel found but it isn't a carousel?" << std::endl;
           // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
           // Page is a carousel. This can not happen
           _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
@@ -170,7 +170,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 		}
       break;
 		case PACKETSTATE_PACKET27:
-				  std::cerr << "TRACE-27 " << std::endl;
+				  //std::cerr << "TRACE-27 " << std::endl;
 
 			if (_lastTxt)
 			{
@@ -181,9 +181,9 @@ Packet* PacketMag::GetPacket(Packet* p)
 				break;
 			}
 			_lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
-			_state=PACKETSTATE_PACKET28; // Fall through
+			_state=PACKETSTATE_PACKET28; //  // Intentional fall through to PACKETSTATE_PACKET28
 		case PACKETSTATE_PACKET28:
-				  std::cerr << "TRACE-28 " << std::endl;
+				  //std::cerr << "TRACE-28 " << std::endl;
 
 			if (_lastTxt)
 			{
@@ -217,7 +217,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 			if (_page->GetPageCoding() == CODING_7BIT_TEXT){
 				// X/26 packets next in normal pages
 				_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
-				_state=PACKETSTATE_PACKET26; // Fall through
+				_state=PACKETSTATE_PACKET26; // Intentional fall through to PACKETSTATE_PACKET26
 			} else {
 				// do X/1 to X/25 first and go back to X/26 after
 				_state=PACKETSTATE_TEXTROW;
@@ -233,7 +233,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 				break;
 			}
 			if (_page->GetPageCoding() == CODING_7BIT_TEXT){
-				_state=PACKETSTATE_TEXTROW; // Fall through to text rows on normal pages
+				_state=PACKETSTATE_TEXTROW; // Intentional fall through to PACKETSTATE_TEXTROW
 			} else {
 				// otherwise we end the page here
 				p=nullptr;
@@ -242,18 +242,18 @@ Packet* PacketMag::GetPacket(Packet* p)
 				break;
 			}			
     case PACKETSTATE_TEXTROW:
-		  std::cerr << "TRACE-T " << std::endl;
+		  // std::cerr << "TRACE-T " << std::endl;
 
       // Find the next row that isn't NULL
       for (_thisRow++;_thisRow<26;_thisRow++)
       {
-        std::cerr << "*";
+        // std::cerr << "*";
         _lastTxt=_page->GetTxRow(_thisRow);
         if (_lastTxt!=NULL)
                   break;
       }
-      std::cerr << std::endl;
-      std::cerr << "[PacketMag::GetPacket] TEXT ROW sending row" << _thisRow << std::endl;
+      //std::cerr << std::endl;
+      //std::cerr << "[PacketMag::GetPacket] TEXT ROW sending row" << _thisRow << std::endl;
 
       // Didn't find? End of this page.
       if (_thisRow>25 || _lastTxt==NULL)
@@ -289,7 +289,7 @@ Packet* PacketMag::GetPacket(Packet* p)
       }
       break;
     case PACKETSTATE_FASTEXT:
-				  std::cerr << "TRACE-F " << std::endl;
+				  //std::cerr << "TRACE-F " << std::endl;
 
 //      std::cerr << "PACKETSTATE_FASTEXT enters" << std::endl;
       p->SetMRAG(_magNumber,27);
@@ -303,7 +303,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 
 			
   default:
-	std::cerr << "TRACE-OOPS " << std::endl;
+	//std::cerr << "TRACE-OOPS " << std::endl;
 
     _state=PACKETSTATE_HEADER;// For now, do the next page
     // Other packets that Alistair will want implemented go here

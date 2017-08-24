@@ -14,6 +14,7 @@
 #include <packetsource.h>
 #include <packetmag.h>
 #include <packet830.h>
+#include <packetsubtitle.h>
 /// Eight magazines and subtitles (maybe other packets too)
 #define STREAMS 9
 /// Strictly these should ODD/EVEN VBI line counts as in general they would be different.
@@ -46,6 +47,12 @@ public:
 	 * @return Nothing useful yet. Perhaps return an error status if something goes wrong
 	 */
 	int run();
+
+	/** Part of Newfor subtitles implementation
+	 * \return The packet source handling the subtitles
+	 */
+  vbit::PacketSubtitle* GetSubtitle(){return _subtitle;};
+
 private:
   // Member variables that define the service
 	Configure* _configure; /// Member reference to the configuration settings
@@ -55,6 +62,8 @@ private:
 	uint8_t _lineCounter; // Which VBI line are we on? Used to signal a new field.
 	uint8_t _fieldCounter; // Which field? Used to time packet 8/30
 	std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
+
+	vbit::PacketSubtitle* _subtitle; // Newfor needs to know which packet source is doing subtitles
 
 	// Member functions
 	void _register(vbit::PacketSource *src); /// Register packet sources

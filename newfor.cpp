@@ -9,12 +9,12 @@
  * or accept any industry standard Newfor source.
  */
 
-#include "newfor.h" 
+#include "newfor.h"
 
 // @todo These will be converted to member variables
-// bufferpacket packetCache[1]; // Incoming rows are cached here, and transferred to subtitleBuffer when OnAir 
+// bufferpacket packetCache[1]; // Incoming rows are cached here, and transferred to subtitleBuffer when OnAir
 
-// Packet Subtitles are stored here 
+// Packet Subtitles are stored here
 
 // uint8_t subtitleCache [SUBTITLEPACKETCOUNT][PACKETSIZE];	/// Storage for 8 packets, 45 bytes per packet. (for packetCache)
 
@@ -32,25 +32,26 @@ vbi_unham8			(unsigned int		c)
 }
 
 
-Newfor::Newfor()
+Newfor::Newfor(PacketSubtitle* subtitle) :
+  _subtitle(subtitle)
 {
 		ttxpage.SetSubCode(0);
 }
 
 Newfor::~Newfor()
-{	
+{
 }
 
 /** initNu4
  * @detail Initialise the buffers used by Newfor
  */
 //void InitNu4()
-//{  
-//	bufferInit(packetCache   ,(char*)subtitleCache ,SUBTITLEPACKETCOUNT);  
+//{
+//	bufferInit(packetCache   ,(char*)subtitleCache ,SUBTITLEPACKETCOUNT);
 //}
 
 
-/** 
+/**
  * @detail Expect four characters
  * 1: Ham 0 (always 0x15)
  * 2: Page number hundreds hammed. 1..8
@@ -62,8 +63,8 @@ int Newfor::SoftelPageInit(char* cmd)
 {
   int page=0;
   int n;
-  
-  
+
+
   // Useless leading 0
   n=vbi_unham8(cmd[1]);
   if (n<0) return 0x900; // @todo This is an error.
@@ -107,28 +108,30 @@ void Newfor::SubtitleOnair(char* response)
 //		bufferMove(&magBuffer[8],packetCache);
 //	}
 	//  \OLD CODE
-	
+
 	strcpy(response,"Response not implemented, sorry\n");
-	
+
 	// At this point ttxpage is ready to go.
-	// Somehow we need to get it to the service thread.
-	
-	ttxpage.SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
-	
-	// After we have displayed the subs we might want to save them for a re-transmitted
+	// Somehow we need to get it to packetsubtitle in the service thread.
+	// 1. Which object is managing the subtitle?
+
+	// 2. Send the page to this object
+  _subtitle->SendSubtitle(&ttxpage);
+
+	// After we have displayed the subs we could save them for retransmission
 	// but instead we will clear out everything.
 	for (int i=0;i<24;i++)
 	{
 			ttxpage.SetRow(i,"");
 	}
-	
+
 }
 
 void Newfor::SubtitleOffair()
 {
 	std::cerr << "[Newfor;:SubtitleOffair]" << std::endl;
 // Construct a header for _page with the erase flag set.
-//  
+//
 /* OLD CODE
 	uint8_t mag;
 	uint8_t page;
@@ -139,19 +142,19 @@ void Newfor::SubtitleOffair()
 	Parity(packet,13);
 	// May want to clear subtitle buffer at the same time
 	bufferPut(&magBuffer[8],packet);
-	
-	
+
+
 	\OLD CODE  */
-	
+
 	// Set the page status
 	ttxpage.SetPageStatus(0x4002);
 	// clear all the lines
 	// Somehow send the page to be transmitted (in adaptive mode where blank lines are elided)
-	
+
 }
 
 /**
- * @return Row count 1..7, or 0 if invalid 
+ * @return Row count 1..7, or 0 if invalid
  * @param cmd - Need some splainin
  */
 int Newfor::GetRowCount(char* cmd)
@@ -160,7 +163,7 @@ int Newfor::GetRowCount(char* cmd)
   if (n>7)
 	n=0;
   _rowcount=n;
-  return n;	
+  return n;
 }
 
 /**

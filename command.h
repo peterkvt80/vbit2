@@ -65,13 +65,13 @@ class Command
 		 * @description Listens on port 5570 and accepts connections.
 		 * When connected it can be sent Newfor commands.
      */
-		Command(const uint32_t port);
+		Command(const uint32_t port, vbit::PacketSubtitle* subtitle);
 
 		/**
      * @brief Constructor
 		 * @param port - TCP port number to use
      */
-		Command(int port);
+		// Command(int port);
 
 		/**
      * @brief Destructor
@@ -85,6 +85,7 @@ class Command
 
 		private:
 			int _portNumber;
+      TCPClient _client;
 
 			/* Page init and subtitle data can respond with this standard codes */
 			static const uint8_t ASCII_ACK=0x06;

@@ -55,10 +55,12 @@ int main(int argc, char** argv)
 	Configure *configure=new Configure(argc, argv);
 	PageList *pageList=new PageList(configure);
 
+  Service* svc=new Service(configure, pageList); // Need to copy the subtitle packet source for Newfor
+
 	std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
-	std::thread serviceThread(&Service::run, Service(configure, pageList));
-	std::thread commandThread(&Command::run, Command((uint32_t)5570));
-	
+	std::thread serviceThread(&Service::run, svc);
+	std::thread commandThread(&Command::run, Command((uint32_t)5570, svc->GetSubtitle()) );
+
   // The threads should never stop, but just in case...
 	monitorThread.join();
 	serviceThread.join();
