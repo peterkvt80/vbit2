@@ -34,6 +34,7 @@
 // Allow for enhancement packets
 #define MAXROW 28
 
+// @todo These should be an enum type
 #define CODING_7BIT_TEXT            0
 #define CODING_13_TRIPLETS          2
 

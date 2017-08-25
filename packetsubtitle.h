@@ -13,12 +13,12 @@ namespace vbit{
 
 /** Subtitles state machine
  */
-enum SubtitleEvent
+enum SubtitleState
 {
-	SUBTITLE_EVENT_IDLE,
-  SUBTITLE_EVENT_HEADER,
-  SUBTITLE_EVENT_TEXT_ROW,
-  SUBTITLE_EVENT_NUMBER_ITEMS
+	SUBTITLE_STATE_IDLE,
+  SUBTITLE_STATE_HEADER,
+  SUBTITLE_STATE_TEXT_ROW,
+  SUBTITLE_STATE_NUMBER_ITEMS
 };
 
 class PacketSubtitle : public PacketSource
@@ -52,7 +52,8 @@ class PacketSubtitle : public PacketSource
 		std::mutex _mtx;		// Mutex to interlock Mewfor thread
 		TTXPage* _page[2];
 		uint8_t _swap;
-		SubtitleEvent _event;	// Subtitle state machine
+		SubtitleState _state;	// Subtitle state machine
+		uint8_t _rowCount;  // Used to iterate through the rows of the subtitle page
 };
 
 }

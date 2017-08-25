@@ -138,7 +138,7 @@ void Service::_updateEvents()
     // Packet 830?
     if (_fieldCounter%10==0)
     {
-      Event ev;
+      Event ev=EVENT_P830_FORMAT_1;
       switch (_fieldCounter/10)
       {
       case 0:

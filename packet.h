@@ -119,7 +119,11 @@ class Packet
 				int GetPage(){return _page;};
 
 				/**
-				 * @brief Same as the row contructor, except it doesn't construct
+				 * @brief Same as the row constructor, except it doesn't construct
+				 * @param mag - Magazine number 0..7 where 0 is magazine 8
+				 * @param row - Row 0..31
+				 * @param val - The contents of the row text (40 characters)
+				 * @param coding -
 				 */
 				void SetRow(int mag, int row, std::string val, int coding);
 
@@ -128,9 +132,9 @@ class Packet
 private:
 	char _packet[45]; //!< Member variable "_packet[45]"
 	bool _isHeader; //<! True if the packet is a header
-	uint8_t _mag;//<! The magazine number this packet belongs to
-	uint32_t _page;//<! The page number this packet belongs to
-	uint8_t _row; //<! Row number
+	uint8_t _mag;//<! The magazine number this packet belongs to 0..7 where 0 is maazine 8
+	uint32_t _page;//<! The page number this packet belongs to 00 to ff
+	uint8_t _row; //<! Row number 0 to 31
 	int _coding; // packet coding
 
 	bool get_offset_time(char* str);
@@ -138,7 +142,7 @@ private:
 	bool get_time(char* str);
 	/** Hamming 24/18
 	 * The incoming triplet should be packed 18 bits of an int 32 representing D1..D18
-	 * The int is repacked with parity bits  
+	 * The int is repacked with parity bits
 	 */
 	void SetTriplet(int ix, int triplet);
 
@@ -147,7 +151,7 @@ private:
 	 * @param p A Hamming 24/18 protected 24 bit word will be stored here,
 	 *   last significant byte first, lsb first transmitted.
 	 * @param c Integer between 0 ... 1 << 18 - 1.
-	 * 
+	 *
 	 * Encodes an 18 bit word with Hamming 24/18 protection
 	 * as specified in ETS 300 706, Section 8.3.
 	 *
@@ -155,7 +159,7 @@ private:
 	 */
 	void vbi_ham24p(uint8_t *		p, unsigned int c);
 
-	
+
 	#ifndef WIN32
 	bool get_temp(char* str);
 #endif
