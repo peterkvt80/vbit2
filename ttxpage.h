@@ -202,6 +202,11 @@ class TTXPage
 
         int GetPageCoding() {return m_pagecoding;}
 
+        /** @todo migrate this deep copy into the standard copy constructor
+         * Warning. Only deep copies the top page. Not for carousels (yet)
+         */
+        void Copy(TTXPage* src);
+
     protected:
         /** Load a TTI page (MRG Systems)
          * \param filename : The source file

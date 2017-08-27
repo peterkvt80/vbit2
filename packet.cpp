@@ -310,7 +310,7 @@ char* Packet::tx(bool debugMode)
 			// %%%V version number eg. 2.00
 			tmpptr=strstr((char*) _packet,"%%%V");
 			if (tmpptr) {
-				strncpy(tmpptr,"2.00",4); // @todo: Move this value to somewhere more obvious
+				strncpy(tmpptr,"2.01",4); // @todo: Move this value to somewhere more obvious
 			}
 			Parity(5); // redo the parity because substitutions will need processing
 		}
@@ -552,4 +552,26 @@ void Packet::vbi_ham24p(uint8_t *		p, unsigned int c)
 	p[2] = D12_D18 | P6;
 
 	//std::cerr << "[Packet::vbi_ham24p] leaves " << std::hex << (p[0] | (p[1] << 8) | (p[2] << 16)) << std::endl;
+}
+
+void Packet::Dump()
+{
+	std::cerr << "[Packet::Dump] Enters" << std::endl;
+	for (int i=0; i<45; i++)
+	{
+		int ch=_packet[i];
+		std::cerr << std::setfill('0') << std::setw(2) << std::hex << ch << " ";
+	}
+  std::cerr << std::endl;		
+
+	for (int i=0; i<45; i++)
+  {
+		char ch=_packet[i];
+		if (ch<' ') ch='*';
+		if (ch>'~') ch='*';
+		std::cerr << " " << ch << " ";
+	}				
+  std::cerr << std::endl;		
+
+	std::cerr << std::dec;
 }

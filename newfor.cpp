@@ -118,11 +118,13 @@ void Newfor::SubtitleOnair(char* response)
 	// 2. Send the page to this object
   _subtitle->SendSubtitle(&ttxpage);
 
+	// ttxpage.SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
+
 	// After we have displayed the subs we could save them for retransmission
 	// but instead we will clear out everything.
 	for (int i=0;i<24;i++)
 	{
-			ttxpage.SetRow(i,"");
+			ttxpage.SetRow(i,"                                        ");
 	}
 
 }
@@ -188,5 +190,6 @@ void Newfor::saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd)
 
 	// What @todo about the mag?
 	// std::cerr << "[Newfor::saveSubtitleRow] cmd=" << cmd << std::endl;
+	if (cmd[0]==0) cmd[0]='?'; // @todo Temporary measure to defeat null strings (this will inevitably multiply problems!)
 	ttxpage.SetRow(row, cmd);
 }

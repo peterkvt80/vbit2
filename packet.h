@@ -127,6 +127,7 @@ class Packet
 				 */
 				void SetRow(int mag, int row, std::string val, int coding);
 
+				void Dump();
 
     protected:
 private:

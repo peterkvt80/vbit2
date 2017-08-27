@@ -50,7 +50,7 @@ class PacketSubtitle : public PacketSource
 
   private:
 		std::mutex _mtx;		// Mutex to interlock Mewfor thread
-		TTXPage* _page[2];
+		TTXPage _page[2];
 		uint8_t _swap;
 		SubtitleState _state;	// Subtitle state machine
 		uint8_t _rowCount;  // Used to iterate through the rows of the subtitle page

@@ -151,10 +151,19 @@ bool TTXLine::IsDoubleHeight()
 
 bool TTXLine::IsBlank()
 {
-    for (unsigned int i=0;i<40;i++)
-        if (m_textline[i]!=' ')
-            return false;
-    return true; // Yes, the line is blank
+	if (m_textline.length()==0)
+	{
+		return true;
+	}
+	for (unsigned int i=0;i<40;i++)
+	{
+		if (m_textline.at(i)!=' ')
+		{
+			//std::cerr << "IsBlank false reason=" << (int) m_textline[i] << std::endl;
+			return false;
+		}
+	}
+	return true; // Yes, the line is blank
 }
 
 char TTXLine::SetCharAt(int x,int code)
@@ -168,7 +177,7 @@ char TTXLine::GetCharAt(int xLoc)
 {
     if (m_textline.length()<(uint16_t)xLoc)
     {
-        // extend the line to 40 characters
+        // @todo extend the line to 40 characters
         std::cerr << "[TTXLine::SetCharAt] oops, need to extend this line" << std::endl;
     }
     return m_textline[xLoc];

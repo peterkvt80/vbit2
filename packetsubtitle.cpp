@@ -17,12 +17,11 @@ PacketSubtitle::~PacketSubtitle()
 
 Packet* PacketSubtitle::GetPacket(Packet* p)
 {
-  // std::cerr << "[PacketSubtitle::GetPacket] GetPacket" << std::endl;
+  // std::cerr << "[PacketSubtitle::GetPacket] State=" << _state << std::endl;
   // @todo Put these values into the configuration instead of being hard wired
-	uint8_t mag=8;
-	uint8_t page=88;
+	uint8_t mag=8 & 0x07; // 0 is mag 8!
+	uint8_t page=0x88;    // These are in hex
 
-  p=new Packet(8,25,"                                        ");
 	_mtx.lock();						// lock the critical section
 	switch (_state)
 	{
@@ -33,20 +32,24 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 		// @todo Construct the header packet and then wait for a field
 		// Copy the header to p
 		p->Header(mag, page, 0, 0x4002); // Subtitle C6
+//		p->Header(mag, page, 0, 0x8002); // Normal (for debugging)
+		p->HeaderText("XENOXXX INDUSTRIES         CLOCK");
+		// p->Parity(13); Don't do parity here! Packet::tx does it.
 		ClearEvent(EVENT_FIELD);
 		_state=SUBTITLE_STATE_TEXT_ROW;
 		_rowCount=1;	// Set up iterator for page rows
 	  break;
   case SUBTITLE_STATE_TEXT_ROW:
 		// 1) Copy the next non-null row to p
-		for (;_rowCount<24 && _page[_swap]->GetRow(_rowCount)->IsBlank();_rowCount++);
     if (_rowCount<24)
     {
 //      TTXPage* pg=_page[_swap];
       //TTXLine* ln=pg->GetRow(_rowCount);
       //str:string st=ln->GetLine();
-      p->SetRow(mag,_rowCount,_page[_swap]->GetRow(_rowCount)->GetLine(),CODING_7BIT_TEXT);
-        // *p=_page[_swap]->GetRow(_rowCount);
+			std::cerr << "[PacketSubtitle::GetPacket] Sending row=" << (int) _rowCount << " string=#" << _page[_swap].GetRow(_rowCount)->GetLine() << "#" << std::endl;
+      p->SetRow(mag,_rowCount,_page[_swap].GetRow(_rowCount)->GetLine(),CODING_7BIT_TEXT);
+			_rowCount++;
+			//p->Parity(5); // Don't do parity here! Packet::tx does it.
     }
     else // Out of rows? Terminate
     {
@@ -60,6 +63,7 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 
 	} // switch
 	_mtx.unlock();					// unlock the critical section
+	p->Dump();
   return p;
 }
 
@@ -76,6 +80,7 @@ bool PacketSubtitle::IsReady(bool force)
 	case SUBTITLE_STATE_IDLE : // Process starts with EVENT_SUBTITLE
 		if (GetEvent(EVENT_SUBTITLE))
 		{
+			ClearEvent(EVENT_SUBTITLE);
 			_state=SUBTITLE_STATE_HEADER;
 			result=true;
 		}
@@ -87,8 +92,42 @@ bool PacketSubtitle::IsReady(bool force)
 		}
 	  break;
   case SUBTITLE_STATE_TEXT_ROW:
-    // @todo Iterate through to the next non blank row. Return false and reset state machine if so
-		result=true;
+    // Iterate through to the next non blank row.
+  	for (;_rowCount<24;_rowCount++)
+		{
+			if (!_page[_swap].GetRow(_rowCount)->IsBlank())
+			{
+				std::cerr << "[PacketSubtitle::IsReady] found non blank row=" << (int) _rowCount << std::endl;
+				std::cerr << "[PacketSubtitle::IsReady] row=" << _page[_swap].GetRow(_rowCount)->GetLine() << std::endl;
+				/**
+				for (int i=0;i<40;i++)
+				{
+					std::cerr << std::setfill('0') << std::setw(2) << std::hex << " " << (int) _page[_swap].GetRow(_rowCount)->GetCharAt(i);
+				}
+				std::cerr << std::endl;
+
+				for (int i=0;i<40;i++)
+				{
+					char ch=_page[_swap].GetRow(_rowCount)->GetCharAt(i);
+					if (ch<' ') ch='*';
+					if (ch>'~') ch='*';
+					std::cerr << " " << ch << "  ";
+				}				
+				std::cerr << std::endl;
+				*/
+				break;
+			}
+		}
+		// Return false and reset state machine if there are no more rows
+		if (_rowCount<24)
+		{
+			result=true;
+		}
+		else
+		{
+			result=false;
+			_state=SUBTITLE_STATE_IDLE;
+		}
 	  break;
   case SUBTITLE_STATE_NUMBER_ITEMS:
 		std::cerr << "[PacketSubtitle::IsReady] This is impossible" << std::endl;
@@ -100,15 +139,25 @@ bool PacketSubtitle::IsReady(bool force)
 
 void PacketSubtitle::SendSubtitle(TTXPage* page)
 {
-  std::cerr << "[] Now do something interesting with the page" << std::endl;
-  // @todo buffer the page because Newfor is liable to overwrite it
-  // @todo double buffer the pages
-  // @todo toggle the buffer
-	_mtx.lock();						// lock the critical section
-	*(_page[_swap])=*page;	// shallow copy the page
-	_swap=(_swap+1)%2;			// swap the double buffering
+	_mtx.lock();				// lock the critical section
+	std::cerr << "[PacketSubtitle::SendSubtitle] Got page: " << std::endl;
 
-	page->SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
+	_swap=(_swap+1)%2;	// swap the double buffering
+	_page[_swap].Copy(page); // deep copy page
+
+//#ifdef DEBUG
+#ifdef WIN32
+	_page[_swap].SavePage("j:\\dev\\vbit2\\subtitleTemp.tti"); // Debug. Send the page representation to a local file
+#else
+	_page[_swap].SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
+	_page[_swap].SavePage("tempSubtitles.tti"); // Debug. Send the page representation to a file
+	
+	_page[_swap].DebugDump();
+#endif // WIN32
+//#endif
+
+	std::cerr << "[PacketSubtitle::SendSubtitle] End of page: " << std::endl;
 	SetEvent(EVENT_SUBTITLE);
+
 	_mtx.unlock();					// unlock the critical section
 }

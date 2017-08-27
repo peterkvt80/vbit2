@@ -12,7 +12,7 @@ Mag::Mag(int mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure) 
     _headerFlag(false),
     _thisRow(0),
     _state(STATE_HEADER),
-    _lastTxt(0)
+    _lastTxt(nullptr)
 {
     //ctor
     if (_pageSet->size()>0)

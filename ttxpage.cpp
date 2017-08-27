@@ -578,7 +578,7 @@ TTXPage::TTXPage(const TTXPage& other)
     m_SubPage=other.m_SubPage;
     for (int i=0;i<=MAXROW;i++)
     {
-        m_pLine[i]=other.m_pLine[i];
+        m_pLine[i]=other.m_pLine[i]; // Is this a deep copy?
         /*
         if (m_pLine[i]!=nullptr)
             std::cerr << "[copy] Line=" << m_pLine[i]->GetLine() << std::endl;
@@ -646,7 +646,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 {
 	// assert(rownumber<=MAXROW);
 	if (rownumber>MAXROW) return;
-	
+
 	if (rownumber == 28){
 		int dc = line.at(0) & 0x0F;
 		if (dc == 0 || dc == 2 || dc == 3 || dc == 4){
@@ -654,13 +654,13 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 			int triplet = line.at(1) & 0x3F;
 			triplet |= (line.at(2) & 0x3F) << 6;
 			triplet |= (line.at(3) & 0x3F) << 12; // first triplet contains page function and coding
-			
+
 			m_pagecoding = (triplet & 0x70) >> 4;
-			
+
 			m_region = 0; // ignore any region from RE line as X/28 sets the character set
 		}
 	}
-	
+
 	if (m_pLine[rownumber]==nullptr)
 			m_pLine[rownumber]=new TTXLine(line,rownumber<MAXROW); // Didn't exist before
 	else
@@ -689,6 +689,7 @@ void TTXPage::m_OutputLines(std::ofstream& ttxfile, TTXPage* p)
 
     for (int i=0;i<=MAXROW;i++)
     {
+
         if (p->m_pLine[i]!=nullptr && !p->m_pLine[i]->IsBlank()) // Skip empty lines
         {
             // This one for Andreas
@@ -697,6 +698,11 @@ void TTXPage::m_OutputLines(std::ofstream& ttxfile, TTXPage* p)
             std::string s=p->m_pLine[i]->GetMappedline7bit(); // Choose the 7 bit output as it is more useful. TODO: Make this a menu option.
             ttxfile << "OL," << std::dec << i << "," << s << "\n";
         }
+				else
+				if (p->m_pLine[i]==nullptr)
+				{
+					std::cerr << "[m_OutputLines] rejected NULL on row=" << i << std::endl;
+				}
     }
     // std::cerr << "sent a subpage" << "\n";
 }
@@ -917,4 +923,40 @@ void TTXPage::DebugDump() const
             if (p->m_pLine[i]!=nullptr)
                 std::cerr << " text=" << p->m_pLine[i]->GetLine() << std::endl;
         }
+}
+
+/** This is similar to the copy constructor
+ * @todo This would be a better version?
+ */
+void TTXPage::Copy(TTXPage* src)
+{
+  // Deep copy the rows.
+  //std::cerr << "[Copy] Trace A" << std::endl;
+  for (int i=0;i<=MAXROW;i++)
+  {
+    // Make sure that we have line object and that it does not get destroyed
+    //std::cerr << "[Copy] Trace B" << std::endl;
+
+    if (this->m_pLine[i]==nullptr)
+    {
+      this->m_pLine[i]=new TTXLine();
+    }
+    //std::cerr << "[Copy] Trace C" << std::endl;
+
+    // If null then blank the line
+    if (src->m_pLine[i]==nullptr)
+    {
+      this->SetRow(i,"                                        "); // Just blank lines rather than destroy them
+    }
+    else
+    {
+      *(this->m_pLine[i])=*(src->m_pLine[i]);
+    }
+    //std::cerr << "[Copy] Trace D" << std::endl;
+
+  }
+  //std::cerr << "[Copy] Trace E" << std::endl;
+	this->m_SubPage=nullptr;  // (Might want to copy carousels but this is only used for subtitles so far)
+  // Copy everything else
+  this->CopyMetaData(src);
 }
