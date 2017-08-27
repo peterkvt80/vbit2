@@ -215,7 +215,7 @@ void TCPClient::Handler(int clntSocket)
   }
 
 #ifdef WIN32
-  // @todo What is the Windows way?
+  // @todo What is the Windows way of closing a socket. It sort of works without bothering.
 #else
   close(clntSocket);    /* Close client socket */
 #endif // WIN32

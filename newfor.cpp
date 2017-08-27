@@ -88,41 +88,11 @@ int Newfor::SoftelPageInit(char* cmd)
 void Newfor::SubtitleOnair(char* response)
 {
   // std::cerr << "[Newfor::SubtitleOnair] page=" << std::hex << ttxpage.GetPageNumber() << std::dec << std::endl;
-
-	// OLD CODE
-	// What page is the subtitle on? THIS IS IN THE WRONG PLACE! Ideally we will already have a header and placed it in the cache
-	//uint8_t mag;
-	//uint8_t page;
-	//mag=(_page/0xff) & 0x07;
-	//page=_page & 0xff;
-	// First packet needs to be the header. Could well want suppress header too.
-	// sprintf(response,"[SubtitleOnair]mag=%1x page=%02x",mag,page);
-	// PacketHeader(packet, mag, page, 0, 0x0002, "test");
-	//PacketHeader(packet, mag, page, 0, 0x4002); // Dummy
-	// dumpPacket(packet);
-	//bufferPut(&magBuffer[8],packet);
-	// fprintf(stderr,response);
-
-	//while (!bufferIsEmpty(packetCache))
-	//{
-//		bufferMove(&magBuffer[8],packetCache);
-//	}
-	//  \OLD CODE
-
 	strcpy(response,"Response not implemented, sorry\n");
-
-	// At this point ttxpage is ready to go.
-	// Somehow we need to get it to packetsubtitle in the service thread.
-	// 1. Which object is managing the subtitle?
-
-	// 2. Send the page to this object
+	// Send the page to the subtitle object in the service thread, then clear the lines.
   _subtitle->SendSubtitle(&ttxpage);
 
-	// ttxpage.SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
-
-	// After we have displayed the subs we could save them for retransmission
-	// but instead we will clear out everything.
-	for (int i=0;i<24;i++)
+	for (int i=0;i<24;i++) // Some broadcasters sent the subs out more than once. We don't.
 	{
 			ttxpage.SetRow(i,"                                        ");
 	}
@@ -131,33 +101,13 @@ void Newfor::SubtitleOnair(char* response)
 
 void Newfor::SubtitleOffair()
 {
-	std::cerr << "[Newfor;:SubtitleOffair]" << std::endl;
-// Construct a header for _page with the erase flag set.
-//
-/* OLD CODE
-	uint8_t mag;
-	uint8_t page;
-	mag=(_page/0xff) & 0x07;
-	page=_page & 0xff;
-	// Control bits are erase+subtitle
-	PacketHeader(packet, mag, page, 0, 0x4002);
-	Parity(packet,13);
-	// May want to clear subtitle buffer at the same time
-	bufferPut(&magBuffer[8],packet);
-
-
-	\OLD CODE  */
-
-	// Set the page status
-	ttxpage.SetPageStatus(0x4002);
-	// clear all the lines
-	// Somehow send the page to be transmitted (in adaptive mode where blank lines are elided)
-
+	//std::cerr << "[Newfor;:SubtitleOffair]" << std::endl;
+  _subtitle->SendSubtitle(&ttxpage);	// OnAir will already have cleared out these lines so just send the page again
 }
 
 /**
  * @return Row count 1..7, or 0 if invalid
- * @param cmd - Need some splainin
+ * @param cmd - The subtitle row count comes as a hammed digit.
  */
 int Newfor::GetRowCount(char* cmd)
 {
@@ -177,18 +127,7 @@ int Newfor::GetRowCount(char* cmd)
  */
 void Newfor::saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd)
 {
-	/* OLD CODE
-	char packet[PACKETSIZE]; // A packet for us to fill
-	PacketPrefix((uint8_t*)packet, mag, row);
-	// copy from cmd to the packet
-	strncpy(packet+5,cmd,40);
-	// fix the parity
-	Parity(packet,5);
-	// stuff it in the buffer
-	bufferPut(packetCache,packet); // buffer packets locally
-	\OLD CODE */
-
-	// What @todo about the mag?
+	// What @todo about the mag? This needs to be decoded and passed on
 	// std::cerr << "[Newfor::saveSubtitleRow] cmd=" << cmd << std::endl;
 	if (cmd[0]==0) cmd[0]='?'; // @todo Temporary measure to defeat null strings (this will inevitably multiply problems!)
 	ttxpage.SetRow(row, cmd);

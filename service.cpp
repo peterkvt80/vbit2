@@ -52,7 +52,7 @@ int Service::run()
   static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
 
   std::cerr << "[Service::run]Loop starts" << std::endl;
-	while(1) // normal
+	while(1)
 	{
     //std::cerr << "[Service::run]iterates. VBI line=" << (int) _lineCounter << " (int) field=" << (int) _fieldCounter << std::endl;
 	  // If counters (or other trigger) causes an event then send the events
@@ -65,50 +65,64 @@ int Service::run()
     bool force=false;
     uint8_t sourceCount=0;
     uint8_t listSize=_Sources.size();
-	  do
-    {
-      // Loop back to the first source
-      if (iterator==_Sources.end())
-      {
-        iterator=_Sources.begin();
-      }
 
-      // If we have tried all sources with and without force, then break out with a filler to prevent a deadlock
-      if (sourceCount>listSize*2)
-      {
-        p=nullptr;
-        std::cerr << "[Service::run] No packet available for this line" << std::endl;
-        break;
-      }
+		// Send ONLY one packet per loop
 
-      // If we have gone around once and got nothing, then force sources to go if possible.
-      if (sourceCount>listSize)
-      {
-        force=true;
-      }
+		// Special case for subtitles. Subtitles always go if there is one waiting
+		if (_subtitle->IsReady())
+		{
+			_subtitle->GetPacket(pkt); 
+			std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+		}		
+	  else
+		{
+			// scan the rest of the available sources
+			do
+			{				
+				// Loop back to the first source
+				if (iterator==_Sources.end())
+				{
+					iterator=_Sources.begin();
+				}
 
-      // Get the packet source
-      p=(*iterator);
-      ++iterator;
+				// If we have tried all sources with and without force, then break out with a filler to prevent a deadlock
+				if (sourceCount>listSize*2)
+				{
+					p=nullptr;
+					std::cerr << "[Service::run] No packet available for this line" << std::endl;
+					break;
+				}
 
-      sourceCount++; // Count how many sources we tried.
-    }
-    while (!p->IsReady(force));
+				// If we have gone around once and got nothing, then force sources to go if possible.
+				if (sourceCount>listSize)
+				{
+					force=true;
+				}
 
-    if (p)
-    {
-      // Big assumption here. pkt must always return a valid packet
-      // Which means that GetPacket is not allowed to fail. Is this correct?
-      p->GetPacket(pkt); // I know this was the original bug, but really don't want to create it dynamically
-      std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
-    }
-    else
-    {
-      std::cout << filler->tx();
-    }
+				// Get the packet source
+				p=(*iterator);
+				++iterator;
 
-	} // while
-	return 99; // don't really want to return anything
+				sourceCount++; // Count how many sources we tried.
+			}
+			while (!p->IsReady(force));
+
+			// Did we find a packet? Then send it otherwise put out a filler
+			if (p)
+			{
+				// Big assumption here. pkt must always return a valid packet
+				// Which means that GetPacket is not allowed to fail. Is this correct?
+				p->GetPacket(pkt); // I know this was the original bug, but really don't want to create it dynamically
+				std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+			}
+			else
+			{
+				std::cout << filler->tx();
+			}
+		}
+
+	} // while forever
+	return 99; // can't return but this keeps the compiler happy
 } // worker
 
 void Service::_updateEvents()
@@ -163,6 +177,5 @@ void Service::_updateEvents()
       }
     }
   }
-  // @todo Subtitle events. Flag when a subtitle is ready to go up
   // @todo Databroadcast events. Flag when there is data in the buffer.
 }

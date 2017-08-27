@@ -18,7 +18,7 @@ PacketSubtitle::~PacketSubtitle()
 Packet* PacketSubtitle::GetPacket(Packet* p)
 {
   // std::cerr << "[PacketSubtitle::GetPacket] State=" << _state << std::endl;
-  // @todo Put these values into the configuration instead of being hard wired
+  // @todo Put these values into the configuration or better still, decoded from the Newfor feed instead of being hard wired
 	uint8_t mag=8 & 0x07; // 0 is mag 8!
 	uint8_t page=0x88;    // These are in hex
 
@@ -29,11 +29,11 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 		std::cerr << "[PacketSubtitle::GetPacket] can not happen" << std::endl;
 	  break;
   case SUBTITLE_STATE_HEADER:
-		// @todo Construct the header packet and then wait for a field
+		// Construct the header packet and then wait for a field
 		// Copy the header to p
 		p->Header(mag, page, 0, 0x4002); // Subtitle C6
 //		p->Header(mag, page, 0, 0x8002); // Normal (for debugging)
-		p->HeaderText("XENOXXX INDUSTRIES         CLOCK");
+		p->HeaderText("XENOXXX INDUSTRIES         CLOCK");	// Only Jason will see this if he decodes a tape.
 		// p->Parity(13); Don't do parity here! Packet::tx does it.
 		ClearEvent(EVENT_FIELD);
 		_state=SUBTITLE_STATE_TEXT_ROW;
@@ -55,6 +55,7 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
     {
       _state=SUBTITLE_STATE_IDLE;
       // @todo. Note that this is the wrong place to terminate as we have no packet to send
+			// @todo Check that IsReady prevents this branch from ever being taken
     }
 	  break;
   case SUBTITLE_STATE_NUMBER_ITEMS:
