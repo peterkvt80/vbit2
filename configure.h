@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <vector>
 #include <algorithm>
+#include <stdexcept>
 
 #define CONFIGFILE "vbit.conf" // default config file name
 #define MAXPATH 132
@@ -32,6 +33,7 @@ public:
 	inline char* GetPageDirectory(){return _pageDir;};
 	
 	std::string GetHeaderTemplate(){return _headerTemplate;}
+	bool GetRowAdaptive(){return _rowAdaptive;}
 	
 private:
 	int DirExists(char *path);
@@ -40,7 +42,9 @@ private:
 	
 	// template string for generating header packets
 	std::string _headerTemplate;
-
+	
+	bool _rowAdaptive;
+	
 	// settings for generation of packet 8/30
 	uint8_t _multiplexedSignalFlag; 	// 0 indicates teletext is multiplexed with video, 1 means full frame teletext.
 	uint8_t _initialMag;

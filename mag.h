@@ -47,7 +47,7 @@ class Mag
          * \return the next packet in the magazine stream or NULL if this was the last packet
          * @param p is a packet instance that will be updated
          */
-        Packet* GetPacket(Packet* p);
+        Packet* GetPacket();
 
         /** Set _pageSet
          * \param val New value to set

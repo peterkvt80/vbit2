@@ -201,14 +201,18 @@ char* Packet::tx(bool debugMode)
 			ptr2=strstr(_packet,"%e");	// day of month with no leading zero
 			if (ptr2)
 			{
-				#ifdef WIN32
-				strftime(tmpstr,10,"%#d",timeinfo);
-				#else
+				#ifndef WIN32
 				strftime(tmpstr,10,"%e",timeinfo);
-				#endif
 				ptr2[0]=tmpstr[0];
+				#else
+				strftime(tmpstr,10,"%d",timeinfo);
+				if (tmpstr[0] == '0')
+					ptr2[0]=' ';
+				else
+					ptr2[0]=tmpstr[0];
+				#endif
 				ptr2[1]=tmpstr[1];
-			}		
+			}
 
 			ptr2=strstr(_packet,"%m");	// month number with leading 0
 			if (ptr2)

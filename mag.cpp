@@ -36,12 +36,13 @@ int Mag::GetPageCount()
     return _pageSet->size();
 }
 
-Packet* Mag::GetPacket(Packet* p)
+Packet* Mag::GetPacket()
 {
   int thisPageNum;
   unsigned int thisSubcode;
   int thisStatus;
   int* links=NULL;
+  Packet* p = new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
 
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
   // Returns one packet at a time from a page.
@@ -250,7 +251,7 @@ Packet* Mag::GetPacket(Packet* p)
 			val.replace(1,1,1,(triplet & 0x3F) | 0x40);
 			val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
 			val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
-			// std::cerr << "region:" << std::hex << region << "nos:" << std::hex << NOS << "triplet:" << std::hex << triplet << std::endl;
+			//std::cerr << "[Mag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
 			p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
 			_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
 			_state=STATE_PACKET26;
@@ -274,7 +275,7 @@ Packet* Mag::GetPacket(Packet* p)
 			p->SetRow(_magNumber, 26, _lastTxt->GetLine(), CODING_13_TRIPLETS);
 			// Do we have another line?
 			_lastTxt=_lastTxt->GetNextLine();
-			// std::cerr << "*";
+			//std::cerr << "*";
 			break;
 		}
 		if (_page->GetPageCoding() == CODING_7BIT_TEXT){
@@ -312,7 +313,7 @@ Packet* Mag::GetPacket(Packet* p)
     else
     {
       //_outp("J");
-      if (_lastTxt->IsBlank()) // If the row is empty then skip it
+      if (_lastTxt->IsBlank() && _configure->GetRowAdaptive()) // If the row is empty then skip it
       {
         // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
         p=NULL;

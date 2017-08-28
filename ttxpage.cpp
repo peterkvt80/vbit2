@@ -478,7 +478,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                         break;
                     pageNumber=std::strtol(line.c_str(), &ptr, 16);
                     // std::cerr << "Line=" << line << " " << "line length=" << line.length() << std::endl;
-                    if (line.length()<5 && pageNumber<0x8ff) // Page number without subpage? Shouldn't happen but you never know.
+                    if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
                     {
                         pageNumber*=0x100;
                     }
@@ -672,7 +672,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 		}
 		else // Enhanced packet
 		{
-			std::cerr << "[TTXPage::SetRow] APPEND row=" << rownumber << std::endl;
+			//std::cerr << "[TTXPage::SetRow] APPEND row=" << rownumber << std::endl;
 			// If the line already exists we want to add the packet rather than overwrite what is already there
 			m_pLine[rownumber]->AppendLine(line);
 		}
@@ -874,9 +874,9 @@ int TTXPage::GetLanguage()
 
 void TTXPage::SetPageNumber(int page)
 {
-    if ((page<0x10000) || (page>0x8ff99))
+    if ((page<0x10000) || (page>0x8ff99) || (page&0xFF00) == 0xFF00)
     {
-        std::cerr << "Page number is out of range: " << page << std::endl;
+        std::cerr << "[TTXPage::SetPageNumber] Page number is out of range: " << std::hex << page << std::endl;
     }
     if (page<0x10000) page=0x10000;
     if (page>0x8ff99) page=0x8ff99;
