@@ -45,11 +45,7 @@ int Service::run()
   std::cerr << "[Service::worker]This is the worker process" << std::endl;
   std::list<vbit::PacketSource*>::const_iterator iterator=_Sources.begin(); // Iterator for packet sources
 
-<<<<<<< HEAD
   std::list<vbit::PacketSource*>::const_iterator first; // Save the first so we know if we have looped.
-=======
-  vbit::Packet* pkt;
->>>>>>> refs/remotes/origin/master
 
   vbit::Packet* pkt=new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
 
@@ -75,44 +71,16 @@ int Service::run()
 		// Special case for subtitles. Subtitles always go if there is one waiting
 		if (_subtitle->IsReady())
 		{
-			_subtitle->GetPacket(pkt); 
+			_subtitle->GetPacket(pkt);
 			std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
-		}		
+		}
 	  else
 		{
-<<<<<<< HEAD
 			// scan the rest of the available sources
 			do
-			{				
+			{
 				// Loop back to the first source
 				if (iterator==_Sources.end())
-=======
-			if (!hold[nmag]) 		// Not in hold
-			{
-				pkt = pMag->GetPacket();
-				bool isHeader=false;
-				if (pkt!=NULL) // How could this be NULL? After the last packet of a page has been sent.
-				{
-					isHeader=pMag->GetHeaderFlag(); // pkt->IsHeader();
-					
-					std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
-					
-					// Was the last packet a header? If so we need to go into hold
-					if (isHeader)
-					{
-						hold[nmag]=true;
-						// std::cerr << "Header wait mode mag=" << (int) nmag << std::endl;
-					}
-					rowCounter++;
-					if (rowCounter>=16)
-					{
-						rowCounter=0;
-						for (uint8_t i=0;i<STREAMS-1;i++) hold[i]=0;	// Any holds are released now
-						// Should put packet 8/30 stuff here as in vbit stream.c
-					}
-				} // not a null packet
-				else
->>>>>>> refs/remotes/origin/master
 				{
 					iterator=_Sources.begin();
 				}
