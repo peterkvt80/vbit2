@@ -1,3 +1,4 @@
 # g++ temporary files
 *.o
 *.bak
+*.bak
