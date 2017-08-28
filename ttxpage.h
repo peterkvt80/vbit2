@@ -34,6 +34,7 @@
 // Allow for enhancement packets
 #define MAXROW 28
 
+// @todo These should be an enum type
 #define CODING_7BIT_TEXT            0
 #define CODING_13_TRIPLETS          2
 
@@ -200,6 +201,11 @@ class TTXPage
         inline bool Loaded() const {return m_Loaded;};
 
         int GetPageCoding() {return m_pagecoding;}
+
+        /** @todo migrate this deep copy into the standard copy constructor
+         * Warning. Only deep copies the top page. Not for carousels (yet)
+         */
+        void Copy(TTXPage* src);
 
     protected:
         /** Load a TTI page (MRG Systems)

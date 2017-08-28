@@ -32,11 +32,12 @@
 
 using namespace vbit;
 
-Command::Command(const uint32_t port=5570) :
-	_portNumber(port)
+Command::Command(const uint32_t port=5570, PacketSubtitle* subtitle=nullptr) :
+	_portNumber(port),
+	_client(subtitle)
 {
     // Constructor
-		// Start a listener thread 
+		// Start a listener thread
 }
 
 Command::~Command()
@@ -54,16 +55,16 @@ void Command::run()
 {
   std::cerr << "[Command::run] Newfor subtitle listener started" << std::endl;
   int serverSock;                    /* Socket descriptor for server */
-  int clientSock;                    /* Socket descriptor for client */	
+  int clientSock;                    /* Socket descriptor for client */
   struct sockaddr_in echoServAddr; /* Local address */
-  struct sockaddr_in echoClntAddr; /* Client address */	
-  unsigned short echoServPort;     /* Server port */	
+  struct sockaddr_in echoClntAddr; /* Client address */
+  unsigned short echoServPort;     /* Server port */
 
 #ifdef WIN32
   int clntLen;                     /* needs to be signed int for winsock */
 	WSADATA wsaData;
   int iResult;
-	
+
 	// Initialize Winsock
   iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
   if (iResult != 0) {
@@ -74,7 +75,7 @@ void Command::run()
 #endif
 
 	echoServPort = _portNumber;  /* This is the local port */
-	
+
 	// System initialisations
 	/* Construct local address structure */
   std::memset(&echoServAddr, 0, sizeof(echoServAddr));   /* Zero out structure */
@@ -84,27 +85,25 @@ void Command::run()
 
   /* Create socket for incoming connections */
   if ((serverSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-      DieWithError("socket() failed\n");	
-	
+      DieWithError("socket() failed\n");
+
   /* Bind to the local address */
   if (bind(serverSock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0)
       DieWithError("bind() failed");
 
   /* Mark the socket so it will listen for incoming connections */
   if (listen(serverSock, MAXPENDING) < 0)
-    DieWithError("listen() failed");	
+    DieWithError("listen() failed");
 
 	/* Set the size of the in-out parameter */
 	clntLen = sizeof(echoClntAddr);
-	
-	TCPClient client;
-			
+
 	while(1)
 	{
     std::cerr << "[Command::run] Ready for a client to connect" << std::endl;
 
 		/* Wait for a client to connect */
-		if ((clientSock = accept(serverSock, (struct sockaddr *) &echoClntAddr, 
+		if ((clientSock = accept(serverSock, (struct sockaddr *) &echoClntAddr,
 							   &clntLen)) < 0)
 			DieWithError("accept() failed");
     std::cerr << "[Command::run] Connected" << std::endl;
@@ -113,7 +112,7 @@ void Command::run()
 
 		// printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
 
-		client.Handler(clientSock);
+		_client.Handler(clientSock);
 
 	}
 }

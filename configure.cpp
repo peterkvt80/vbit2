@@ -6,7 +6,7 @@ using namespace ttx;
 
 int Configure::DirExists(char *path){
 	struct stat info;
-	
+
 	if(stat(path, &info ) != 0)
 		return 0;
 	else if(info.st_mode & S_IFDIR)
@@ -16,7 +16,7 @@ int Configure::DirExists(char *path){
 }
 
 Configure::Configure(int argc, char** argv) :
-	
+
 	// settings for generation of packet 8/30
 	_multiplexedSignalFlag(0),
 	_initialMag(1),
@@ -28,15 +28,15 @@ Configure::Configure(int argc, char** argv) :
 	std::cerr << "[Configure::Configure] Started" << std::endl;
 	strncpy(_configFile,CONFIGFILE,MAXPATH-1);
 #ifdef _WIN32
-	strncpy(_pageDir,"i:\\temp\\teletext",MAXPATH-1);
+	strncpy(_pageDir,"j:\\temp\\teletext",MAXPATH-1); // Hard wired for Peter's PC
 #else
 	strcpy(_pageDir,"/home/pi/teletext");
 #endif
 	// This is where the default header template is defined.
 	_headerTemplate = "TEEFAX 1 %%# %%a %d %%b" "\x03" "%H:%M.%S";
-	
+
 	_rowAdaptive = false;
-	
+
 	//Scan the command line for overriding the pages file.
 	//std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
 	if (argc>1)
@@ -54,7 +54,7 @@ Configure::Configure(int argc, char** argv) :
 		std::cerr << "[Configure::Configure] " << _pageDir << " does not exist or is not a directory" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	
+
 	/// @ scan for overriding the configuration file
 	std::cerr << "[Configure::Configure] Pages directory is " << _pageDir << std::endl;
 	std::cerr << "[Configure::Configure] Config file is " << _configFile << std::endl;
@@ -75,14 +75,14 @@ Configure::~Configure()
 int Configure::LoadConfigFile(std::string filename)
 {
 	std::ifstream filein(filename.c_str()); // Open the file
-	
+
 	std::vector<std::string>::iterator iter;
 	// these are all the valid strings for config lines
 	std::vector<std::string> nameStrings{"header_template", "initial_teletext_page", "row_adaptive_mode"};
-	
+
 	if (filein.is_open()){
 		std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
-		
+
 		std::string line;
 		std::string name;
 		std::string value;
@@ -91,7 +91,7 @@ int Configure::LoadConfigFile(std::string filename)
 				/// todo: parsing!
 				std::size_t delim = line.find("=", 0);
 				int error = 0;
-				
+
 				if (delim != std::string::npos){
 					name = line.substr(0, delim);
 					value = line.substr(delim + 1);
@@ -102,7 +102,7 @@ int Configure::LoadConfigFile(std::string filename)
 							case 0: // header_template
 								_headerTemplate.assign(value, 0, 32);
 								break;
-							
+
 							case 1: // initial_teletext_page
 								if (value.size() >= 3){
 									size_t idx;
@@ -138,10 +138,10 @@ int Configure::LoadConfigFile(std::string filename)
 									_initialMag = magpage / 0x100;
 									_initialPage = magpage % 0x100;
 									break;
-								} 
+								}
 								error = 1;
 								break;
-							
+
 							case 2: // row_adaptive_mode
 								if (!value.compare("true")){
 									_rowAdaptive = true;

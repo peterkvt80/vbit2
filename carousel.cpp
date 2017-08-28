@@ -32,7 +32,7 @@ void Carousel::deletePage(TTXPageStream* p)
 TTXPageStream* Carousel::nextCarousel()
 {
     TTXPageStream* p;
-    //std::cerr << "[nextCarousel] list size = " << _carouselList.size() << std::endl;
+    // std::cerr << "[nextCarousel] list size = " << _carouselList.size() << std::endl;
     if (_carouselList.size()==0) return NULL;
 
 
@@ -42,11 +42,11 @@ TTXPageStream* Carousel::nextCarousel()
 
         if (p->Expired())
         {
-            //std::cerr << "[Carousel::nextCarousel] page " << std::hex << p->GetPageNumber() << std::dec << " cycle time=" << p->GetCycleTime() << std::endl;
+            // std::cerr << "[Carousel::nextCarousel] page " << std::hex << p->GetPageNumber() << std::dec << " cycle time=" << p->GetCycleTime() << std::endl;
             p->SetTransitionTime(); // We found a carousel that is ready to step
             break;
         }
-        p=NULL;
+        p=nullptr;
     }
 #if 0
     char c;

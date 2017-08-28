@@ -3,7 +3,10 @@
 
 using namespace vbit;
 
-Packet::Packet() : _isHeader(false), _mag(1)
+Packet::Packet() :
+  _isHeader(false),
+  _mag(1),
+  _coding(CODING_7BIT_TEXT)
 {
     //ctor
     SetMRAG(8,25);
@@ -35,7 +38,7 @@ void Packet::SetRow(int mag, int row, std::string val, int coding)
 	SetMRAG(mag, row);
 	SetPacketText(val);
 	_coding = coding;
-	
+
 	// The following block of code is experimental support for page enhancement
 	// packets read from special OL rows in tti page files.
 	// If OL,28, packet is used the page file should not contain a non zero RE,
@@ -47,7 +50,7 @@ void Packet::SetRow(int mag, int row, std::string val, int coding)
 		// bits in b0-b5.
 		designationcode = _packet[5] & 0x0F;
 		_packet[5] = HamTab[designationcode]; // designation code is 8/4 hamming coded
-		
+
 		/* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish) */
 		for (int i = 1; i<=13; i++){
 			//std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
@@ -180,7 +183,7 @@ char* Packet::tx(bool debugMode)
 				ptr2[1]=tmpstr[1];
 				ptr2[2]=tmpstr[2];
 			}
-				
+
 			ptr2=strstr(_packet,"%%b"); // Jan
 			if (ptr2)
 			{
@@ -189,7 +192,7 @@ char* Packet::tx(bool debugMode)
 				ptr2[1]=tmpstr[1];
 				ptr2[2]=tmpstr[2];
 			}
-			
+
 			ptr2=strstr(_packet,"%d");	// day of month with leading zero
 			if (ptr2)
 			{
@@ -197,7 +200,7 @@ char* Packet::tx(bool debugMode)
 				ptr2[0]=tmpstr[0];
 				ptr2[1]=tmpstr[1];
 			}
-			
+
 			ptr2=strstr(_packet,"%e");	// day of month with no leading zero
 			if (ptr2)
 			{
@@ -229,7 +232,7 @@ char* Packet::tx(bool debugMode)
 				ptr2[0]=tmpstr[0];
 				ptr2[1]=tmpstr[1];
 			}
-			
+
 			ptr2=strstr(_packet,"%H");	// hour.
 			if (ptr2)
 			{
@@ -237,7 +240,7 @@ char* Packet::tx(bool debugMode)
 				ptr2[0]=tmpstr[0];
 				ptr2[1]=tmpstr[1];
 			}
-			
+
 			ptr2=strstr(_packet,"%M");	// minutes.
 			if (ptr2)
 			{
@@ -245,7 +248,7 @@ char* Packet::tx(bool debugMode)
 				ptr2[0]=tmpstr[0];
 				ptr2[1]=tmpstr[1];
 			}
-			
+
 			ptr2=strstr(_packet,"%S");	// seconds.
 			if (ptr2)
 			{
@@ -253,7 +256,7 @@ char* Packet::tx(bool debugMode)
 				ptr2[0]=tmpstr[0];
 				ptr2[1]=tmpstr[1];
 			}
-			
+
 			Parity(13); // apply parity to the text of the header
 
 		}
@@ -307,7 +310,7 @@ char* Packet::tx(bool debugMode)
 			// %%%V version number eg. 2.00
 			tmpptr=strstr((char*) _packet,"%%%V");
 			if (tmpptr) {
-				strncpy(tmpptr,"2.00",4); // @todo: Move this value to somewhere more obvious
+				strncpy(tmpptr,"2.01",4); // @todo: Move this value to somewhere more obvious
 			}
 			Parity(5); // redo the parity because substitutions will need processing
 		}
@@ -547,6 +550,28 @@ void Packet::vbi_ham24p(uint8_t *		p, unsigned int c)
 	P6 = 0x80 & ((_vbi_hamm24_inv_par[0][Byte_0]
 		      ^ _vbi_hamm24_inv_par[0][D5_D11]) << 2);
 	p[2] = D12_D18 | P6;
-	
+
 	//std::cerr << "[Packet::vbi_ham24p] leaves " << std::hex << (p[0] | (p[1] << 8) | (p[2] << 16)) << std::endl;
+}
+
+void Packet::Dump()
+{
+	std::cerr << "[Packet::Dump] Enters" << std::endl;
+	for (int i=0; i<45; i++)
+	{
+		int ch=_packet[i];
+		std::cerr << std::setfill('0') << std::setw(2) << std::hex << ch << " ";
+	}
+  std::cerr << std::endl;		
+
+	for (int i=0; i<45; i++)
+  {
+		char ch=_packet[i];
+		if (ch<' ') ch='*';
+		if (ch>'~') ch='*';
+		std::cerr << " " << ch << " ";
+	}				
+  std::cerr << std::endl;		
+
+	std::cerr << std::dec;
 }

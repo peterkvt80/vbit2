@@ -84,7 +84,7 @@ class TTXLine
         std::string validate(std::string const& test);
 
         std::string m_textline;
-				TTXLine* _nextLine;
+				TTXLine* _nextLine; // @todo probably not used. We can dump this
 
 };
 
