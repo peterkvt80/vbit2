@@ -38,12 +38,13 @@ int Mag::GetPageCount()
     return _pageSet->size();
 }
 
-Packet* Mag::GetPacket(Packet* p)
+Packet* Mag::GetPacket()
 {
   int thisPageNum;
   unsigned int thisSubcode;
   int thisStatus;
   int* links=NULL;
+  Packet* p = new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
 
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
   // Returns one packet at a time from a page.
