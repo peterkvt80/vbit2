@@ -16,7 +16,7 @@ Service::Service(Configure *configure, PageList *pageList) :
 	_fieldCounter(0)
 {
   // @todo Put priority into config and add commands to allow updates.
-  uint8_t priority[8]={9,3,3,6,3,3,5,9};	// 1=High priority,9=low. Note: priority[0] is mag 8
+  uint8_t priority[8]={9,3,3,6,3,3,5,6};	// 1=High priority,9=low. Note: priority[0] is mag 8
 
   vbit::Mag **magList=_pageList->GetMagazines();
   // Register all the packet sources
