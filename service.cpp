@@ -56,7 +56,6 @@ int Service::run()
 	{
     //std::cerr << "[Service::run]iterates. VBI line=" << (int) _lineCounter << " (int) field=" << (int) _fieldCounter << std::endl;
 	  // If counters (or other trigger) causes an event then send the events
-    _updateEvents(); // Must only call this ONCE per transmitted row
 
 	  // Iterate through the packet sources until we get a packet to transmit
 
@@ -71,8 +70,10 @@ int Service::run()
 		// Special case for subtitles. Subtitles always go if there is one waiting
 		if (_subtitle->IsReady())
 		{
-			if (_subtitle->GetPacket(pkt) != nullptr)
+			if (_subtitle->GetPacket(pkt) != nullptr){
 				std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+				_updateEvents(); // Must only call this ONCE per transmitted row
+			}
 		}
 	  else
 		{
@@ -111,12 +112,15 @@ int Service::run()
 			if (p)
 			{
 				// GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
-				if (p->GetPacket(pkt) != nullptr)
+				if (p->GetPacket(pkt) != nullptr){
 					std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+					_updateEvents(); // Must only call this ONCE per transmitted row
+				}
 			}
 			else
 			{
-				std::cout << filler->tx();
+				std::cout.write(filler->tx(), 42);
+				_updateEvents(); // Must only call this ONCE per transmitted row
 			}
 		}
 
