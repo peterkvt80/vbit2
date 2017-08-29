@@ -6,12 +6,12 @@ CC=g++
 #Set any compiler flags you want to use (e.g. "-I."), or leave blank
 CXXFLAGS = -g -O2 -Wall -std=gnu++11 -fstack-protector-all -Wextra -I.
 
-ifeq ($(OS),Windows_NT)
-CXXFLAGS += -DWIN32
-endif
-
 LIBS = -lpthread -fstack-protector
 
+ifeq ($(OS),Windows_NT)
+CXXFLAGS += -DWIN32
+LIBS += -lwsock32
+endif
 
 #Set any dependent files (e.g. header files) so that if they are edited they cause a re-compile (e.g. "main.h my_sub_functions.h some_definitions_file.h"), or leave blank
 DEPS = vbit2.h service.h configure.h pagelist.h ttxpage.h packet.h tables.h mag.h ttxpagestream.h ttxline.h carousel.h filemonitor.h command.h TCPClient.h newfor.h hamm-tables.h packetsource.h packetmag.h packet830.h packetsubtitle.h
