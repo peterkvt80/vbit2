@@ -60,7 +60,7 @@ Packet* PacketMag::GetPacket(Packet* p)
   // If there is no page, we should send a filler
   if (_pageSet->size()<1)
   {
-    p->SetMRAG(8,25);
+    p->SetMRAG(8,25); // we set the MRAG but the contents of pkt is still whatever the last packet was.
     return filler;
   }
 
@@ -103,13 +103,12 @@ Packet* PacketMag::GetPacket(Packet* p)
         // Get pointer to the page we are sending
         // todo: Find a way to skip carousels without going into an infinite loop
         _page=&*_it;
-        // If it is marked for deletion, then remove it and send a filler instead.
+        // If it is marked for deletion, then remove it.
         if (_page->GetStatusFlag()==TTXPageStream::MARKED)
         {
           _pageSet->remove(*(_it++));
           _page=nullptr;
-          p->SetMRAG(8,25);
-          return filler;
+          return nullptr;
           // Stays in HEADER mode so that we run this again
         }
         if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
@@ -118,8 +117,7 @@ Packet* PacketMag::GetPacket(Packet* p)
           // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
           // Page is a carousel. This can not happen
           _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
-          p->SetMRAG(8,25);
-          return filler;
+          return nullptr;
         }
       }
     _thisRow=0;
@@ -166,7 +164,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 		links=_page->GetLinkSet();
 		if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
 			_state=PACKETSTATE_FASTEXT; // a non zero FL row will override an OL,27 row
-      break;
+			break;
 		} else {
 			_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
 			_state=PACKETSTATE_PACKET27;
@@ -216,15 +214,14 @@ Packet* PacketMag::GetPacket(Packet* p)
 				_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
 				_state=PACKETSTATE_PACKET26;
 				break;
-			}
-			if (_page->GetPageCoding() == CODING_7BIT_TEXT){
+			} else if (_page->GetPageCoding() == CODING_7BIT_TEXT){
 				// X/26 packets next in normal pages
 				_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
 				_state=PACKETSTATE_PACKET26; // Intentional fall through to PACKETSTATE_PACKET26
 			} else {
 				// do X/1 to X/25 first and go back to X/26 after
 				_state=PACKETSTATE_TEXTROW;
-				break;
+				return nullptr;
 			}
 		case PACKETSTATE_PACKET26:
 			if (_lastTxt)
@@ -239,10 +236,9 @@ Packet* PacketMag::GetPacket(Packet* p)
 				_state=PACKETSTATE_TEXTROW; // Intentional fall through to PACKETSTATE_TEXTROW
 			} else {
 				// otherwise we end the page here
-				p=nullptr;
 				_state=PACKETSTATE_HEADER;
 				_thisRow=0;
-				break;
+				return nullptr;
 			}
     case PACKETSTATE_TEXTROW:
 		  // std::cerr << "TRACE-T " << std::endl;
@@ -256,14 +252,15 @@ Packet* PacketMag::GetPacket(Packet* p)
                   break;
       }
       //std::cerr << std::endl;
-      //std::cerr << "[PacketMag::GetPacket] TEXT ROW sending row" << _thisRow << std::endl;
+      //std::cerr << "[PacketMag::GetPacket] TEXT ROW sending MRAG " << (int)_magNumber << " " << (int)_thisRow << std::endl;
 
       // Didn't find? End of this page.
       if (_thisRow>25 || _lastTxt==NULL)
       {
+		 // std::cerr << "[PacketMag::GetPacket] FOO row " << std::dec << p->GetRow() << std::endl;
+		 // std::cerr << p->tx() << std::endl;
         if(_page->GetPageCoding() == CODING_7BIT_TEXT){
           // if this is a normal page we've finished
-          p=nullptr;
           _state=PACKETSTATE_HEADER;
           _thisRow=0;
           //_outp("H");
@@ -272,6 +269,7 @@ Packet* PacketMag::GetPacket(Packet* p)
           _lastTxt=_page->GetTxRow(26);
           _state=PACKETSTATE_PACKET26;
         }
+        return nullptr;
       }
       else
       {
@@ -279,7 +277,7 @@ Packet* PacketMag::GetPacket(Packet* p)
         if (_lastTxt->IsBlank() && _configure->GetRowAdaptive()) // If the row is empty then skip it
         {
           // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
-          p=nullptr;
+          return nullptr;
         }
         else
         {
@@ -306,10 +304,9 @@ Packet* PacketMag::GetPacket(Packet* p)
 
 
   default:
-	//std::cerr << "TRACE-OOPS " << std::endl;
-
+	 std::cerr << "TRACE-OOPS " << std::endl;
     _state=PACKETSTATE_HEADER;// For now, do the next page
-    // Other packets that Alistair will want implemented go here
+    return nullptr;
   }
 
   return p; //

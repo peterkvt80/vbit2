@@ -71,8 +71,8 @@ int Service::run()
 		// Special case for subtitles. Subtitles always go if there is one waiting
 		if (_subtitle->IsReady())
 		{
-			_subtitle->GetPacket(pkt);
-			std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+			if (_subtitle->GetPacket(pkt) != nullptr)
+				std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
 		}
 	  else
 		{
@@ -110,10 +110,9 @@ int Service::run()
 			// Did we find a packet? Then send it otherwise put out a filler
 			if (p)
 			{
-				// Big assumption here. pkt must always return a valid packet
-				// Which means that GetPacket is not allowed to fail. Is this correct?
-				p->GetPacket(pkt); // I know this was the original bug, but really don't want to create it dynamically
-				std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+				// GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
+				if (p->GetPacket(pkt) != nullptr)
+					std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
 			}
 			else
 			{
