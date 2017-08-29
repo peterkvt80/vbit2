@@ -60,6 +60,7 @@ Packet* PacketMag::GetPacket(Packet* p)
   // If there is no page, we should send a filler
   if (_pageSet->size()<1)
   {
+    p->SetMRAG(8,25);
     return filler;
   }
 
@@ -107,6 +108,7 @@ Packet* PacketMag::GetPacket(Packet* p)
         {
           _pageSet->remove(*(_it++));
           _page=nullptr;
+          p->SetMRAG(8,25);
           return filler;
           // Stays in HEADER mode so that we run this again
         }
@@ -116,6 +118,7 @@ Packet* PacketMag::GetPacket(Packet* p)
           // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
           // Page is a carousel. This can not happen
           _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
+          p->SetMRAG(8,25);
           return filler;
         }
       }
