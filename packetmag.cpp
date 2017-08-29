@@ -13,7 +13,6 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _magNumber(mag),
     _priority(priority),
     _priorityCount(priority),
-    _headerFlag(false),
     _state(PACKETSTATE_HEADER),
     _thisRow(0),
     _lastTxt(nullptr)
@@ -117,7 +116,7 @@ Packet* PacketMag::GetPacket(Packet* p)
           // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
           // Page is a carousel. This can not happen
           _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
-          return nullptr;
+          return filler;
         }
       }
     _thisRow=0;
@@ -167,7 +166,8 @@ Packet* PacketMag::GetPacket(Packet* p)
       break;
 		} else {
 			_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
-			_state=PACKETSTATE_PACKET27; // intentional fall through
+			_state=PACKETSTATE_PACKET27;
+			break;
 		}
 		case PACKETSTATE_PACKET27:
 				  //std::cerr << "TRACE-27 " << std::endl;
@@ -222,7 +222,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 				// do X/1 to X/25 first and go back to X/26 after
 				_state=PACKETSTATE_TEXTROW;
 				break;
-			}			
+			}
 		case PACKETSTATE_PACKET26:
 			if (_lastTxt)
 			{
@@ -240,7 +240,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 				_state=PACKETSTATE_HEADER;
 				_thisRow=0;
 				break;
-			}			
+			}
     case PACKETSTATE_TEXTROW:
 		  // std::cerr << "TRACE-T " << std::endl;
 
@@ -301,7 +301,7 @@ Packet* PacketMag::GetPacket(Packet* p)
       break;
 
 
-			
+
   default:
 	//std::cerr << "TRACE-OOPS " << std::endl;
 

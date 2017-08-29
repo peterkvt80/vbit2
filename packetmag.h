@@ -38,7 +38,6 @@ class PacketMag : public PacketSource
       std::list<TTXPageStream>::iterator _it;
       Carousel* _carousel;
       uint8_t _priorityCount; /// Controls transmission priority
-      bool _headerFlag; /// True if the last packet was a header
       PacketState _state; /// State machine to sequence packet types
       uint8_t _thisRow; // The current line that we are outputting
       TTXLine* _lastTxt; // The text of the last row that we fetched. Used for enhanced packets
