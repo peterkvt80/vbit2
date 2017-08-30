@@ -22,8 +22,7 @@ Packet* Packet830::GetPacket(Packet* p)
 {
   // std::cerr << "[Packet830::Packet830] GetPacket" << std::endl;
   // @todo Find which event happened and send the relevant packet
-  p=new Packet(8,25,"                                        "); // @todo I think this is a mistake. SHOULD NOT BE DOING new here
-  return p;
+  return nullptr;
 }
 
 bool Packet830::IsReady(bool force)
