@@ -78,7 +78,9 @@ int Configure::LoadConfigFile(std::string filename)
 
 	std::vector<std::string>::iterator iter;
 	// these are all the valid strings for config lines
-	std::vector<std::string> nameStrings{"header_template", "initial_teletext_page", "row_adaptive_mode"};
+	std::vector<std::string> nameStrings{"header_template", "initial_teletext_page", "row_adaptive_mode", // 0..2
+		"network_identification_code", "country_network_identification", "time_offset_code", "status_display" // 3..6 Packet 8/30 settings
+		};
 
 	if (filein.is_open()){
 		std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
@@ -151,6 +153,13 @@ int Configure::LoadConfigFile(std::string filename)
 									error = 1;
 								}
 								break;
+							case 3: // "network_identification_code" - four character hex. eg. FA6F
+								break;
+							case 4: // "country_network_identification" - four character hex. eg. 2C2F
+								break;
+							case 5: // "time_offset_code"
+								break;
+							case 6: // "status_display" 								
 						}
 					} else {
 						error = 1; // unrecognised config line

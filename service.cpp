@@ -152,8 +152,8 @@ void Service::_updateEvents()
     {
       (*iterator)->SetEvent(EVENT_FIELD);
     }
-    // Packet 830?
-    if (_fieldCounter%10==0)
+    // Packet 830 happens every 200ms with Format 1 on the second interval.
+    if (_fieldCounter%10==0) // @todo ETSI says that this event should happen on the second interval. So it needs to be based on the system clock rather than a field counter.
     {
       Event ev=EVENT_P830_FORMAT_1;
       switch (_fieldCounter/10)
