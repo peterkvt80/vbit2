@@ -65,14 +65,16 @@ int Service::run()
     uint8_t sourceCount=0;
     uint8_t listSize=_Sources.size();
 
-		// Send ONLY one packet per loop
+	// Send ONLY one packet per loop
+	_updateEvents();
 
 		// Special case for subtitles. Subtitles always go if there is one waiting
 		if (_subtitle->IsReady())
 		{
 			if (_subtitle->GetPacket(pkt) != nullptr){
 				std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
-				_updateEvents(); // Must only call this ONCE per transmitted row
+			} else {
+				std::cout.write(filler->tx(), 42);
 			}
 		}
 	  else
@@ -114,13 +116,14 @@ int Service::run()
 				// GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
 				if (p->GetPacket(pkt) != nullptr){
 					std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
-					_updateEvents(); // Must only call this ONCE per transmitted row
+					//_updateEvents(); // Must only call this ONCE per transmitted row
+				} else {
+					std::cout.write(filler->tx(), 42);
 				}
 			}
 			else
 			{
 				std::cout.write(filler->tx(), 42);
-				_updateEvents(); // Must only call this ONCE per transmitted row
 			}
 		}
 
