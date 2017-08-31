@@ -159,7 +159,8 @@ int Configure::LoadConfigFile(std::string filename)
 								break;
 							case 5: // "time_offset_code"
 								break;
-							case 6: // "status_display" 								
+							case 6: // "status_display" 
+								break;							
 						}
 					} else {
 						error = 1; // unrecognised config line
