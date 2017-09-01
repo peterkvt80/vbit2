@@ -18,12 +18,11 @@ int Configure::DirExists(char *path){
 Configure::Configure(int argc, char** argv) :
 
 	// settings for generation of packet 8/30
-	_multiplexedSignalFlag(0),
 	_initialMag(1),
 	_initialPage(0x00),
 	_initialSubcode(0x3F7F),
 	_NetworkIdentificationCode(0x0000),
-	_serviceStatusString(19, ' ')
+	_serviceStatusString(20, ' ')
 {
 	std::cerr << "[Configure::Configure] Started" << std::endl;
 	strncpy(_configFile,CONFIGFILE,MAXPATH-1);
@@ -36,6 +35,8 @@ Configure::Configure(int argc, char** argv) :
 	_headerTemplate = "TEEFAX 1 %%# %%a %d %%b" "\x03" "%H:%M.%S";
 
 	_rowAdaptive = false;
+	
+	_multiplexedSignalFlag = false; // using this would require changing all the line counting and a way to send full field through raspi-teletext - something for the distant future when everything else is done...
 
 	//Scan the command line for overriding the pages file.
 	//std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
@@ -79,7 +80,7 @@ int Configure::LoadConfigFile(std::string filename)
 	std::vector<std::string>::iterator iter;
 	// these are all the valid strings for config lines
 	std::vector<std::string> nameStrings{"header_template", "initial_teletext_page", "row_adaptive_mode", // 0..2
-		"network_identification_code", "country_network_identification", "time_offset_code", "status_display" // 3..6 Packet 8/30 settings
+		"network_identification_code", "country_network_identification", "full_field", "status_display" // 3..6 Packet 8/30 settings
 		};
 
 	if (filein.is_open()){
@@ -157,7 +158,7 @@ int Configure::LoadConfigFile(std::string filename)
 								break;
 							case 4: // "country_network_identification" - four character hex. eg. 2C2F
 								break;
-							case 5: // "time_offset_code"
+							case 5: // "full_field"
 								break;
 							case 6: // "status_display" 
 								break;							

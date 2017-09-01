@@ -36,6 +36,7 @@
 
 // @todo These should be an enum type
 #define CODING_7BIT_TEXT            0
+#define CODING_8BIT_DATA            1
 #define CODING_13_TRIPLETS          2
 
 class TTXPage

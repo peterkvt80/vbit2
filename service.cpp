@@ -28,7 +28,7 @@ Service::Service(Configure *configure, PageList *pageList) :
   }
   // Add packet sources for subtitles, databroadcast and packet 830
   _register(_subtitle=new PacketSubtitle());
-  _register(new Packet830());
+  _register(new Packet830(_configure));
 }
 
 Service::~Service()

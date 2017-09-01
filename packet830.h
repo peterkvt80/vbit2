@@ -4,6 +4,7 @@
 #define _PACKET830_H_
 
 #include "packetsource.h"
+#include "configure.h"
 
 namespace vbit
 {
@@ -13,7 +14,7 @@ class Packet830 : public PacketSource
 {
   public:
     /** Default constructor */
-    Packet830();
+    Packet830(ttx::Configure *configure);
     /** Default destructor */
     virtual ~Packet830();
 
@@ -33,6 +34,7 @@ class Packet830 : public PacketSource
   protected:
 
   private:
+    ttx::Configure* _configure;
 };
 
 }

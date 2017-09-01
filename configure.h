@@ -34,6 +34,9 @@ public:
 	
 	std::string GetHeaderTemplate(){return _headerTemplate;}
 	bool GetRowAdaptive(){return _rowAdaptive;}
+	std::string GetServiceStatusString(){return _serviceStatusString;}
+	bool GetMultiplexedSignalFlag(){return _multiplexedSignalFlag;}
+	uint16_t GetNetworkIdentificationCode(){return _NetworkIdentificationCode;}
 	
 private:
 	int DirExists(char *path);
@@ -46,7 +49,7 @@ private:
 	bool _rowAdaptive;
 	
 	// settings for generation of packet 8/30
-	uint8_t _multiplexedSignalFlag; 	// 0 indicates teletext is multiplexed with video, 1 means full frame teletext.
+	bool _multiplexedSignalFlag; 	// false indicates teletext is multiplexed with video, true means full frame teletext.
 	uint8_t _initialMag;
 	uint8_t _initialPage;
 	uint16_t _initialSubcode;

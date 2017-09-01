@@ -76,6 +76,13 @@ void Packet::Set_packet(char *val)
     strncpy(&_packet[5],val,40);
 }
 
+void Packet::SetPacketRaw(char *val)
+{
+    // this is a raw copy of 40 bytes into our packet. use with caution.
+    memcpy(&_packet[5],val,40);
+    _coding = CODING_8BIT_DATA; // don't allow this to be re-processed with parity etc
+}
+
 void Packet::SetPacketText(std::string val)
 {
 	_isHeader=false; // Because it can't be a header

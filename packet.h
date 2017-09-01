@@ -43,6 +43,9 @@ class Packet
          * \param *val New value to set
          */
         void Set_packet(char *val);
+        
+        // this is a raw copy of 40 bytes for pre-formatted packets. use with caution!
+        void SetPacketRaw(char *val);
 
         /** SetPacketText
          * Copy the supplied text into the text part of the packet (last 40 bytes)
