@@ -37,6 +37,9 @@ public:
 	std::string GetServiceStatusString(){return _serviceStatusString;}
 	bool GetMultiplexedSignalFlag(){return _multiplexedSignalFlag;}
 	uint16_t GetNetworkIdentificationCode(){return _NetworkIdentificationCode;}
+	uint8_t GetInitialMag(){return _initialMag;}
+	uint8_t GetInitialPage(){return _initialPage;}
+	uint16_t GetInitialSubcode(){return _initialSubcode;}
 	
 private:
 	int DirExists(char *path);

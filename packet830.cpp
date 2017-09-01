@@ -30,6 +30,15 @@ Packet* Packet830::GetPacket(Packet* p)
   uint8_t muxed = _configure->GetMultiplexedSignalFlag();
   
   // @todo initial page
+  uint8_t m = _configure->GetInitialMag();
+  uint8_t pn = _configure->GetInitialPage();
+  uint16_t sc = _configure->GetInitialSubcode();
+  val[1] = HamTab[pn & 0xF];
+  val[2] = HamTab[(pn & 0xF0) >> 4];
+  val[3] = HamTab[sc & 0xF];
+  val[4] = HamTab[((sc & 0xF0) >> 4) | ((m & 1) << 3)];
+  val[5] = HamTab[(sc & 0xF00) >> 8];
+  val[6] = HamTab[((sc & 0xF000) >> 12) | ((m & 6) << 1)];
   
   // @todo Find which event happened and send the relevant packet
 	if (GetEvent(EVENT_P830_FORMAT_1))
