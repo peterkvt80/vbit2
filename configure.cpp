@@ -22,6 +22,7 @@ Configure::Configure(int argc, char** argv) :
 	_initialPage(0x00),
 	_initialSubcode(0x3F7F),
 	_NetworkIdentificationCode(0x0000),
+	_CountryNetworkIdentificationCode(0x0000),
 	_serviceStatusString(20, ' ')
 {
 	std::cerr << "[Configure::Configure] Started" << std::endl;
@@ -79,9 +80,7 @@ int Configure::LoadConfigFile(std::string filename)
 
 	std::vector<std::string>::iterator iter;
 	// these are all the valid strings for config lines
-	std::vector<std::string> nameStrings{"header_template", "initial_teletext_page", "row_adaptive_mode", // 0..2
-		"network_identification_code", "country_network_identification", "full_field", "status_display" // 3..6 Packet 8/30 settings
-		};
+	std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display" };
 
 	if (filein.is_open()){
 		std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
@@ -155,9 +154,31 @@ int Configure::LoadConfigFile(std::string filename)
 									error = 1;
 								}
 								break;
-							case 3: // "network_identification_code" - four character hex. eg. FA6F
+							case 3: // "country_network_identification" - four character hex. eg. FA6F
+								if (value.size() == 4){
+									size_t idx;
+									try {
+										_NetworkIdentificationCode = stoi(std::string(value, 0, 4), &idx, 16);
+									} catch (const std::invalid_argument& ia) {
+										error = 1;
+										break;
+									}
+								} else {
+									error = 1;
+								}
 								break;
 							case 4: // "country_network_identification" - four character hex. eg. 2C2F
+								if (value.size() == 4){
+									size_t idx;
+									try {
+										_CountryNetworkIdentificationCode = stoi(std::string(value, 0, 4), &idx, 16);
+									} catch (const std::invalid_argument& ia) {
+										error = 1;
+										break;
+									}
+								} else {
+									error = 1;
+								}
 								break;
 							case 5: // "full_field"
 								break;
