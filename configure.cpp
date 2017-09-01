@@ -32,7 +32,7 @@ Configure::Configure(int argc, char** argv) :
 	strcpy(_pageDir,"/home/pi/teletext");
 #endif
 	// This is where the default header template is defined.
-	_headerTemplate = "TEEFAX 1 %%# %%a %d %%b" "\x03" "%H:%M.%S";
+	_headerTemplate = "VBIT2    %%# %%a %d %%b" "\x03" "%H:%M:%S";
 
 	_rowAdaptive = false;
 	
@@ -103,7 +103,8 @@ int Configure::LoadConfigFile(std::string filename)
 						// matched string
 						switch(iter - nameStrings.begin()){
 							case 0: // header_template
-								_headerTemplate.assign(value, 0, 32);
+								value.resize(32,' ');
+								_headerTemplate.assign(value);
 								break;
 
 							case 1: // initial_teletext_page
@@ -161,7 +162,9 @@ int Configure::LoadConfigFile(std::string filename)
 							case 5: // "full_field"
 								break;
 							case 6: // "status_display" 
-								break;							
+								value.resize(20,' ');
+								_serviceStatusString.assign(value);
+								break;
 						}
 					} else {
 						error = 1; // unrecognised config line

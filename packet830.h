@@ -35,6 +35,7 @@ class Packet830 : public PacketSource
 
   private:
     ttx::Configure* _configure;
+    long calculateMJD(int year, int month, int day);
 };
 
 }
