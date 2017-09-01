@@ -155,7 +155,8 @@ bool TTXLine::IsBlank()
 	{
 		return true;
 	}
-	for (unsigned int i=0;i<40;i++)
+	for (unsigned int i=0;i<m_textline.length();i++)
+	// for (unsigned int i=0;i<40;i++)
 	{
 		if (m_textline.at(i)!=' ')
 		{
