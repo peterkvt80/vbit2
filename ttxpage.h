@@ -208,6 +208,12 @@ class TTXPage
          */
         void Copy(TTXPage* src);
 
+        /** \brief Check if any line in the page has changed.
+         *  This can only be called once as it will clear the changed state.
+         *  This is NOT the same as pageChanged.
+         */
+        bool Changed();
+
     protected:
         /** Load a TTI page (MRG Systems)
          * \param filename : The source file

@@ -76,6 +76,20 @@ TTXPage::TTXPage(std::string filename) :
     // std::cerr << "Finished reading page. Loaded=" << m_Loaded << std::endl;
 }
 
+bool TTXPage::Changed()
+{
+  bool changed=false;
+  for (uint8_t row=1;row<=MAXROW;row++)
+  {
+    if (GetRow(row)->GetChanged())
+    {
+      changed=true;
+      // Could break here BUT the changed state in the other rows must be cleared
+    }
+  }
+  return changed;
+}
+
 
 static int instanceCount=0;
 
@@ -926,7 +940,7 @@ void TTXPage::DebugDump() const
 }
 
 /** This is similar to the copy constructor
- * @todo This would be a better version?
+ * @todo This would be a better version to make into a copy constructor?
  */
 void TTXPage::Copy(TTXPage* src)
 {

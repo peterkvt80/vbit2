@@ -152,6 +152,14 @@ Packet* PacketMag::GetPacket(Packet* p)
 		}
 
     thisStatus=_page->GetPageStatus();
+
+    // If the page has changed, then set the update bit.
+    // This is by request of Nate. It isn't a feature required in ETSI
+    if (_page->Changed())
+    {
+      thisStatus|=PAGESTATUS_C8_UPDATE;
+    }
+
     // p=new Packet();
     p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!
 

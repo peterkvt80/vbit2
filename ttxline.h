@@ -21,10 +21,10 @@ class TTXLine
         /** Default destructor */
         virtual ~TTXLine();
 
-
-        /** Set m_textline
-         * \param val New value to set
-         */
+      /** Set the teletext line contents
+       * \param val - New value to set
+       * \param validateLine - If true, it ensures the line is checked and modified if needed to be transmission ready.
+       */
         void Setm_textline(std::string const& val, bool validateLine=true);
 
         /** Access m_textline
@@ -45,6 +45,8 @@ class TTXLine
 
         /** Place a character in a line. Must be an actual teletext code.
          *  Bit 7 will be stripped off.
+         * @param x - Address of the character
+         & @param code - The character to set
          * \return previous character at that location (for undo)
          */
         char SetCharAt(int x,int code);
@@ -79,12 +81,17 @@ class TTXLine
 
 				void Dump();
 
+				bool GetChanged(){bool temp=_changed;_changed=false;return temp;}; /// Get the changed status (and clear the flag)
+
     protected:
     private:
         std::string validate(std::string const& test);
 
         std::string m_textline;
 				TTXLine* _nextLine; // @todo probably not used. We can dump this
+				// If SetLine or SetChar can set the changed flag.
+				// The changed flag is used to set the C8 flag and then is reset.
+				bool _changed;  /// If the line contents has changed. Set by SetLine or SetChar
 
 };
 

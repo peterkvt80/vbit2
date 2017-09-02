@@ -28,7 +28,8 @@
 
 TTXLine::TTXLine(std::string const& line, bool validateLine):
 	m_textline(validate(line)),
-	_nextLine(nullptr)
+	_nextLine(nullptr),
+	_changed(false)
 
 {
 	if (!validateLine)
@@ -46,11 +47,12 @@ TTXLine::~TTXLine()
 		delete _nextLine;
 }
 
-/** Set m_textline
- * \param val New value to set
- */
 void TTXLine::Setm_textline(std::string const& val, bool validateLine)
 {
+  if (m_textline.compare(val)!=0) // changed flag is used to set the C8 flag
+  {
+    _changed=true;
+  }
 	if (validateLine)
     m_textline = validate(val);
 	else
@@ -169,9 +171,15 @@ bool TTXLine::IsBlank()
 
 char TTXLine::SetCharAt(int x,int code)
 {
-    char c=m_textline[x];
-    m_textline[x]=code & 0x7f;
-    return c;
+  char c=m_textline[x];
+  code=code & 0x7f;
+  // If the existing character is changed, then set the changed flag.
+  if (c!=code)
+  {
+    _changed=true;
+  }
+  m_textline[x]=code;
+  return c;
 }
 
 char TTXLine::GetCharAt(int xLoc)
