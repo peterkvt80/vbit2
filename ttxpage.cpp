@@ -81,7 +81,8 @@ bool TTXPage::Changed()
   bool changed=false;
   for (uint8_t row=1;row<=MAXROW;row++)
   {
-    if (GetRow(row)->GetChanged())
+		TTXLine* line=GetRow(row);
+    if (line!=nullptr && line->GetChanged())
     {
       changed=true;
       // Could break here BUT the changed state in the other rows must be cleared
