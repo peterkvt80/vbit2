@@ -32,6 +32,7 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 		std::cerr << "[PacketSubtitle::GetPacket] can not happen" << std::endl;
 	  break;
   case SUBTITLE_STATE_HEADER:
+		std::cerr << "[PacketSubtitle::GetPacket] Header. repeat count=" << (int)_repeatCount << std::endl;
 		// Construct the header packet and then wait for a field
 		{
 		  uint16_t status=PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C6_SUBTITLE; // Erase page + Subtitle
@@ -73,7 +74,7 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 
 	} // switch
 	_mtx.unlock();					// unlock the critical section
-	p->Dump();
+	// p->Dump();
   return p;
 }
 
@@ -164,7 +165,7 @@ void PacketSubtitle::SendSubtitle(TTXPage* page)
 	_swap=(_swap+1)%2;	// swap the double buffering
 	_page[_swap].Copy(page); // deep copy page
 
-//#ifdef DEBUG
+/*
 #ifdef WIN32
 	_page[_swap].SavePage("j:\\dev\\vbit2\\subtitleTemp.tti"); // Debug. Send the page representation to a local file
 #else
@@ -173,7 +174,7 @@ void PacketSubtitle::SendSubtitle(TTXPage* page)
 
 	_page[_swap].DebugDump();
 #endif // WIN32
-//#endif
+*/
 
 	std::cerr << "[PacketSubtitle::SendSubtitle] End of page: " << std::endl;
 	SetEvent(EVENT_SUBTITLE);
