@@ -23,7 +23,8 @@ Configure::Configure(int argc, char** argv) :
 	_initialSubcode(0x3F7F),
 	_NetworkIdentificationCode(0x0000),
 	_CountryNetworkIdentificationCode(0x0000),
-	_serviceStatusString(20, ' ')
+	_serviceStatusString(20, ' '),
+	_subtitleRepeats(1)
 {
 	std::cerr << "[Configure::Configure] Started" << std::endl;
 	strncpy(_configFile,CONFIGFILE,MAXPATH-1);
@@ -36,7 +37,7 @@ Configure::Configure(int argc, char** argv) :
 	_headerTemplate = "VBIT2    %%# %%a %d %%b" "\x03" "%H:%M:%S";
 
 	_rowAdaptive = false;
-	
+
 	_multiplexedSignalFlag = false; // using this would require changing all the line counting and a way to send full field through raspi-teletext - something for the distant future when everything else is done...
 
 	//Scan the command line for overriding the pages file.
@@ -80,7 +81,7 @@ int Configure::LoadConfigFile(std::string filename)
 
 	std::vector<std::string>::iterator iter;
 	// these are all the valid strings for config lines
-	std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display" };
+	std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats" };
 
 	if (filein.is_open()){
 		std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
@@ -182,9 +183,12 @@ int Configure::LoadConfigFile(std::string filename)
 								break;
 							case 5: // "full_field"
 								break;
-							case 6: // "status_display" 
+							case 6: // "status_display"
 								value.resize(20,' ');
 								_serviceStatusString.assign(value);
+								break;
+							case 7: // "subtitle_repeats" - The number of times a subtitle transmission is repeated 0..9
+								_subtitleRepeats = stoi(std::string(value, 0, 1));
 								break;
 						}
 					} else {

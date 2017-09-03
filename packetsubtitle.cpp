@@ -2,10 +2,13 @@
 
 using namespace vbit;
 
-PacketSubtitle::PacketSubtitle() :
+PacketSubtitle::PacketSubtitle(ttx::Configure *configure) :
 	_swap(0),
 	_state(SUBTITLE_STATE_IDLE),
-	_rowCount(0)
+	_rowCount(0),
+  _configure(configure),
+	_repeatCount(_configure->GetSubtitleRepeats()),
+	_C8Flag(true)
 {
   //ctor
 }
@@ -30,11 +33,17 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 	  break;
   case SUBTITLE_STATE_HEADER:
 		// Construct the header packet and then wait for a field
-		// Copy the header to p
-		p->Header(mag, page, 0, 0x4002); // Subtitle C6
-//		p->Header(mag, page, 0, 0x8002); // Normal (for debugging)
+		{
+		  uint16_t status=PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C6_SUBTITLE; // Erase page + Subtitle
+      // The first transmission should have the Update Indicator set. Repeat transmissions do not.
+      if (_C8Flag)
+      {
+        status|=PAGESTATUS_C8_UPDATE;
+        _C8Flag=false;
+      }
+      p->Header(mag, page, 0, status); // Create the header
+		}
 		p->HeaderText("XENOXXX INDUSTRIES         CLOCK");	// Only Jason will see this if he decodes a tape.
-		// p->Parity(13); Don't do parity here! Packet::tx does it.
 		ClearEvent(EVENT_FIELD);
 		_state=SUBTITLE_STATE_TEXT_ROW;
 		_rowCount=1;	// Set up iterator for page rows
@@ -113,7 +122,7 @@ bool PacketSubtitle::IsReady(bool force)
 					if (ch<' ') ch='*';
 					if (ch>'~') ch='*';
 					std::cerr << " " << ch << "  ";
-				}				
+				}
 				std::cerr << std::endl;
 				*/
 				break;
@@ -126,8 +135,17 @@ bool PacketSubtitle::IsReady(bool force)
 		}
 		else
 		{
-			result=false;
-			_state=SUBTITLE_STATE_IDLE;
+      _state=SUBTITLE_STATE_IDLE; // Subtitle is done so state is idle
+		  if (_repeatCount==0)
+      {
+        result=false; // No more repeats
+      }
+      else
+      {
+        _repeatCount--;
+        SetEvent(EVENT_SUBTITLE); // Set up to repeat transmission
+        result=true;
+      }
 		}
 	  break;
   case SUBTITLE_STATE_NUMBER_ITEMS:
@@ -152,13 +170,17 @@ void PacketSubtitle::SendSubtitle(TTXPage* page)
 #else
 	_page[_swap].SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
 	_page[_swap].SavePage("tempSubtitles.tti"); // Debug. Send the page representation to a file
-	
+
 	_page[_swap].DebugDump();
 #endif // WIN32
 //#endif
 
 	std::cerr << "[PacketSubtitle::SendSubtitle] End of page: " << std::endl;
 	SetEvent(EVENT_SUBTITLE);
+
+  _repeatCount=_configure->GetSubtitleRepeats(); // 	// transmission repeat counter
+
+  _C8Flag=true; // New subtitle sets C8 flag
 
 	_mtx.unlock();					// unlock the critical section
 }

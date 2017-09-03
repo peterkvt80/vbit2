@@ -8,6 +8,7 @@
 
 #include "packetsource.h"
 #include "ttxpage.h"
+#include "configure.h"
 
 namespace vbit{
 
@@ -25,7 +26,7 @@ class PacketSubtitle : public PacketSource
 {
   public:
     /** Default constructor */
-    PacketSubtitle();
+    PacketSubtitle(ttx::Configure *configure);
     /** Default destructor */
     virtual ~PacketSubtitle();
 
@@ -54,6 +55,9 @@ class PacketSubtitle : public PacketSource
 		uint8_t _swap;
 		SubtitleState _state;	// Subtitle state machine
 		uint8_t _rowCount;  // Used to iterate through the rows of the subtitle page
+    ttx::Configure* _configure; /// Configuration object
+		uint8_t _repeatCount; /// Counts repeat transmissions
+		bool _C8Flag;         /// C8 Update flag. Set when new sub comes in, cleared when first header goes out.
 };
 
 }
