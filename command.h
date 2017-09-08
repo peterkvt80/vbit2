@@ -84,12 +84,13 @@ class Command
 		void run();
 
 		private:
-			int _portNumber;
-      TCPClient _client;
+			int _portNumber;		/// The port number is configurable. Default is 5570 for no oarticular reason.
+      TCPClient _client; /// Did I call this a client? It is where clients connect and get their commands executed.
 
-			/* Page init and subtitle data can respond with this standard codes */
+			/* Page init and subtitle data can respond with these standard codes */
 			static const uint8_t ASCII_ACK=0x06;
 			static const uint8_t ASCII_NACK=0x15;
+			
 			static const uint8_t MAXPENDING=5;    /* Maximum outstanding connection requests */
 
 			void DieWithError(std::string errorMessage);  /* Error handling function */

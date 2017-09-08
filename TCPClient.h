@@ -24,8 +24,18 @@
  * this software.
  ***************************************************************************
  * Handle network control commands.
- * Initially for subtitles but could also be used for other inserter
+ * Initially for Newfor subtitles but can also be used for other inserter
  * control functions.
+ * These inserter functions follow MRG Systems' XTP620 protocol 
+ *
+ * Example:
+ * To find out what model of inserter you are connected to, type Y.
+ * You will need to enable Telnet (Windows) or run nc (Linux).
+ * Telnet can be enabled in the "Turn Windows features on or off" settings. 
+ * Connect to the IP address and port of your VBIT "telnet 192.168.1.2 5570"
+ * Type Y<enter>
+ * Should reply "VBIT620"
+ * Use CTRL-] to exit telnet
 **/
 
 #ifndef _TCPCLIENT_H_
@@ -81,12 +91,14 @@ class TCPClient
 		int _row; // Row counter
 		char* _pkt;	// A teletext packet (one row of VBI)
     int _rowAddress; // The address of this row
+		
+		uint32_t _pageNumber;	/// The page address in MPPSS (hex. 10000..8FF99
 
 
 		// Functions
     void clearCmd(void);
     void addChar(char ch, char* response);
-		void command(char* cmd, char* response);
+		void command(char* cmd, char* response);	/// Handles XPT620 commands
 		void DieWithError(std::string errorMessage);
 
 }; // TCPClient

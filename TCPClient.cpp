@@ -14,7 +14,8 @@ vbi_unham8			(unsigned int		c)
 
 TCPClient::TCPClient(PacketSubtitle* subtitle) :
 	_pCmd(_cmd),
-	_newfor(subtitle)
+	_newfor(subtitle),
+	_pageNumber(0x10000)
 {
 }
 
@@ -30,18 +31,45 @@ void TCPClient::DieWithError(std::string errorMessage)
 
 void TCPClient::command(char* cmd, char* response)
 {
+	char result[132]="Fail\n\r";
+	char* ptr;
+	int row;
 	switch (cmd[0])
 	{
-	case 'T' :;
-		if (response) strcpy(response,"T not implemented\n");
+	case 'L' :
+		if (cmd[1]=='I') // LI,<row>,<text> - Set row in current page with text
+		{
+			row=std::strtol(&(cmd[3]), &ptr, 10);
+			// @todo Use ptr to continue parsing
+			sprintf(result, "LI Command Page=%x row=%d\n\r", _pageNumber, row); 
+		}
 		break;
-
+	case 'P' :
+		if (cmd[1]=='N') // PN,xxxxx - Set the page number
+		{
+			_pageNumber=std::strtol(&(cmd[3]), &ptr, 16);
+			sprintf(result, "PN Command %x\n\r", _pageNumber); 
+		}
+		else
+		{
+			strcpy(result,"Command not implemented\n\r");
+		}
+		break;
+	case 'T' :;
+		strcpy(result,"T not implemented\n\r");
+		break;
 	case 'Y' :
-		if (response) strcpy(response,"VBIT620\n");
+		strcpy(result,"VBIT620\n\r");
 		break;
 	case 0x0e:
-		if (response) strcpy(response,"This of course does not work. No CR in Softel \n\r");
+		strcpy(result,"This of course does not work. No CR in Softel \n\r");
 		break;
+	default:
+		sprintf(result,"Command not recognised cmd=%s\n\r",cmd);
+	}
+	if (response)
+	{
+		strcpy(response,result);		
 	}
 } // command
 
@@ -107,7 +135,7 @@ void TCPClient::addChar(char ch, char* response)
 			if (response) response[0]=0;
 			// std::cerr << "[TCPClient::addChar] accumulate cmd=" << _cmd << std::endl;
 		}
-		else
+		else // @todo Avoid this being called twice by \n\r combinations
 		{
 			// Got a complete non-newfor command
 			std::cerr << "[TCPClient::addChar] finished cmd=" << _cmd << std::endl;
