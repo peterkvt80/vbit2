@@ -59,7 +59,7 @@ int main(int argc, char** argv)
 
 	std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
 	std::thread serviceThread(&Service::run, svc);
-	std::thread commandThread(&Command::run, Command((uint32_t)5570, svc->GetSubtitle()) );
+	std::thread commandThread(&Command::run, Command((uint32_t)5570, svc->GetSubtitle(), pageList) );
 
   // The threads should never stop, but just in case...
 	monitorThread.join();

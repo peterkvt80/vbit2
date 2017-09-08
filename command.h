@@ -51,6 +51,7 @@
 #include <arpa/inet.h>  /* for sockaddr_in and inet_ntoa() */
 #endif
 
+#include "pagelist.h"
 #include "TCPClient.h"
 
 namespace vbit
@@ -65,7 +66,7 @@ class Command
 		 * @description Listens on port 5570 and accepts connections.
 		 * When connected it can be sent Newfor commands.
      */
-		Command(const uint32_t port, vbit::PacketSubtitle* subtitle);
+		Command(const uint32_t port, vbit::PacketSubtitle* subtitle, ttx::PageList* pageList);
 
 		/**
      * @brief Constructor

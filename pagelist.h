@@ -40,6 +40,12 @@ public:
    */
   TTXPageStream* Locate(std::string filename);
 
+  /** Find a page given the page number
+   * @param filename The page number of the page (in MPPSS hex)
+	 * \return A Page object if it exists, otherwise null
+   */
+  TTXPageStream* FindPage(int pageNumber);
+
   /** Add a teletext page to the proper magazine
    * @param page TTXPageStream object that has already been loaded
    */

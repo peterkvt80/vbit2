@@ -31,10 +31,11 @@
 #include "command.h"
 
 using namespace vbit;
+using namespace ttx;
 
-Command::Command(const uint32_t port=5570, PacketSubtitle* subtitle=nullptr) :
+Command::Command(const uint32_t port=5570, PacketSubtitle* subtitle=nullptr, PageList *pageList=nullptr) :
 	_portNumber(port),
-	_client(subtitle)
+	_client(subtitle, pageList)
 {
     // Constructor
 		// Start a listener thread

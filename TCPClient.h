@@ -50,6 +50,7 @@
 
 #include <stdint.h>
 
+#include "pagelist.h"
 #include "newfor.h"
 #include "hamm-tables.h"
 
@@ -61,7 +62,7 @@ namespace vbit
 class TCPClient
 {
   public:
-    TCPClient(PacketSubtitle* subtitle);
+    TCPClient(PacketSubtitle* subtitle, ttx::PageList* pageList);
    ~TCPClient();
    void Handler(int clntSocket);
 
@@ -93,6 +94,8 @@ class TCPClient
     int _rowAddress; // The address of this row
 		
 		uint32_t _pageNumber;	/// The page address in MPPSS (hex. 10000..8FF99
+		
+		ttx::PageList* _pageList;	/// List of pages for XTP620 commands to access
 
 
 		// Functions

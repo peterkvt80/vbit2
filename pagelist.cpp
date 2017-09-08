@@ -90,6 +90,8 @@ void PageList::AddPage(TTXPageStream* page)
 		_pageList[mag].push_back(*page);
 }
 
+
+// Find a page by filename
 TTXPageStream* PageList::Locate(std::string filename)
 {
   // This is called from the FileMonitor thread
@@ -109,6 +111,27 @@ TTXPageStream* PageList::Locate(std::string filename)
   }
  return NULL; // @todo placeholder What should we do here?
 }
+
+// Find a page by page number
+TTXPageStream* PageList::FindPage(int pageNumber)
+{
+	std::cerr << "[PageList::FindPage] Not implemented" << std::endl;
+	// Could be MPP only? Then add the SS
+	if (pageNumber<0x900)
+	{
+		pageNumber*=0x100;
+	}
+	int mag=(pageNumber & 0xf0000) >> 16;
+	for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+	{
+		TTXPageStream* ptr;
+		ptr=&(*p);
+		if (pageNumber==ptr->GetPageNumber())
+			return ptr;
+   	}
+	return nullptr; // Not found
+}
+
 
 // Detect pages that have been deleted from the drive
 // Do this by first clearing all the "exists" flags

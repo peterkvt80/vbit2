@@ -5,6 +5,7 @@
 #include "TCPClient.h"
 
 using namespace vbit;
+using namespace ttx;
 
 static int
 vbi_unham8			(unsigned int		c)
@@ -12,10 +13,11 @@ vbi_unham8			(unsigned int		c)
 	return _vbi_hamm8_inv[(uint8_t) c];
 }
 
-TCPClient::TCPClient(PacketSubtitle* subtitle) :
+TCPClient::TCPClient(PacketSubtitle* subtitle, PageList* pageList) :
 	_pCmd(_cmd),
 	_newfor(subtitle),
-	_pageNumber(0x10000)
+	_pageNumber(0x10000),
+	_pageList(pageList)
 {
 }
 
@@ -36,23 +38,26 @@ void TCPClient::command(char* cmd, char* response)
 	int row;
 	switch (cmd[0])
 	{
-	case 'L' :
-		if (cmd[1]=='I') // LI,<row>,<text> - Set row in current page with text
+	case 'L' : // L<nn><text> - Set row in current page with text
 		{
-			row=std::strtol(&(cmd[3]), &ptr, 10);
-			// @todo Use ptr to continue parsing
-			sprintf(result, "LI Command Page=%x row=%d\n\r", _pageNumber, row); 
+			char rowStr[3];
+			rowStr[0]=cmd[1];
+			rowStr[1]=cmd[2];
+			rowStr[2]=0;
+			row=std::strtol(rowStr, &ptr, 10);
+			ptr=&(cmd[3]);
+			sprintf(result, "L Command Page=%x row=%d ptr=%s\n\r", _pageNumber, row, ptr); 
+			TTXPage* page=_pageList->FindPage(_pageNumber);
+			if (page!=nullptr)
+			{
+				page->SetRow(row, ptr);				
+			}
 		}
 		break;
-	case 'P' :
-		if (cmd[1]=='N') // PN,xxxxx - Set the page number
+	case 'P' : // Pxxxxx - Set the page number. @todo Extend to multiple page selection
 		{
-			_pageNumber=std::strtol(&(cmd[3]), &ptr, 16);
-			sprintf(result, "PN Command %x\n\r", _pageNumber); 
-		}
-		else
-		{
-			strcpy(result,"Command not implemented\n\r");
+			_pageNumber=std::strtol(&(cmd[1]), &ptr, 16);
+			sprintf(result, "P Command %x\n\r", _pageNumber); 
 		}
 		break;
 	case 'T' :;
