@@ -26,12 +26,12 @@
  * Handle network control commands.
  * Initially for Newfor subtitles but can also be used for other inserter
  * control functions.
- * These inserter functions follow MRG Systems' XTP620 protocol 
+ * These inserter functions follow MRG Systems' XTP620 protocol
  *
  * Example:
  * To find out what model of inserter you are connected to, type Y.
  * You will need to enable Telnet (Windows) or run nc (Linux).
- * Telnet can be enabled in the "Turn Windows features on or off" settings. 
+ * Telnet can be enabled in the "Turn Windows features on or off" settings.
  * Connect to the IP address and port of your VBIT "telnet 192.168.1.2 5570"
  * Type Y<enter>
  * Should reply "VBIT620"
@@ -61,48 +61,63 @@ namespace vbit
 
 class TCPClient
 {
-  public:
-    TCPClient(PacketSubtitle* subtitle, ttx::PageList* pageList);
-   ~TCPClient();
-   void Handler(int clntSocket);
+public:
+  TCPClient(PacketSubtitle* subtitle, ttx::PageList* pageList);
+ ~TCPClient();
+ void Handler(int clntSocket);
 
-  private:
-		// Constants
-		static const uint8_t MAXCMD=128;
-    static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */
+private:
+  // Constants
+  static const uint8_t MAXCMD=128;
+  static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */
 
 // Normal command mode
-		static const uint8_t MODENORMAL=0;
-		static const uint8_t MODESOFTELPAGEINIT=1;
+  static const uint8_t MODENORMAL=0;
+  static const uint8_t MODESOFTELPAGEINIT=1;
 // Get row count
-		static const uint8_t MODEGETROWCOUNT=3;
+  static const uint8_t MODEGETROWCOUNT=3;
 // Get a row of data
-		static const uint8_t MODEGETROW=4;
+  static const uint8_t MODEGETROW=4;
 // Display the row
-		static const uint8_t MODESUBTITLEONAIR=5;
+  static const uint8_t MODESUBTITLEONAIR=5;
 // Clear down
-		static const uint8_t MODESUBTITLEOFFAIR=6;
-		static const uint8_t MODESUBTITLEDATAHIGHNYBBLE=7;
-		static const uint8_t MODESUBTITLEDATALOWNYBBLE=8;
+  static const uint8_t MODESUBTITLEOFFAIR=6;
+  static const uint8_t MODESUBTITLEDATAHIGHNYBBLE=7;
+  static const uint8_t MODESUBTITLEDATALOWNYBBLE=8;
 
-		// Variables
-	  char _cmd[MAXCMD];	/// command buffer
-		char* _pCmd;		/// Pointer into the command buffer
-		Newfor _newfor;
-		int _row; // Row counter
-		char* _pkt;	// A teletext packet (one row of VBI)
-    int _rowAddress; // The address of this row
-		
-		uint32_t _pageNumber;	/// The page address in MPPSS (hex. 10000..8FF99
-		
-		ttx::PageList* _pageList;	/// List of pages for XTP620 commands to access
+  // Variables
+  char _cmd[MAXCMD];	/// command buffer
+  char* _pCmd;		/// Pointer into the command buffer
+  Newfor _newfor;
+  int _row; // Row counter
+  char* _pkt;	// A teletext packet (one row of VBI)
+  int _rowAddress; // The address of this row
+
+  /// The page address in MPPSS (hex. 10000..8FF99. Omitting trailing characters defaults to 0
+  /// * wildcard
+  char _pageNumber[6];
+
+  ttx::PageList* _pageList;	/// List of pages for XTP620 commands to access
 
 
-		// Functions
-    void clearCmd(void);
-    void addChar(char ch, char* response);
-		void command(char* cmd, char* response);	/// Handles XPT620 commands
-		void DieWithError(std::string errorMessage);
+  // Functions
+  void clearCmd(void);
+  void addChar(char ch, char* response);
+  void command(char* cmd, char* response);	/// Handles XPT620 commands
+  void DieWithError(std::string errorMessage);
+
+  /** Validate a page identity of the form mppss
+   *  Where:
+   *  m=1..8
+   *  p=0..f
+   *  s=0,,9
+   *  and any digit can be wildcarded with *
+   *  and trailing digits can be omitted where they will be defaulted to 0
+   * \param src - the page identity parameter of a P command. (only one allowed in this implementation)
+   * \param dest - the validated page number
+   * \return true if the page identity is valid
+   */
+  bool Validate(char* dest, char* src);
 
 }; // TCPClient
 

@@ -44,7 +44,16 @@ public:
    * @param filename The page number of the page (in MPPSS hex)
 	 * \return A Page object if it exists, otherwise null
    */
-  TTXPageStream* FindPage(int pageNumber);
+  TTXPageStream* FindPage(char* pageNumber);
+
+  // Probably want a nextPage function to scan using a wildcard
+
+  /**
+   * \brief Match - Find and mark all pages that match the page identity
+   * \param page - A page identity string
+   * \return - The number of pages that matched this identity
+   */
+  int Match(char* page);
 
   /** Add a teletext page to the proper magazine
    * @param page TTXPageStream object that has already been loaded

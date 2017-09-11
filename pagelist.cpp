@@ -112,30 +112,99 @@ TTXPageStream* PageList::Locate(std::string filename)
  return NULL; // @todo placeholder What should we do here?
 }
 
-// Find a page by page number
-TTXPageStream* PageList::FindPage(int pageNumber)
+// Find a page by page number. THIS IS TO BE REPLACED BY Match().
+TTXPageStream* PageList::FindPage(char* pageNumber)
 {
-	std::cerr << "[PageList::FindPage] Not implemented" << std::endl;
-	// Could be MPP only? Then add the SS
-	if (pageNumber<0x900)
-	{
-		pageNumber*=0x100;
-	}
-	int mag=(pageNumber & 0xf0000) >> 16;
+	std::cerr << "[PageList::FindPage] Need to extend to multiple page selection" << std::endl;
+	int mag=(pageNumber[0]-'0') & 0x07;
+	// For each page
 	for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
 	{
 		TTXPageStream* ptr;
+		std::stringstream ss;
+		char s[6];
+		char* ps=s;
+		bool match=true;
 		ptr=&(*p);
-		if (pageNumber==ptr->GetPageNumber())
+		// Convert the page number into a string so we can compare it
+		ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
+		strcpy(ps,ss.str().c_str());
+
+		for (int i=0;i<5;i++)
+    {
+      if (pageNumber[i]!='*') // wildcard
+      {
+        if (pageNumber[i]!=s[i])
+        {
+          match=false;
+        }
+      }
+    }
+		if (match)
+    {
 			return ptr;
-   	}
+    }
+  }
 	return nullptr; // Not found
+
 }
 
+int PageList::Match(char* pageNumber)
+{
+  int matchCount=0;
+
+ 	std::cerr << "[PageList::FindPage] Selecting " << pageNumber << std::endl;
+	int begin=0;
+	int end=7;
+	char ch=pageNumber[0];
+	if (ch!='*') // If not wildcard, just do the one magazine
+  {
+    begin=(pageNumber[0]-'0') & 0x07;
+    end=begin;
+  }
+
+	for (int mag=begin;mag<end+1;mag++)
+  {
+    // For each page
+    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    {
+      TTXPageStream* ptr;
+      std::stringstream ss;
+      char s[6];
+      char* ps=s;
+      bool match=true;
+      ptr=&(*p);
+      // Convert the page number into a string so we can compare it
+      ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
+      strcpy(ps,ss.str().c_str());
+      // std::cerr << "[PageList::FindPage] matching " << ps << std::endl;
+
+      for (int i=0;i<5;i++)
+      {
+        if (pageNumber[i]!='*') // wildcard
+        {
+          if (pageNumber[i]!=ps[i])
+          {
+            match=false;
+          }
+        }
+      }
+      if (match)
+      {
+        matchCount++;
+        // std::cerr << "[PageList::FindPage] MATCHED " << ps << std::endl;
+      }
+      ptr->SetSelected(match);
+    }
+  }
+	return matchCount; // final count
+}
 
 // Detect pages that have been deleted from the drive
 // Do this by first clearing all the "exists" flags
 // As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
+
+
 
 void PageList::ClearFlags()
 {

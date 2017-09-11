@@ -26,7 +26,6 @@ TTXPageStream::~TTXPageStream()
     //dtor
 }
 
-
 TTXLine* TTXPageStream::GetTxRow(uint8_t row)
 {
   // Return a line OR NULL if the row does not exist

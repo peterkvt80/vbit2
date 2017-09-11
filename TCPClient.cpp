@@ -16,7 +16,7 @@ vbi_unham8			(unsigned int		c)
 TCPClient::TCPClient(PacketSubtitle* subtitle, PageList* pageList) :
 	_pCmd(_cmd),
 	_newfor(subtitle),
-	_pageNumber(0x10000),
+	_pageNumber("10000"),
 	_pageList(pageList)
 {
 }
@@ -33,9 +33,14 @@ void TCPClient::DieWithError(std::string errorMessage)
 
 void TCPClient::command(char* cmd, char* response)
 {
-	char result[132]="Fail\n\r";
+	char result[132];
 	char* ptr;
 	int row;
+	int status=0;
+	char statusText[4];
+#ifdef DEBUG
+	strcpy(response,"todo");
+#endif
 	switch (cmd[0])
 	{
 	case 'L' : // L<nn><text> - Set row in current page with text
@@ -46,18 +51,52 @@ void TCPClient::command(char* cmd, char* response)
 			rowStr[2]=0;
 			row=std::strtol(rowStr, &ptr, 10);
 			ptr=&(cmd[3]);
-			sprintf(result, "L Command Page=%x row=%d ptr=%s\n\r", _pageNumber, row, ptr); 
+			result[0]=0;
+			status=0; // @todo Line number out of range =1
+			//sprintf(result, "L Command Page=%.*s row=%d ptr=%s\n\r", 5, _pageNumber, row, ptr);
 			TTXPage* page=_pageList->FindPage(_pageNumber);
 			if (page!=nullptr)
 			{
-				page->SetRow(row, ptr);				
+				page->SetRow(row, ptr);
 			}
 		}
 		break;
-	case 'P' : // Pxxxxx - Set the page number. @todo Extend to multiple page selection
+	case 'P' : // P<mppss> - Set the page number. @todo Extend to multiple page selection
 		{
-			_pageNumber=std::strtol(&(cmd[1]), &ptr, 16);
-			sprintf(result, "P Command %x\n\r", _pageNumber); 
+		  char* param=&(cmd[1]);    // The page identity parameter
+		  char* pageSet=_pageNumber;// The validated page identity
+		  int matchedPages=-1;
+		  if (Validate(pageSet, param))
+      {
+        matchedPages=_pageList->Match(pageSet);
+      }
+      // pageSet is empty
+      if (matchedPages==0)
+      {
+        matchedPages=1;
+        status=8;
+        for (int i=0;i<5;i++) // Wildcards are not allowed here
+        {
+          if (_pageNumber[i]=='*')
+          {
+            matchedPages=-1; // fail
+          }
+        }
+        // @todo Create the page if status is 8
+        if (status==8)
+        {
+          std::cerr << "[TCPClient::command] @todo Create the page" << std::endl;
+        }
+      }
+      // Failed command
+      if (matchedPages<0)
+      {
+        matchedPages=0;
+        status=1;
+      }
+      _pageNumber[5]=0; // Terminate the page number before we print it just in case
+      std::cerr << "[TCPClient::command] _pageNumber=" << _pageNumber << std::endl;
+      sprintf(result,"%03x",matchedPages);
 		}
 		break;
 	case 'T' :;
@@ -72,10 +111,7 @@ void TCPClient::command(char* cmd, char* response)
 	default:
 		sprintf(result,"Command not recognised cmd=%s\n\r",cmd);
 	}
-	if (response)
-	{
-		strcpy(response,result);		
-	}
+	sprintf(response,"%s%1d\n\r",result,status);
 } // command
 
 void TCPClient::clearCmd(void)
@@ -97,7 +133,7 @@ void TCPClient::clearCmd(void)
 void TCPClient::addChar(char ch, char* response)
 {
 	static int mode=MODENORMAL;
-	static int charCount=0;
+	static int charCount=0; // Used to accumulate Newfor
 
 	response[0]=0;
 	// std::cerr << "[TCPClient::addChar] ch=" << ((int)ch) << " mode=" << mode << std::endl;
@@ -140,11 +176,14 @@ void TCPClient::addChar(char ch, char* response)
 			if (response) response[0]=0;
 			// std::cerr << "[TCPClient::addChar] accumulate cmd=" << _cmd << std::endl;
 		}
-		else // @todo Avoid this being called twice by \n\r combinations
+		else
 		{
 			// Got a complete non-newfor command
-			std::cerr << "[TCPClient::addChar] finished cmd=" << _cmd << std::endl;
-			command(_cmd, response);
+			std::cerr << "[TCPClient::addChar] finished cmd='" << strlen(_cmd) << std::endl;
+			if (strlen(_cmd))  // Avoid this being called twice by \n\r combinations
+      {
+        command(_cmd, response);
+      }
 			clearCmd();
 			mode=MODENORMAL;
 		}
@@ -254,3 +293,58 @@ void TCPClient::Handler(int clntSocket)
 #endif // WIN32
 }
 
+/** Validate a page identity
+ */
+bool TCPClient::Validate(char* dest, char* src)
+{
+  bool valid=true;
+  bool pad=false;
+  // Copy the target page number, validating as we go
+  for (int i=0;i<5 && valid;i++)
+  {
+    // Get the next input character and validate it
+    char ch=*src++;
+    // If we hit a null, pad with 0 to the end and stay valid
+    if (pad || ch==0)
+    {
+      pad=true;
+      ch='0';
+    }
+    else
+    {
+      switch (i)
+      {
+      case 0: // m - magazine
+        if ((ch<'1' || ch>'8')  &&
+          (ch!='*'))
+        {
+          valid=false;
+        }
+        break;
+      case 1: // pp - page number
+      case 2:
+        // Change case?
+        if (ch>='a' && ch<='f')
+        {
+          ch-='a'-'A';
+        }
+        if ((ch<'0' || ch>'9') &&
+           (ch<'A' || ch>'F') &&
+           (ch!='*'))
+        {
+          valid=false;
+        }
+      case 3: // aa - internal subpage (related to subcode but NOT the same thing)
+      case 4:
+        if ((ch<'0' || ch>'9') &&
+           (ch!='*'))
+        {
+          valid=false;
+        }
+      } // switch
+
+    }
+    *dest++=ch;
+  } // for each character
+  return valid;
+}

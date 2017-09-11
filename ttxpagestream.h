@@ -114,6 +114,9 @@ class TTXPageStream : public TTXPage
      */
     bool operator==(const TTXPageStream& rhs) const;
 
+    void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
+    bool Selected(){return _Selected;}; /// Return the selected state
+
   protected:
 
   private:
@@ -128,6 +131,8 @@ class TTXPageStream : public TTXPage
     // Things that affect the display list
     time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
     Status _fileStatus;	/// Used to mark if we found the file. (Used to detect deletions)
+
+    bool _Selected;   /// Marked as selected by the inserter P command
 
 
 };

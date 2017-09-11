@@ -92,7 +92,8 @@ int Service::run()
 				if (sourceCount>listSize*2)
 				{
 					p=nullptr;
-					std::cerr << "[Service::run] No packet available for this line" << std::endl;
+					// If we get a lot of this maybe there is a problem?
+					// std::cerr << "[Service::run] No packet available for this line" << std::endl;
 					break;
 				}
 
