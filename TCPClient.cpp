@@ -62,6 +62,7 @@ void TCPClient::command(char* cmd, char* response)
       {
         TTXPageStream* page=p;
         std::cerr << "[TCPClient::command] L command applied to page=" << std::hex << page->GetPageNumber() << std::endl;
+				page->SetRow(row, ptr);
       }
 
       /*
