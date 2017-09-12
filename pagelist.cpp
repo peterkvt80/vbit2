@@ -5,7 +5,8 @@
 using namespace ttx;
 
 PageList::PageList(Configure *configure) :
-	_configure(configure)
+	_configure(configure),
+	_iterMag(0)
 {
   for (int i=0;i<8;i++)
       _mag[i]=nullptr;
@@ -197,15 +198,64 @@ int PageList::Match(char* pageNumber)
       ptr->SetSelected(match);
     }
   }
+  // Set up the iterator for commands that use pages selected by the Page Identity
+  _iterMag=0;
+  _iter=_pageList[_iterMag].begin();
+
 	return matchCount; // final count
+}
+
+TTXPageStream* PageList::NextPage()
+{
+  //std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
+  bool more=true;
+  ++_iter; // Next page
+  //std::cerr << "X";
+  if (_iter==_pageList[_iterMag].end()) // end of mag?
+  {
+    std::cerr << "A" << std::endl;
+    _iterMag++; // next mag
+    _iter=_pageList[_iterMag].begin();
+
+    if (_iterMag>7) // no more mags?
+    {
+      //std::cerr << "B" << std::endl;
+      // Reset the iterator
+      _iterMag=0;
+      _iter=_pageList[_iterMag].begin();
+      more=false;
+    }
+  }
+  //std::cerr << "C" << std::endl;
+
+  if (more)
+  {
+    //std::cerr << "D" << std::endl;
+
+    return &(*_iter);
+  }
+  //std::cerr << "E" << std::endl;
+
+  return nullptr; // Returned after the last page is iterated
+}
+
+TTXPageStream* PageList::NextSelectedPage()
+{
+  TTXPageStream* page;
+  for(;;)
+  {
+    // std::cerr << "[PageList::NextSelectedPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
+    page=NextPage();
+    if (page==nullptr || page->Selected())
+    {
+      return page;
+    }
+  }
 }
 
 // Detect pages that have been deleted from the drive
 // Do this by first clearing all the "exists" flags
 // As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
-
-
-
 void PageList::ClearFlags()
 {
   for (int mag=0;mag<8;mag++)

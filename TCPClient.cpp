@@ -54,11 +54,23 @@ void TCPClient::command(char* cmd, char* response)
 			result[0]=0;
 			status=0; // @todo Line number out of range =1
 			//sprintf(result, "L Command Page=%.*s row=%d ptr=%s\n\r", 5, _pageNumber, row, ptr);
+
+      std::cerr << "[TCPClient::command] L command starts" << std::endl;
+			for (TTXPageStream* p=_pageList->NextSelectedPage();
+        p!=nullptr;
+        p=_pageList->NextSelectedPage())
+      {
+        TTXPageStream* page=p;
+        std::cerr << "[TCPClient::command] L command applied to page=" << std::hex << page->GetPageNumber() << std::endl;
+      }
+
+      /*
 			TTXPage* page=_pageList->FindPage(_pageNumber);
 			if (page!=nullptr)
 			{
 				page->SetRow(row, ptr);
 			}
+			*/
 		}
 		break;
 	case 'P' : // P<mppss> - Set the page number. @todo Extend to multiple page selection

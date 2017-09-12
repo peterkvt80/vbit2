@@ -67,10 +67,24 @@ public:
    */
 	void DeleteOldPages();
 
+  /** \brief Iterate through all pages
+   *  \return Returns the next page or nullptr if we are at the end
+   */
+	TTXPageStream* NextPage();
+
+  /** \brief Iterate through selected pages (using the P command)
+   *  \return Returns the next page or nullptr if we are at the end
+   */
+  TTXPageStream* NextSelectedPage();
+
 private:
 	Configure* _configure; // The configuration object
 	std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
 	vbit::Mag* _mag[8];
+
+	// iterators through selected pages
+	uint8_t _iterMag;  /// Magazine number for the iterator
+	std::list<TTXPageStream>::iterator _iter;  /// pages in a magazine
 
 };
 
