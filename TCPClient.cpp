@@ -16,9 +16,9 @@ vbi_unham8			(unsigned int		c)
 TCPClient::TCPClient(PacketSubtitle* subtitle, PageList* pageList) :
 	_pCmd(_cmd),
 	_newfor(subtitle),
-	_pageNumber("10000"),
 	_pageList(pageList)
 {
+	strcpy(_pageNumber,"10000");
 }
 
 TCPClient::~TCPClient()
@@ -65,13 +65,22 @@ void TCPClient::command(char* cmd, char* response)
 				page->SetRow(row, ptr);
       }
 
-      /*
-			TTXPage* page=_pageList->FindPage(_pageNumber);
-			if (page!=nullptr)
+		}
+		break;
+	case 'M' : // MD - delete pages
+		status=1; // Incorrect syntax or no page deleted.
+		result[0]=0;
+		if (cmd[1]=='D')
+		{
+			for (TTXPageStream* p=_pageList->NextSelectedPage();
+				p!=nullptr;
+				p=_pageList->NextSelectedPage())
 			{
-				page->SetRow(row, ptr);
-			}
-			*/
+				TTXPageStream* page=p;
+				std::cerr << "[TCPClient::command] MD command applied to page=" << std::hex << page->GetPageNumber() << std::endl;
+				status=0;
+				// @todo Actually delete the page from _pageList
+			}	
 		}
 		break;
 	case 'P' : // P<mppss> - Set the page number. @todo Extend to multiple page selection
@@ -109,14 +118,36 @@ void TCPClient::command(char* cmd, char* response)
       }
       _pageNumber[5]=0; // Terminate the page number before we print it just in case
       std::cerr << "[TCPClient::command] _pageNumber=" << _pageNumber << std::endl;
-      sprintf(result,"%03x",matchedPages);
+      sprintf(result,"%03d",matchedPages);
+		}
+		break;
+	case 'R' : // R<nn> - Read back row <nn> from the first selected page
+		{
+			TTXPageStream* p;
+			char rowStr[3];
+			rowStr[0]=cmd[1];
+			rowStr[1]=cmd[2];
+			rowStr[2]=0;
+			row=std::strtol(rowStr, &ptr, 10);
+			p=_pageList->NextSelectedPage();
+			_pageList->ResetIter();
+			if (p==nullptr)
+			{
+				result[0]=0;
+				status=1;
+			}
+			else
+			{
+				TTXLine* line=p->GetRow(row);
+				strcpy(result,line->GetLine().c_str());
+			}
 		}
 		break;
 	case 'T' :;
 		strcpy(result,"T not implemented\n\r");
 		break;
 	case 'Y' :
-		strcpy(result,"VBIT620\n\r");
+		strcpy(result,"VBIT620 Text Generator V2.01    "); // 32 character limit
 		break;
 	case 0x0e:
 		strcpy(result,"This of course does not work. No CR in Softel \n\r");

@@ -50,7 +50,7 @@ int main(int argc, char** argv)
 	#ifdef WIN32
 	_setmode(_fileno(stdout), _O_BINARY); // set stdout to binary mode stdout to avoid pesky line ending conversion
 	#endif
-	// std::cout << "VBIT2 ssudo tarted" << std::endl;
+	// std::cout << "VBIT2 started" << std::endl;
 	/// @todo option of adding a non standard config path
 	Configure *configure=new Configure(argc, argv);
 	PageList *pageList=new PageList(configure);

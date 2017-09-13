@@ -157,12 +157,6 @@ int PageList::Match(char* pageNumber)
  	std::cerr << "[PageList::FindPage] Selecting " << pageNumber << std::endl;
 	int begin=0;
 	int end=7;
-	char ch=pageNumber[0];
-	if (ch!='*') // If not wildcard, just do the one magazine
-  {
-    begin=(pageNumber[0]-'0') & 0x07;
-    end=begin;
-  }
 
 	for (int mag=begin;mag<end+1;mag++)
   {
@@ -210,33 +204,30 @@ TTXPageStream* PageList::NextPage()
   //std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
   bool more=true;
   ++_iter; // Next page
-  //std::cerr << "X";
   if (_iter==_pageList[_iterMag].end()) // end of mag?
   {
-    std::cerr << "A" << std::endl;
     _iterMag++; // next mag
     _iter=_pageList[_iterMag].begin();
 
     if (_iterMag>7) // no more mags?
     {
-      //std::cerr << "B" << std::endl;
       // Reset the iterator
-      _iterMag=0;
-      _iter=_pageList[_iterMag].begin();
+			ResetIter();
       more=false;
     }
   }
-  //std::cerr << "C" << std::endl;
 
   if (more)
   {
-    //std::cerr << "D" << std::endl;
-
     return &(*_iter);
   }
-  //std::cerr << "E" << std::endl;
-
   return nullptr; // Returned after the last page is iterated
+}
+
+void PageList::ResetIter()
+{
+	_iterMag=0;
+	_iter=_pageList[_iterMag].begin();
 }
 
 TTXPageStream* PageList::NextSelectedPage()

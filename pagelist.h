@@ -76,6 +76,10 @@ public:
    *  \return Returns the next page or nullptr if we are at the end
    */
   TTXPageStream* NextSelectedPage();
+	
+  /** \brief Reset the page iterator to the beginning
+   */
+	void ResetIter();
 
 private:
 	Configure* _configure; // The configuration object
