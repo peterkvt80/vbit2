@@ -212,7 +212,7 @@ TTXPageStream* PageList::NextPage()
     if (_iterMag>7) // no more mags?
     {
       // Reset the iterator
-			ResetIter();
+			// ResetIter();
       more=false;
     }
   }
@@ -224,10 +224,20 @@ TTXPageStream* PageList::NextPage()
   return nullptr; // Returned after the last page is iterated
 }
 
-void PageList::ResetIter()
+TTXPageStream* PageList::ResetIter()
 {
-	_iterMag=0;
-	_iter=_pageList[_iterMag].begin();
+  // Reset the iterators
+  _iterMag=0;
+  _iter=_pageList[_iterMag].begin();
+  // Iterate through all the pages
+  for (TTXPageStream* p=&(*_iter); p!=nullptr; p=NextPage())
+  {
+    if (p->Selected()) // If the page is selected, return a pointer to it
+    {
+      return p;
+    }
+  }
+  return nullptr; // No selected page
 }
 
 TTXPageStream* PageList::NextSelectedPage()

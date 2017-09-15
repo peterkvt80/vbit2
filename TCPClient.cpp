@@ -43,9 +43,69 @@ void TCPClient::command(char* cmd, char* response)
 #endif
 	switch (cmd[0])
 	{
+  case 'D' : // D[<start>]<sign>[<steps>] - directory
+    // <start> = F | L
+    // <sign> = + | -
+    // <steps> = number of pages to step through (default 1)
+    {
+      TTXPageStream* page=nullptr;
+      int ix=1;
+      switch (cmd[ix])
+      {
+      case 'F' : // Move to first page
+        std::cerr << "DF" << std::endl;
+        ix++;
+        if ((page=_pageList->ResetIter())==nullptr)
+        {
+          status=1; // Fail: There are no pages selected
+          break;
+        }
+        status=0;
+        break;
+      case '+' : // Step to next entry
+        page=_pageList->NextPage();
+        if (page!=nullptr)
+        {
+          status=0;
+        }
+        else
+        {
+          status=1;
+        }
+        break;
+      case 'L' : // Move to last page
+        std::cerr << "DL" << std::endl;
+        status=1;
+        ix++;
+        break;
+      default:
+        status=1;
+        strcpy(result,"This was unexpected");
+      }
+      // Now we either have a page pointer or null
+      if (status==0)
+      {
+        // ss mpp qq cc tttt ssss n xxxxxxxx
+        sprintf(result,"%02d %03x %02d %02d %04x %1d %s",
+                page->GetSubCode(),
+                page->GetPageNumber(),
+                page->GetCycleTime(),
+                page->GetSubCode(),
+                page->GetPageStatus(),
+                0,
+                "????????");
+      }
+      else if (status==1)
+      {
+        result[0]=0;
+      }
+      break;
+
+    } // D command
 	case 'L' : // L<nn><text> - Set row in current page with text
 		{
 			char rowStr[3];
+
 			rowStr[0]=cmd[1];
 			rowStr[1]=cmd[2];
 			rowStr[2]=0;
@@ -56,7 +116,7 @@ void TCPClient::command(char* cmd, char* response)
 			//sprintf(result, "L Command Page=%.*s row=%d ptr=%s\n\r", 5, _pageNumber, row, ptr);
 
       std::cerr << "[TCPClient::command] L command starts" << std::endl;
-			for (TTXPageStream* p=_pageList->NextSelectedPage();
+			for (TTXPageStream* p=_pageList->ResetIter();
         p!=nullptr;
         p=_pageList->NextSelectedPage())
       {
@@ -80,7 +140,7 @@ void TCPClient::command(char* cmd, char* response)
 				std::cerr << "[TCPClient::command] MD command applied to page=" << std::hex << page->GetPageNumber() << std::endl;
 				status=0;
 				// @todo Actually delete the page from _pageList
-			}	
+			}
 		}
 		break;
 	case 'P' : // P<mppss> - Set the page number. @todo Extend to multiple page selection
@@ -130,7 +190,7 @@ void TCPClient::command(char* cmd, char* response)
 			rowStr[2]=0;
 			row=std::strtol(rowStr, &ptr, 10);
 			p=_pageList->NextSelectedPage();
-			_pageList->ResetIter();
+			_pageList->ResetIter();// @todo. What page object to put here?
 			if (p==nullptr)
 			{
 				result[0]=0;
