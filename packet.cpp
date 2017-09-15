@@ -31,7 +31,7 @@ Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag),
 	assert(_row!=0); // Use Header for row 0
 }
 
-void Packet::SetRow(int mag, int row, std::string val, int coding)
+void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
 {
 	int triplet;
 	int designationcode;

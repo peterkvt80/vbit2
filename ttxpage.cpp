@@ -112,6 +112,7 @@ void TTXPage::m_Init()
     m_cycletimetype='T';
     m_pagestatus=0x8000;
     m_pagecoding=CODING_7BIT_TEXT;
+    m_pagefunction=LOP;
     instance=instanceCount++;
     TTXPage::pageChanged=false;
 
@@ -615,6 +616,7 @@ TTXPage::TTXPage(const TTXPage& other)
     m_pagestatus=other.m_pagestatus;           // PS
     m_region=other.m_region;               // RE
     m_pagecoding=other.m_pagecoding;
+    m_pagefunction=other.m_pagefunction;
 
         //int instance;
 
@@ -670,7 +672,55 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 			triplet |= (line.at(2) & 0x3F) << 6;
 			triplet |= (line.at(3) & 0x3F) << 12; // first triplet contains page function and coding
 
-			m_pagecoding = (triplet & 0x70) >> 4;
+			switch ((triplet & 0x70) >> 4){
+				default: // treat codings we don't know yet as normal text.
+				case 0:
+					m_pagecoding = CODING_7BIT_TEXT;
+					break;
+				case 1:
+					m_pagecoding = CODING_8BIT_DATA;
+					break;
+				case 2:
+					m_pagecoding = CODING_13_TRIPLETS;
+					break;
+			}
+			
+			switch (triplet & 0x0F){
+				default: // treat page functions we don't know as level one pages
+				case 0:
+					m_pagefunction = LOP;
+					break;
+				case 2:
+					m_pagefunction = GPOP;
+					break;
+				case 3:
+					m_pagefunction = POP;
+					break;
+				case 4:
+					m_pagefunction = GDRCS;
+					break;
+				case 5:
+					m_pagefunction = DRCS;
+					break;
+				case 7:
+					m_pagefunction = MOT;
+					break;
+				case 8:
+					m_pagefunction = MIP;
+					break;
+				case 9:
+					m_pagefunction = BTT;
+					break;
+				case 10:
+					m_pagefunction = AIT;
+					break;
+				case 11:
+					m_pagefunction = MPT;
+					break;
+				case 12:
+					m_pagefunction = MPT_EX;
+					break;
+			}
 
 			m_region = 0; // ignore any region from RE line as X/28 sets the character set
 		}

@@ -128,7 +128,7 @@ class Packet
 				 * @param val - The contents of the row text (40 characters)
 				 * @param coding -
 				 */
-				void SetRow(int mag, int row, std::string val, int coding);
+				void SetRow(int mag, int row, std::string val, PageCoding coding);
 
 				void Dump();
 
@@ -139,7 +139,7 @@ private:
 	uint8_t _mag;//<! The magazine number this packet belongs to 0..7 where 0 is maazine 8
 	uint32_t _page;//<! The page number this packet belongs to 00 to ff
 	uint8_t _row; //<! Row number 0 to 31
-	int _coding; // packet coding
+	PageCoding _coding; // packet coding
 
 	bool get_offset_time(char* str);
 	bool get_net(char* str);

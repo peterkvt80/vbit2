@@ -34,10 +34,9 @@
 // Allow for enhancement packets
 #define MAXROW 28
 
-// @todo These should be an enum type
-#define CODING_7BIT_TEXT            0
-#define CODING_8BIT_DATA            1
-#define CODING_13_TRIPLETS          2
+// @todo more page codings
+enum PageCoding {CODING_7BIT_TEXT,CODING_8BIT_DATA,CODING_13_TRIPLETS};
+enum PageFunction {LOP, DATABROADCAST, GPOP, POP, GDRCS, DRCS, MOT, MIP, BTT, AIT, MPT, MPT_EX};
 
 class TTXPage
 {
@@ -201,7 +200,8 @@ class TTXPage
 
         inline bool Loaded() const {return m_Loaded;};
 
-        int GetPageCoding() {return m_pagecoding;}
+        PageCoding GetPageCoding() {return m_pagecoding;}
+        PageFunction GetPageFunction() {return m_pagefunction;}
 
         /** @todo migrate this deep copy into the standard copy constructor
          * Warning. Only deep copies the top page. Not for carousels (yet)
@@ -238,7 +238,8 @@ class TTXPage
         unsigned int m_subcode;     // SC
         int m_pagestatus;           // PS
         int m_region;               // RE
-        int m_pagecoding;
+        PageCoding m_pagecoding;
+        PageFunction m_pagefunction;
         // Private functions
         void m_Init();
         void m_OutputLines(std::ofstream& ttxfile, TTXPage* p); /// Send ttx lines to an output stream

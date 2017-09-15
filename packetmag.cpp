@@ -185,7 +185,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 			{
 				//std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
 				//_lastTxt->Dump();
-				p->SetRow(_magNumber, 27, _lastTxt->GetLine(), 0); // TODO coding for navigation packets
+				p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_7BIT_TEXT); // TODO coding for navigation packets
 				_lastTxt=_lastTxt->GetNextLine();
 				break;
 			}
@@ -282,7 +282,7 @@ Packet* PacketMag::GetPacket(Packet* p)
       else
       {
         //_outp("J");
-        if (_lastTxt->IsBlank() && _configure->GetRowAdaptive()) // If the row is empty then skip it
+        if (_lastTxt->IsBlank() && (_configure->GetRowAdaptive() || _page->GetPageFunction() != LOP)) // If a row is empty then skip it if row adaptive mode on, or not a level 1 page
         {
           // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
           return nullptr;
