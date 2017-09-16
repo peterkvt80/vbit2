@@ -85,7 +85,7 @@ public:
 
 private:
 	Configure* _configure; // The configuration object
-	std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
+	std::list<TTXPageStream> _pageList[16]; /// The list of Pages in this service. Two lists per magazine (normal pages in lists 0-7, enhancement and magazine inventory and organisation table pages in 8-15)
 	vbit::Mag* _mag[8];
 
 	// iterators through selected pages. (use the same iterator for D command and MD, L etc.)

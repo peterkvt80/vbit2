@@ -112,6 +112,7 @@ void FileMonitor::run()
             // We need a mutex or semaphore to lock out this page while we do that
             // lock
             p->LoadPage(name); // What if this fails? We can see the bool. What to do ?
+			//TODO: If this was a normal page and is now a special page or vice versa we have loaded it into the wrong pagelist! FIX ME!
             p->SetModifiedTime(attrib.st_mtime);
             // unlock
 
