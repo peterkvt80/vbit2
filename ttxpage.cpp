@@ -868,39 +868,47 @@ int TTXPage::GetPageCount()
 	int count=0;
 	unsigned int subcode; // Start from 1.
 	int code[4];
+    PageFunction func = GetPageFunction();
+    
 	for (int i=0;i<4;i++) code[i]=0;
 	for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
 	{
-		// Pages intended for display with sub-pages should have sub-pages coded sequentially from Mxx-0001 to
-		// Mxx-0009 and then Mxx-0010 to Mxx-0019 and similarly using the decimal values of sub-code nibbles S2
-		// and S1 to Mxx-0079.
+        if (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func == MIP){
+            // "Special" pages (e.g. MOT, POP, GPOP, DRCS, GDRCS, MIP) should be coded sequentially in hexadecimal 0000-000F
+            subcode = count;
+        }
+        else
+        {
+            // Pages intended for display with sub-pages should have sub-pages coded sequentially from Mxx-0001 to
+            // Mxx-0009 and then Mxx-0010 to Mxx-0019 and similarly using the decimal values of sub-code nibbles S2
+            // and S1 to Mxx-0079.
 
-		// Increment the subcode is a baroque way
-		code[3]++;
-		if (code[3]>9)
-		{
-			code[3]=0;
-			code[2]++;
-			if (code[2]>9)
-			{
-				code[2]=0;
-				code[1]++;
-				if (code[1]>9)
-				{
-					code[1]=0;
-					code[0]++;
-					if (code[0]>9)
-					{
-						code[0]=0;
-						code[1]=0;
-						code[2]=0;
-						code[3]=0;
-					}
-				}
-			}
-		}
-		subcode=(code[0]<<12) + (code[1]<<8) + (code[2]<<4) + code[3];
-
+            // Increment the subcode is a baroque way
+            code[3]++;
+            if (code[3]>9)
+            {
+                code[3]=0;
+                code[2]++;
+                if (code[2]>9)
+                {
+                    code[2]=0;
+                    code[1]++;
+                    if (code[1]>9)
+                    {
+                        code[1]=0;
+                        code[0]++;
+                        if (code[0]>9)
+                        {
+                            code[0]=0;
+                            code[1]=0;
+                            code[2]=0;
+                            code[3]=0;
+                        }
+                    }
+                }
+            }
+            subcode=(code[0]<<12) + (code[1]<<8) + (code[2]<<4) + code[3];
+        }
 		// std::cerr <<"Get page count happens here, subcode=" << subcode << " " << (int)p << std::endl;
 		if (p!=nullptr)
 			p->SetSubCode(subcode);   // Always redo the subcodes

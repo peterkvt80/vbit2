@@ -82,8 +82,16 @@ Packet* PacketMag::GetPacket(Packet* p)
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
                 thisStatus=0x0010;
                 
-                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. I will set it to be subpage zero, with the last X/26 row as the final packet for now but this is WRONG */
-                thisSubcode=0x2900;
+                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
+                if (_page->IsCarousel())
+                {
+                    thisSubcode=(_page->GetCarouselPage()->GetSubCode()) & 0x000F; // will break if carousel has more than 16 subpages but that would be out of spec anyway.
+                }
+                else
+                {
+                    thisSubcode = 0; // no subpages
+                }
+                thisSubcode|=0x2900; // Set the last X/26 row as the final packet for now but this is WRONG
             } else {
                 // got to the end of the special pages
                 ClearEvent(EVENT_SPECIAL_PAGES);
