@@ -434,6 +434,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
     // Open the file
     std::ifstream filein(filename.c_str());
     TTXPage* p=this;
+    p->m_Init(); // reset page
     char * ptr;
     unsigned int subcode;
     std::string subpage;

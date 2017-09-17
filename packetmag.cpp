@@ -78,6 +78,12 @@ Packet* PacketMag::GetPacket(Packet* p)
             if (_page)
             {
                 // got a special page
+                
+                /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
+                thisStatus=0x0010;
+                
+                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. I will set it to be subpage zero, with the last X/26 row as the final packet for now but this is WRONG */
+                thisSubcode=0x2900;
             } else {
                 // got to the end of the special pages
                 ClearEvent(EVENT_SPECIAL_PAGES);
@@ -152,6 +158,31 @@ Packet* PacketMag::GetPacket(Packet* p)
                 //exit(3); //
               }
             }
+            
+            func = _page->GetPageFunction();
+            special = (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func == MIP);
+            if (special && _page->GetSpecialFlag()){
+                // don't let special pages into normal sequence
+                return nullptr;
+            }
+            
+            if (_page->IsCarousel())
+            {
+                thisSubcode=_page->GetCarouselPage()->GetSubCode();
+            }
+            else
+            {
+                thisSubcode=_page->GetSubCode();
+            }
+            
+            thisStatus=_page->GetPageStatus();
+            
+            // If the page has changed, then set the update bit.
+            // This is by request of Nate. It isn't a feature required in ETSI
+            if (_page->Changed())
+            {
+              thisStatus|=PAGESTATUS_C8_UPDATE;
+            }
         }
         
         // the function of a page changes
@@ -164,6 +195,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _specialPages->addPage(_page);
                 return nullptr;
             } else {
+                std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->deletePage(_page);
             }
         }
@@ -171,23 +203,6 @@ Packet* PacketMag::GetPacket(Packet* p)
         // Assemble the header. (we can simplify this code or leave it for the optimiser)
         thisPageNum=_page->GetPageNumber();
         thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
-        if (_page->IsCarousel())
-            {
-                thisSubcode=_page->GetCarouselPage()->GetSubCode();
-            }
-            else
-            {
-                thisSubcode=_page->GetSubCode();
-            }
-
-        thisStatus=_page->GetPageStatus();
-
-        // If the page has changed, then set the update bit.
-        // This is by request of Nate. It isn't a feature required in ETSI
-        if (_page->Changed())
-        {
-          thisStatus|=PAGESTATUS_C8_UPDATE;
-        }
 
         // p=new Packet();
         p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!

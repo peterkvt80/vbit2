@@ -50,10 +50,15 @@ TTXLine* TTXPageStream::GetTxRow(uint8_t row)
   return NULL;
 }
 
+void TTXPageStream::StepNextSubpageNoLoop()
+{
+    if (_CarouselPage==NULL) _CarouselPage=this;
+    _CarouselPage=_CarouselPage->Getm_SubPage();
+}
+
 void TTXPageStream::StepNextSubpage()
 {
-	if (_CarouselPage==NULL) _CarouselPage=this;
-	_CarouselPage=_CarouselPage->Getm_SubPage();
+	StepNextSubpageNoLoop();
 	if (_CarouselPage==NULL) // Last carousel subpage? Loop to beginning
 		_CarouselPage=this;
 }

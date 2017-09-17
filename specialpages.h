@@ -20,7 +20,7 @@ class SpecialPages
 
         TTXPageStream* NextPage();
         
-        TTXPageStream* ResetIter();
+        void ResetIter();
 
         void addPage(TTXPageStream* p);
 
@@ -31,8 +31,8 @@ class SpecialPages
 
     private:
         std::list<TTXPageStream*> _specialPagesList;
-        std::list<TTXPageStream>::iterator _iter;
-
+        std::list<TTXPageStream*>::iterator _iter;
+        TTXPageStream* _page;
 };
 
 }

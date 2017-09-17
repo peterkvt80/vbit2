@@ -364,7 +364,7 @@ void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode,
 	cbit=0;
 	if (control & 0x4000) cbit=0x08;	// C4 Erase page
 	_packet[8]=HamTab[(subcode&0x07) | cbit]; // S2 (3 bits) add C4
-	subcode>>=3;
+	subcode>>=4;
 	_packet[9]=HamTab[(subcode&0x0f)]; // S3 four bits
 	subcode>>=4;
 	cbit=0;

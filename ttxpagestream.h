@@ -79,6 +79,9 @@ class TTXPageStream : public TTXPage
      *  Updates _CarouselPage;
      */
     void StepNextSubpage();
+    
+    // step to next subpage but don't loop back to the start
+    void StepNextSubpageNoLoop();
 
     /** This is used by mag */
     TTXPage* GetCarouselPage(){return _CarouselPage;};
