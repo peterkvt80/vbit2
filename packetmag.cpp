@@ -26,12 +26,14 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _page=&*_it;
   }
   _carousel=new vbit::Carousel();
+  _specialPages=new vbit::SpecialPages();
 }
 
 PacketMag::~PacketMag()
 {
   //dtor
   delete _carousel;
+  delete _specialPages;
 }
 
 // @todo Invent a packet sequencer similar to mag.cpp which this will replace
@@ -42,6 +44,8 @@ Packet* PacketMag::GetPacket(Packet* p)
   unsigned int thisSubcode;
   int thisStatus;
   int* links=NULL;
+  bool special;
+  PageFunction func;
 
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
 
@@ -67,189 +71,214 @@ Packet* PacketMag::GetPacket(Packet* p)
   switch (_state)
   {
     case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
-		  //std::cerr << "TRACE-H " << std::endl;
-      ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
-
-      _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
-
-      // But before that, do some housekeeping
-
-      // Is this page deleted?
-      if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
-      {
-        _carousel->deletePage(_page);
-        _page=nullptr;
-      }
-
-      if (_page) // Carousel? Step to the next subpage
-      {
-        //_outp("c");
-        _page->StepNextSubpage();
-        //std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
-
-      }
-      else  // No carousel? Take the next page in the main sequence
-      {
-        if (_it==_pageSet->end())
+        if (GetEvent(EVENT_SPECIAL_PAGES))
         {
-          std::cerr << "This can not happen (we can't get the next page?)" << std::endl;
-          exit(0);
+            _page=_specialPages->NextPage();
+            
+            if (_page)
+            {
+                // got a special page
+            } else {
+                // got to the end of the special pages
+                ClearEvent(EVENT_SPECIAL_PAGES);
+                return nullptr;
+            }
+        } else {
+            ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
+            _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
+
+            // But before that, do some housekeeping
+
+            // Is this page deleted?
+            if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
+            {
+                _carousel->deletePage(_page);
+                _page=nullptr;
+            }
+
+            if (_page) // Carousel? Step to the next subpage
+            {
+                //_outp("c");
+                _page->StepNextSubpage();
+                //std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
+            }
+            else  // No carousel? Take the next page in the main sequence
+            {
+                if (_it==_pageSet->end())
+                {
+                    std::cerr << "This can not happen (we can't get the next page?)" << std::endl;
+                    exit(0);
+                }
+                ++_it;
+                if (_it==_pageSet->end())
+                {
+                    _it=_pageSet->begin();
+                }
+                // Get pointer to the page we are sending
+                // todo: Find a way to skip carousels without going into an infinite loop
+                _page=&*_it;
+                // If it is marked for deletion, then remove it.
+                if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+                {
+                    _pageSet->remove(*(_it++));
+                    _page=nullptr;
+                    return nullptr;
+                  // Stays in HEADER mode so that we run this again
+                }
+                if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
+                {
+                    //std::cerr << "This can not happen. Carousel found but it isn't a carousel?" << std::endl;
+                    // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
+                    // Page is a carousel. This can not happen
+                    _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
+                    return nullptr;
+                }
+            }
+            _thisRow=0;
+
+            // When a single page is changed into a carousel
+            if (_page->IsCarousel() != _page->GetCarouselFlag())
+            {
+              _page->SetCarouselFlag(_page->IsCarousel());
+              if (_page->IsCarousel())
+              {
+                  // std::cerr << "This page has become a carousel. Add it to the list" << std::endl;
+                  _carousel->addPage(_page);
+              }
+              else
+              {
+                // @todo Implement this
+                //std::cerr << "@todo This page has no longer a carousel. Remove it from the list" << std::endl;
+                //exit(3); //
+              }
+            }
         }
-        ++_it;
-        if (_it==_pageSet->end())
+        
+        // the function of a page changes
+        func = _page->GetPageFunction();
+        special = (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func == MIP);
+        if (special != _page->GetSpecialFlag()){
+            _page->SetSpecialFlag(special);
+            if (special){
+                std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
+                _specialPages->addPage(_page);
+                return nullptr;
+            } else {
+                _specialPages->deletePage(_page);
+            }
+        }
+
+        // Assemble the header. (we can simplify this code or leave it for the optimiser)
+        thisPageNum=_page->GetPageNumber();
+        thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
+        if (_page->IsCarousel())
+            {
+                thisSubcode=_page->GetCarouselPage()->GetSubCode();
+            }
+            else
+            {
+                thisSubcode=_page->GetSubCode();
+            }
+
+        thisStatus=_page->GetPageStatus();
+
+        // If the page has changed, then set the update bit.
+        // This is by request of Nate. It isn't a feature required in ETSI
+        if (_page->Changed())
         {
-            _it=_pageSet->begin();
+          thisStatus|=PAGESTATUS_C8_UPDATE;
         }
-        // Get pointer to the page we are sending
-        // todo: Find a way to skip carousels without going into an infinite loop
-        _page=&*_it;
-        // If it is marked for deletion, then remove it.
-        if (_page->GetStatusFlag()==TTXPageStream::MARKED)
-        {
-          _pageSet->remove(*(_it++));
-          _page=nullptr;
-          return nullptr;
-          // Stays in HEADER mode so that we run this again
+
+        // p=new Packet();
+        p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!
+
+        p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
+
+
+        //p->Parity(13); // don't apply parity here it will screw up the template. parity for the header is done by tx() later
+        assert(p!=NULL);
+
+        links=_page->GetLinkSet();
+        if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
+            _state=PACKETSTATE_FASTEXT; // a non zero FL row will override an OL,27 row
+            break;
+        } else {
+            _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
+            _state=PACKETSTATE_PACKET27;
+            break;
         }
-        if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
-        {
-          //std::cerr << "This can not happen. Carousel found but it isn't a carousel?" << std::endl;
-          // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
-          // Page is a carousel. This can not happen
-          _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
-          return nullptr;
-        }
-      }
-    _thisRow=0;
+        case PACKETSTATE_PACKET27:
+                  //std::cerr << "TRACE-27 " << std::endl;
 
-    // When a single page is changed into a carousel
-    if (_page->IsCarousel() != _page->GetCarouselFlag())
-    {
-      _page->SetCarouselFlag(_page->IsCarousel());
-      if (_page->IsCarousel())
-      {
-          // std::cerr << "This page has become a carousel. Add it to the list" << std::endl;
-          _carousel->addPage(_page);
-      }
-      else
-      {
-        // @todo Implement this
-        //std::cerr << "@todo This page has no longer a carousel. Remove it from the list" << std::endl;
-        //exit(3); //
-      }
-    }
+            if (_lastTxt)
+            {
+                //std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
+                //_lastTxt->Dump();
+                p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_7BIT_TEXT); // TODO coding for navigation packets
+                _lastTxt=_lastTxt->GetNextLine();
+                break;
+            }
+            _lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
+            _state=PACKETSTATE_PACKET28; //  // Intentional fall through to PACKETSTATE_PACKET28
+        case PACKETSTATE_PACKET28:
+                  //std::cerr << "TRACE-28 " << std::endl;
 
-    // Assemble the header. (we can simplify this code or leave it for the optimiser)
-    thisPageNum=_page->GetPageNumber();
-    thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
-    if (_page->IsCarousel())
-		{
-			thisSubcode=_page->GetCarouselPage()->GetSubCode();
-		}
-		else
-		{
-			thisSubcode=_page->GetSubCode();
-		}
+            if (_lastTxt)
+            {
+                //std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
+                //_lastTxt->Dump();
 
-    thisStatus=_page->GetPageStatus();
+                p->SetRow(_magNumber, 28, _lastTxt->GetLine(), CODING_13_TRIPLETS);
+                _lastTxt=_lastTxt->GetNextLine();
+                break;
+            }
+            else if (_page->GetRegion())
+            {
+                // create X/28/0 packet for pages which have a region set with RE in file
+                // it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
 
-    // If the page has changed, then set the update bit.
-    // This is by request of Nate. It isn't a feature required in ETSI
-    if (_page->Changed())
-    {
-      thisStatus|=PAGESTATUS_C8_UPDATE;
-    }
-
-    // p=new Packet();
-    p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!
-
-    p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
-
-
-    //p->Parity(13); // don't apply parity here it will screw up the template. parity for the header is done by tx() later
-    assert(p!=NULL);
-
-		links=_page->GetLinkSet();
-		if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
-			_state=PACKETSTATE_FASTEXT; // a non zero FL row will override an OL,27 row
-			break;
-		} else {
-			_lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
-			_state=PACKETSTATE_PACKET27;
-			break;
-		}
-		case PACKETSTATE_PACKET27:
-				  //std::cerr << "TRACE-27 " << std::endl;
-
-			if (_lastTxt)
-			{
-				//std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
-				//_lastTxt->Dump();
-				p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_7BIT_TEXT); // TODO coding for navigation packets
-				_lastTxt=_lastTxt->GetNextLine();
-				break;
-			}
-			_lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
-			_state=PACKETSTATE_PACKET28; //  // Intentional fall through to PACKETSTATE_PACKET28
-		case PACKETSTATE_PACKET28:
-				  //std::cerr << "TRACE-28 " << std::endl;
-
-			if (_lastTxt)
-			{
-				//std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
-				//_lastTxt->Dump();
-
-				p->SetRow(_magNumber, 28, _lastTxt->GetLine(), CODING_13_TRIPLETS);
-				_lastTxt=_lastTxt->GetNextLine();
-				break;
-			}
-			else if (_page->GetRegion())
-			{
-				// create X/28/0 packet for pages which have a region set with RE in file
-				// it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
-
-				// this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
-				std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
-				int region = _page->GetRegion();
-				int NOS = (_page->GetPageStatus() & 0x380) >> 7;
-				int language = NOS | (region << 3);
-				int triplet = 0x3C000 | (language << 7); // construct triplet 1
-				val.replace(1,1,1,(triplet & 0x3F) | 0x40);
-				val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
-				val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
-				//std::cerr << "[Mag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
-				p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
-				_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
-				_state=PACKETSTATE_PACKET26;
-				break;
-			} else if (_page->GetPageCoding() == CODING_7BIT_TEXT){
-				// X/26 packets next in normal pages
-				_lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
-				_state=PACKETSTATE_PACKET26; // Intentional fall through to PACKETSTATE_PACKET26
-			} else {
-				// do X/1 to X/25 first and go back to X/26 after
-				_state=PACKETSTATE_TEXTROW;
-				return nullptr;
-			}
-		case PACKETSTATE_PACKET26:
-			if (_lastTxt)
-			{
-				p->SetRow(_magNumber, 26, _lastTxt->GetLine(), CODING_13_TRIPLETS);
-				// Do we have another line?
-				_lastTxt=_lastTxt->GetNextLine();
-				// std::cerr << "*";
-				break;
-			}
-			if (_page->GetPageCoding() == CODING_7BIT_TEXT){
-				_state=PACKETSTATE_TEXTROW; // Intentional fall through to PACKETSTATE_TEXTROW
-			} else {
-				// otherwise we end the page here
-				_state=PACKETSTATE_HEADER;
-				_thisRow=0;
-				return nullptr;
-			}
+                // this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
+                std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
+                int region = _page->GetRegion();
+                int NOS = (_page->GetPageStatus() & 0x380) >> 7;
+                int language = NOS | (region << 3);
+                int triplet = 0x3C000 | (language << 7); // construct triplet 1
+                val.replace(1,1,1,(triplet & 0x3F) | 0x40);
+                val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
+                val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
+                //std::cerr << "[Mag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
+                p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
+                _lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
+                _state=PACKETSTATE_PACKET26;
+                break;
+            } else if (_page->GetPageCoding() == CODING_7BIT_TEXT){
+                // X/26 packets next in normal pages
+                _lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
+                _state=PACKETSTATE_PACKET26; // Intentional fall through to PACKETSTATE_PACKET26
+            } else {
+                // do X/1 to X/25 first and go back to X/26 after
+                _state=PACKETSTATE_TEXTROW;
+                return nullptr;
+            }
+        case PACKETSTATE_PACKET26:
+            if (_lastTxt)
+            {
+                p->SetRow(_magNumber, 26, _lastTxt->GetLine(), CODING_13_TRIPLETS);
+                // Do we have another line?
+                _lastTxt=_lastTxt->GetNextLine();
+                // std::cerr << "*";
+                break;
+            }
+            if (_page->GetPageCoding() == CODING_7BIT_TEXT){
+                _state=PACKETSTATE_TEXTROW; // Intentional fall through to PACKETSTATE_TEXTROW
+            } else {
+                // otherwise we end the page here
+                _state=PACKETSTATE_HEADER;
+                _thisRow=0;
+                return nullptr;
+            }
     case PACKETSTATE_TEXTROW:
-		  // std::cerr << "TRACE-T " << std::endl;
+          // std::cerr << "TRACE-T " << std::endl;
 
       // Find the next row that isn't NULL
       for (_thisRow++;_thisRow<26;_thisRow++)
@@ -265,8 +294,8 @@ Packet* PacketMag::GetPacket(Packet* p)
       // Didn't find? End of this page.
       if (_thisRow>25 || _lastTxt==NULL)
       {
-		 // std::cerr << "[PacketMag::GetPacket] FOO row " << std::dec << p->GetRow() << std::endl;
-		 // std::cerr << p->tx() << std::endl;
+         // std::cerr << "[PacketMag::GetPacket] FOO row " << std::dec << p->GetRow() << std::endl;
+         // std::cerr << p->tx() << std::endl;
         if(_page->GetPageCoding() == CODING_7BIT_TEXT){
           // if this is a normal page we've finished
           _state=PACKETSTATE_HEADER;
@@ -298,7 +327,7 @@ Packet* PacketMag::GetPacket(Packet* p)
       }
       break;
     case PACKETSTATE_FASTEXT:
-				  //std::cerr << "TRACE-F " << std::endl;
+                  //std::cerr << "TRACE-F " << std::endl;
 
 //      std::cerr << "PACKETSTATE_FASTEXT enters" << std::endl;
       p->SetMRAG(_magNumber,27);
@@ -312,7 +341,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 
 
   default:
-	 std::cerr << "TRACE-OOPS " << std::endl;
+     std::cerr << "TRACE-OOPS " << std::endl;
     _state=PACKETSTATE_HEADER;// For now, do the next page
     return nullptr;
   }
@@ -331,7 +360,7 @@ bool PacketMag::IsReady(bool force)
   // We can always send something unless
   // 1) We have just sent out a header and are waiting on a new field
   // 2) There are no pages
-  if ( ((GetEvent(EVENT_FIELD)) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
+  if ( ((GetEvent(EVENT_FIELD)) || GetEvent(EVENT_SPECIAL_PAGES) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
   {
     // If we send a header we want to wait for this to get set GetEvent(EVENT_FIELD)
     _priorityCount--;

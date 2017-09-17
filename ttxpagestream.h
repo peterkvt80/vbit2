@@ -44,6 +44,9 @@ class TTXPageStream : public TTXPage
      * \param val New value to set
      */
     void SetCarouselFlag(bool val) { _isCarousel = val; }
+    
+    bool GetSpecialFlag() { return _isSpecial; }
+    void SetSpecialFlag(bool val) { _isSpecial = val; }
 
     ///** Access _CurrentPage
      //* \return The current value of _CurrentPage
@@ -134,7 +137,7 @@ class TTXPageStream : public TTXPage
 
     bool _Selected;   /// Marked as selected by the inserter P command
 
-
+    bool _isSpecial;
 };
 
 #endif // _TTXPAGESTREAM_H_

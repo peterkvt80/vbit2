@@ -4,6 +4,7 @@
 #include <packetsource.h>
 #include "ttxpagestream.h"
 #include "carousel.h"
+#include "specialpages.h"
 #include "configure.h"
 
 namespace vbit
@@ -37,6 +38,7 @@ class PacketMag : public PacketSource
 
       std::list<TTXPageStream>::iterator _it;
       Carousel* _carousel;
+      SpecialPages* _specialPages;
       uint8_t _priorityCount; /// Controls transmission priority
       PacketState _state; /// State machine to sequence packet types
       uint8_t _thisRow; // The current line that we are outputting
