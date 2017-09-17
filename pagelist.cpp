@@ -48,12 +48,7 @@ int PageList::LoadPageList(std::string filepath)
 					q->GetPageCount(); // Use for the side effect of renumbering the subcodes
 
           int mag=(q->GetPageNumber() >> 16) & 0x7;
-          PageFunction func = q->GetPageFunction();
-          if (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func ==  MIP){
-            _pageList[mag+8].push_back(*q); // put page in separate pageList for "special" pages
-          } else {
-            _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
-          }
+          _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
       }
     }
 	}
@@ -92,13 +87,8 @@ int PageList::LoadPageList(std::string filepath)
 
 void PageList::AddPage(TTXPageStream* page)
 {
-	int mag=(page->GetPageNumber() >> 16) & 0x7;
-	PageFunction func = page->GetPageFunction();
-	if (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func ==  MIP){
-		_pageList[mag+8].push_back(*page); // put page into separate pageList for "special" pages
-	} else {
-		_pageList[mag].push_back(*page); // put page into the normal page sequence
-	}
+		int mag=(page->GetPageNumber() >> 16) & 0x7;
+		_pageList[mag].push_back(*page);
 }
 
 
@@ -107,7 +97,7 @@ TTXPageStream* PageList::Locate(std::string filename)
 {
   // This is called from the FileMonitor thread
   // std::cerr << "[PageList::Locate] *** TODO *** " << filename << std::endl;
-  for (int mag=0;mag<16;mag++) // check both sets of page lists as it might be one of the special pages
+  for (int mag=0;mag<8;mag++)
   {
     //for (auto p : _pageList[mag])
     for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
