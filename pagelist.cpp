@@ -269,7 +269,7 @@ TTXPageStream* PageList::NextSelectedPage()
 // As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
 void PageList::ClearFlags()
 {
-  for (int mag=0;mag<16;mag++)
+  for (int mag=0;mag<8;mag++)
   {
     for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
     {
@@ -287,7 +287,7 @@ void PageList::ClearFlags()
 void PageList::DeleteOldPages()
 {
   // This is called from the FileMonitor thread
-  for (int mag=0;mag<16;mag++)
+  for (int mag=0;mag<8;mag++)
   {
     for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
     {
