@@ -44,8 +44,6 @@ Packet* PacketMag::GetPacket(Packet* p)
   unsigned int thisSubcode;
   int thisStatus;
   int* links=NULL;
-  bool special;
-  PageFunction func;
 
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
 
@@ -167,9 +165,7 @@ Packet* PacketMag::GetPacket(Packet* p)
               }
             }
             
-            func = _page->GetPageFunction();
-            special = (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func == MIP);
-            if (special && _page->GetSpecialFlag()){
+            if (_page->Special() && _page->GetSpecialFlag()){
                 // don't let special pages into normal sequence
                 return nullptr;
             }
@@ -194,16 +190,14 @@ Packet* PacketMag::GetPacket(Packet* p)
         }
         
         // the function of a page changes
-        func = _page->GetPageFunction();
-        special = (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func == MIP);
-        if (special != _page->GetSpecialFlag()){
-            _page->SetSpecialFlag(special);
-            if (special){
-                std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
+        if (_page->Special() != _page->GetSpecialFlag()){
+            _page->SetSpecialFlag(_page->Special());
+            if (_page->Special()){
+                //std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->addPage(_page);
                 return nullptr;
             } else {
-                std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
+                //std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->deletePage(_page);
             }
         }
