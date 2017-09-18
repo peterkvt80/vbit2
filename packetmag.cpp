@@ -77,6 +77,12 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
                 // got a special page
                 
+                if (_page->GetPageFunction() == MIP)
+                {
+                    // Magazine Inventory Page
+                    ClearEvent(EVENT_FIELD); // enforce 20ms page erasure interval
+                }
+                    
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
                 thisStatus=0x8010;
                 

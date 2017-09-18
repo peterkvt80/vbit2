@@ -972,6 +972,12 @@ void TTXPage::SetPageNumber(int page)
         m_pagefunction = MOT;
         m_pagecoding = CODING_HAMMING_8_4;
     }
+    else if ((page & 0xFF00) == 0xFD00)
+    {
+        // page xFD is reserved for the Magazine Inventory Page:
+        m_pagefunction = MIP;
+        m_pagecoding = CODING_HAMMING_8_4;
+    }
 }
 
 int TTXPage::GetFastextLink(int link)
