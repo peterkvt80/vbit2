@@ -389,7 +389,7 @@ bool PacketMag::IsReady(bool force)
   // We can always send something unless
   // 1) We have just sent out a header and are waiting on a new field
   // 2) There are no pages
-  if ( ((GetEvent(EVENT_FIELD)) || GetEvent(EVENT_SPECIAL_PAGES) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
+  if ( ((GetEvent(EVENT_FIELD)) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
   {
     // If we send a header we want to wait for this to get set GetEvent(EVENT_FIELD)
     _priorityCount--;
