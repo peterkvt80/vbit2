@@ -966,7 +966,7 @@ void TTXPage::SetPageNumber(int page)
     m_PageNumber=page;
     //std::cerr << std::hex << m_PageNumber << std::endl;
     
-    if ((page & 0xFE00) == 0xFE00)
+    if ((page & 0xFF00) == 0xFE00)
     {
         // page xFE is reserved for the Magazine Organisation Table set this as a side effect of assigning that page number
         m_pagefunction = MOT;

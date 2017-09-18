@@ -78,7 +78,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 // got a special page
                 
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
-                thisStatus=0x0010;
+                thisStatus=0x8010;
                 
                 /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
                 if (_page->IsCarousel())
@@ -193,13 +193,19 @@ Packet* PacketMag::GetPacket(Packet* p)
         if (_page->Special() != _page->GetSpecialFlag()){
             _page->SetSpecialFlag(_page->Special());
             if (_page->Special()){
-                //std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
+                std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->addPage(_page);
                 return nullptr;
             } else {
-                //std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
+                std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->deletePage(_page);
             }
+        }
+        
+        if (!(thisStatus & 0x8000))
+        {
+            _page=nullptr;
+            return nullptr;
         }
 
         // Assemble the header. (we can simplify this code or leave it for the optimiser)
