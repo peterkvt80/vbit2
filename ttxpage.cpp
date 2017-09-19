@@ -966,17 +966,23 @@ void TTXPage::SetPageNumber(int page)
     m_PageNumber=page;
     //std::cerr << std::hex << m_PageNumber << std::endl;
     
-    if ((page & 0xFF00) == 0xFE00)
+    // compare page tens and units to reserved page numbers and set page function and coding as required
+    switch ((page >> 8) & 0xFF)
     {
-        // page xFE is reserved for the Magazine Organisation Table set this as a side effect of assigning that page number
-        m_pagefunction = MOT;
-        m_pagecoding = CODING_HAMMING_8_4;
-    }
-    else if ((page & 0xFF00) == 0xFD00)
-    {
-        // page xFD is reserved for the Magazine Inventory Page:
-        m_pagefunction = MIP;
-        m_pagecoding = CODING_HAMMING_8_4;
+        case 0xF0: // Basic Top Table
+            m_pagefunction = BTT;
+            m_pagecoding = CODING_HAMMING_8_4;
+            break;
+        
+        case 0xFD: // Magazine Organisation Table
+            m_pagefunction = MOT;
+            m_pagecoding = CODING_HAMMING_8_4;
+            break;
+        
+        case 0xFE: // Magazine Inventory Page
+            m_pagefunction = MIP;
+            m_pagecoding = CODING_HAMMING_8_4;
+            break;
     }
 }
 
