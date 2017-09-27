@@ -6,7 +6,8 @@ using namespace ttx;
 
 PageList::PageList(Configure *configure) :
 	_configure(configure),
-	_iterMag(0)
+	_iterMag(0),
+	_iterSubpage(nullptr)
 {
   for (int i=0;i<8;i++)
       _mag[i]=nullptr;
@@ -168,19 +169,21 @@ int PageList::Match(char* pageNumber)
       char s[6];
       char* ps=s;
       bool match=true;
-      ptr=&(*p);
-      // Convert the page number into a string so we can compare it
-      ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
-      strcpy(ps,ss.str().c_str());
-      // std::cerr << "[PageList::FindPage] matching " << ps << std::endl;
-
-      for (int i=0;i<5;i++)
+      for (ptr=&(*p);ptr!=nullptr;ptr=(TTXPageStream*)ptr->Getm_SubPage()) // For all the subpages in a carousel
       {
-        if (pageNumber[i]!='*') // wildcard
+        // Convert the page number into a string so we can compare it
+        ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
+        strcpy(ps,ss.str().c_str());
+        // std::cerr << "[PageList::FindPage] matching " << ps << std::endl;
+
+        for (int i=0;i<5;i++)
         {
-          if (pageNumber[i]!=ps[i])
+          if (pageNumber[i]!='*') // wildcard
           {
-            match=false;
+            if (pageNumber[i]!=ps[i])
+            {
+              match=false;
+            }
           }
         }
       }
@@ -201,18 +204,65 @@ int PageList::Match(char* pageNumber)
 
 TTXPageStream* PageList::NextPage()
 {
-  //std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
+  std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
   bool more=true;
-  ++_iter; // Next page
+  if (_iterSubpage!=nullptr)
+  {
+    std::cerr << "A";
+    _iterSubpage=(TTXPageStream*) _iterSubpage->Getm_SubPage();
+    std::cerr << "B";
+  }
+  if (_iterSubpage!=nullptr)
+  {
+    std::cerr << "C";
+    return _iterSubpage;
+  }
+  std::cerr << "[PageList::NextPage] _iterSubpage is null, so checking next page" << std::endl;
+
+  if (_iter!=_pageList[_iterMag].end())
+  {
+    ++_iter; // Next page
+  }
   if (_iter==_pageList[_iterMag].end()) // end of mag?
   {
-    _iterMag++; // next mag
-    _iter=_pageList[_iterMag].begin();
-
-    if (_iterMag>7) // no more mags?
+    if (_iterMag<7)
     {
-      // Reset the iterator
-			// ResetIter();
+      _iterMag++; // next mag
+      _iter=_pageList[_iterMag].begin();
+    }
+    else
+    {
+      more=false; // End of last mag
+    }
+  }
+
+  if (more)
+  {
+    _iterSubpage=&(*_iter);
+    return _iterSubpage;
+  }
+  _iterSubpage=nullptr;
+  return nullptr; // Returned after the last page is iterated
+}
+
+TTXPageStream* PageList::PrevPage()
+{
+  //std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
+  bool more=true;
+  if (_iter!=_pageList[_iterMag].begin())
+  {
+    --_iter; // Previous page
+  }
+
+  if (_iter==_pageList[_iterMag].begin()) // beginning of mag?
+  {
+    if (_iterMag<=0)
+    {
+      _iterMag--; // previous mag
+      _iter=_pageList[_iterMag].end();
+    }
+    else
+    {
       more=false;
     }
   }
@@ -221,16 +271,36 @@ TTXPageStream* PageList::NextPage()
   {
     return &(*_iter);
   }
-  return nullptr; // Returned after the last page is iterated
+  return nullptr; // Returned after the first page is iterated
 }
 
-TTXPageStream* PageList::ResetIter()
+TTXPageStream* PageList::FirstPage()
 {
   // Reset the iterators
   _iterMag=0;
   _iter=_pageList[_iterMag].begin();
+  _iterSubpage=&(*_iter);
   // Iterate through all the pages
-  for (TTXPageStream* p=&(*_iter); p!=nullptr; p=NextPage())
+  std::cerr << "[PageList::FirstPage] about to find if there is a selected page" << std::endl;
+  for (TTXPageStream* p=_iterSubpage; p!=nullptr; p=NextPage())
+  {
+    if (p->Selected()) // If the page is selected, return a pointer to it
+    {
+      std::cerr << "[PageList::FirstPage] selected page found" << std::endl;
+      return p;
+    }
+  }
+  std::cerr << "[PageList::FirstPage] no selected page" << std::endl;
+  return nullptr; // No selected page
+}
+
+TTXPageStream* PageList::LastPage()
+{
+  // Reset the iterators
+  _iterMag=7;
+  _iter=_pageList[_iterMag].end();
+  // Iterate through all the pages
+  for (TTXPageStream* p=&(*_iter); p!=nullptr; p=PrevPage())
   {
     if (p->Selected()) // If the page is selected, return a pointer to it
     {

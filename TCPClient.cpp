@@ -55,7 +55,7 @@ void TCPClient::command(char* cmd, char* response)
       case 'F' : // Move to first page
         std::cerr << "DF" << std::endl;
         ix++;
-        if ((page=_pageList->ResetIter())==nullptr)
+        if ((page=_pageList->FirstPage())==nullptr)
         {
           status=1; // Fail: There are no pages selected
           break;
@@ -73,10 +73,39 @@ void TCPClient::command(char* cmd, char* response)
           status=1;
         }
         break;
+      case '-' : // Step to previous entry
+        page=_pageList->PrevPage();
+        if (page!=nullptr)
+        {
+          status=0;
+        }
+        else
+        {
+          status=1;
+        }
+        break;
       case 'L' : // Move to last page
         std::cerr << "DL" << std::endl;
-        status=1;
         ix++;
+        if ((page=_pageList->LastPage())==nullptr)
+        {
+          status=1; // Fail: There are no pages selected
+          break;
+        }
+        status=0;
+        break;
+      case 'P' : // Secret debug code - Sends page into to stderr
+        std::cerr << "DP" << std::endl;
+        {
+          page=_pageList->FirstPage();
+          for (int row=0;row<24;row++)
+          {
+            std::cerr << "OL," << std::setw(2) << row;
+            TTXLine* line=page->GetRow(row);
+            std::cerr << "," << line->GetLine() << std::endl;
+          }
+        }
+        status=0;
         break;
       default:
         status=1;
@@ -116,7 +145,7 @@ void TCPClient::command(char* cmd, char* response)
 			//sprintf(result, "L Command Page=%.*s row=%d ptr=%s\n\r", 5, _pageNumber, row, ptr);
 
       std::cerr << "[TCPClient::command] L command starts" << std::endl;
-			for (TTXPageStream* p=_pageList->ResetIter();
+			for (TTXPageStream* p=_pageList->FirstPage();
         p!=nullptr;
         p=_pageList->NextSelectedPage())
       {
@@ -189,8 +218,7 @@ void TCPClient::command(char* cmd, char* response)
 			rowStr[1]=cmd[2];
 			rowStr[2]=0;
 			row=std::strtol(rowStr, &ptr, 10);
-			p=_pageList->NextSelectedPage();
-			_pageList->ResetIter();// @todo. What page object to put here?
+			p=_pageList->FirstPage();
 			if (p==nullptr)
 			{
 				result[0]=0;
@@ -391,7 +419,7 @@ void TCPClient::Handler(int clntSocket)
   }
 
 #ifdef WIN32
-  // @todo What is the Windows way of closing a socket. It sort of works without bothering.
+  closesocket(clntSocket);
 #else
   close(clntSocket);    /* Close client socket */
 #endif // WIN32

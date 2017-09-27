@@ -72,6 +72,16 @@ public:
    */
 	TTXPageStream* NextPage();
 
+  /** \brief Iterate through all pages
+   *  \return Returns the previous page or nullptr if we are at the beginning
+   */
+	TTXPageStream* PrevPage();
+
+  /** \brief Last Page in the selected list
+   *  \return Returns the last selected page or nullptr if there isn't one
+   */
+	TTXPageStream* LastPage();
+
   /** \brief Iterate through selected pages (using the P command)
    *  \return Returns the next page or nullptr if we are at the end
    */
@@ -81,7 +91,7 @@ public:
    *  Afterwards repeatedly call NextPage() until it returns nullptr
    *  \return the initial page or nullptr if there is no page
    */
-  TTXPageStream* ResetIter();
+  TTXPageStream* FirstPage();
 
 private:
 	Configure* _configure; // The configuration object
@@ -91,6 +101,7 @@ private:
 	// iterators through selected pages. (use the same iterator for D command and MD, L etc.)
 	uint8_t _iterMag;  /// Magazine number for the iterator
 	std::list<TTXPageStream>::iterator _iter;  /// pages in a magazine
+	TTXPageStream* _iterSubpage;    /// Subpages in a carousel
 
 };
 

@@ -62,7 +62,7 @@ class TTXPage
          */
         // TTXPage& operator=(const TTXPage& other);
 
-        /** Access m_SubPage
+        /** Access m_SubPage which is the next page in a carousel
          * \return The current value of m_SubPage
          */
         TTXPage* Getm_SubPage() { return m_SubPage; }
@@ -214,6 +214,12 @@ class TTXPage
          */
         bool Changed();
 
+        void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
+        bool Selected(){return _Selected;}; /// Return the selected state
+
+
+
+
     protected:
         /** Load a TTI page (MRG Systems)
          * \param filename : The source file
@@ -265,6 +271,8 @@ class TTXPage
          * \return true if the page was loaded
          */
         bool m_LoadTTX(std::string filename);
+
+        bool _elected; /// True if this page has been selected.
 
 };
 

@@ -44,7 +44,7 @@ class TTXPageStream : public TTXPage
      * \param val New value to set
      */
     void SetCarouselFlag(bool val) { _isCarousel = val; }
-    
+
     bool GetSpecialFlag() { return _isSpecial; }
     void SetSpecialFlag(bool val) { _isSpecial = val; }
 
@@ -79,7 +79,7 @@ class TTXPageStream : public TTXPage
      *  Updates _CarouselPage;
      */
     void StepNextSubpage();
-    
+
     // step to next subpage but don't loop back to the start
     void StepNextSubpageNoLoop();
 
@@ -120,6 +120,7 @@ class TTXPageStream : public TTXPage
      */
     bool operator==(const TTXPageStream& rhs) const;
 
+    // Todo: These are migrating to TTXPage
     void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
     bool Selected(){return _Selected;}; /// Return the selected state
 

@@ -32,7 +32,8 @@ TTXPage::TTXPage() :
     m_SubPage(nullptr),
     m_sourcepage("none"),   //ctor
 		m_subcode(0),
-    m_Loaded(false)
+    m_Loaded(false),
+    _Selected(false)
 {
     m_Init();
 }
@@ -48,7 +49,8 @@ TTXPage::TTXPage(std::string filename) :
     m_SubPage(nullptr),
     m_sourcepage(filename),
  		m_subcode(0),
-    m_Loaded(false)
+    m_Loaded(false),
+    _Selected(false)
 {
     // std::cerr << "[TTXPage] file constructor loading " << filename<< std::endl;
     m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
@@ -685,7 +687,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 					m_pagecoding = CODING_13_TRIPLETS;
 					break;
 			}
-			
+
 			switch (triplet & 0x0F){
 				default: // treat page functions we don't know as level one pages
 				case 0:
@@ -869,7 +871,7 @@ int TTXPage::GetPageCount()
 	unsigned int subcode; // Start from 1.
 	int code[4];
     PageFunction func = GetPageFunction();
-    
+
 	for (int i=0;i<4;i++) code[i]=0;
 	for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
 	{
