@@ -39,7 +39,7 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
 	SetPacketText(val);
 	_coding = coding;
 
-	// The following block of code is experimental support for page enhancement
+	// The following block of code is for page enhancement
 	// packets read from special OL rows in tti page files.
 	// If OL,28, packet is used the page file should not contain a non zero RE,
 	if (coding == CODING_13_TRIPLETS)
@@ -60,8 +60,13 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
 			SetTriplet(i, triplet);
 		}
 	}
-
-	// end of experimental page enhancement code
+    else if (coding == CODING_HAMMING_8_4)
+    {
+        for (int i = 0; i<40; i++)
+        {
+            _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
+        }
+    }
 }
 
 Packet::~Packet()

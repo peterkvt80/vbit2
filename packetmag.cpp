@@ -44,8 +44,6 @@ Packet* PacketMag::GetPacket(Packet* p)
   unsigned int thisSubcode;
   int thisStatus;
   int* links=NULL;
-  bool special;
-  PageFunction func;
 
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
 
@@ -79,8 +77,14 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
                 // got a special page
                 
+                if (_page->GetPageFunction() == MIP)
+                {
+                    // Magazine Inventory Page
+                    ClearEvent(EVENT_FIELD); // enforce 20ms page erasure interval
+                }
+                    
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
-                thisStatus=0x0010;
+                thisStatus=0x8010;
                 
                 /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
                 if (_page->IsCarousel())
@@ -167,9 +171,7 @@ Packet* PacketMag::GetPacket(Packet* p)
               }
             }
             
-            func = _page->GetPageFunction();
-            special = (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func == MIP);
-            if (special && _page->GetSpecialFlag()){
+            if (_page->Special() && _page->GetSpecialFlag()){
                 // don't let special pages into normal sequence
                 return nullptr;
             }
@@ -194,11 +196,9 @@ Packet* PacketMag::GetPacket(Packet* p)
         }
         
         // the function of a page changes
-        func = _page->GetPageFunction();
-        special = (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func == MIP);
-        if (special != _page->GetSpecialFlag()){
-            _page->SetSpecialFlag(special);
-            if (special){
+        if (_page->Special() != _page->GetSpecialFlag()){
+            _page->SetSpecialFlag(_page->Special());
+            if (_page->Special()){
                 std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->addPage(_page);
                 return nullptr;
@@ -206,6 +206,12 @@ Packet* PacketMag::GetPacket(Packet* p)
                 std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->deletePage(_page);
             }
+        }
+        
+        if (!(thisStatus & 0x8000))
+        {
+            _page=nullptr;
+            return nullptr;
         }
 
         // Assemble the header. (we can simplify this code or leave it for the optimiser)
@@ -383,7 +389,7 @@ bool PacketMag::IsReady(bool force)
   // We can always send something unless
   // 1) We have just sent out a header and are waiting on a new field
   // 2) There are no pages
-  if ( ((GetEvent(EVENT_FIELD)) || GetEvent(EVENT_SPECIAL_PAGES) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
+  if ( ((GetEvent(EVENT_FIELD)) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
   {
     // If we send a header we want to wait for this to get set GetEvent(EVENT_FIELD)
     _priorityCount--;

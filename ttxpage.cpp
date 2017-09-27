@@ -686,6 +686,9 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 				case 2:
 					m_pagecoding = CODING_13_TRIPLETS;
 					break;
+				case 3:
+					m_pagecoding = CODING_HAMMING_8_4;
+					break;
 			}
 
 			switch (triplet & 0x0F){
@@ -870,12 +873,11 @@ int TTXPage::GetPageCount()
 	int count=0;
 	unsigned int subcode; // Start from 1.
 	int code[4];
-    PageFunction func = GetPageFunction();
-
+  // PageFunction func = GetPageFunction();
 	for (int i=0;i<4;i++) code[i]=0;
 	for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
 	{
-        if (func == GPOP || func == POP || func == GDRCS || func == DRCS || func == MOT || func == MIP){
+        if (Special()){
             // "Special" pages (e.g. MOT, POP, GPOP, DRCS, GDRCS, MIP) should be coded sequentially in hexadecimal 0000-000F
             subcode = count;
         }
@@ -965,6 +967,25 @@ void TTXPage::SetPageNumber(int page)
     //std::cerr << "PageNumber changed from " << std::hex << m_PageNumber << " to ";
     m_PageNumber=page;
     //std::cerr << std::hex << m_PageNumber << std::endl;
+
+    // compare page tens and units to reserved page numbers and set page function and coding as required
+    switch ((page >> 8) & 0xFF)
+    {
+        case 0xF0: // Basic Top Table
+            m_pagefunction = BTT;
+            m_pagecoding = CODING_HAMMING_8_4;
+            break;
+
+        case 0xFD: // Magazine Organisation Table
+            m_pagefunction = MOT;
+            m_pagecoding = CODING_HAMMING_8_4;
+            break;
+
+        case 0xFE: // Magazine Inventory Page
+            m_pagefunction = MIP;
+            m_pagecoding = CODING_HAMMING_8_4;
+            break;
+    }
 }
 
 int TTXPage::GetFastextLink(int link)

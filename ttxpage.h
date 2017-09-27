@@ -35,7 +35,7 @@
 #define MAXROW 28
 
 // @todo more page codings
-enum PageCoding {CODING_7BIT_TEXT,CODING_8BIT_DATA,CODING_13_TRIPLETS};
+enum PageCoding {CODING_7BIT_TEXT,CODING_8BIT_DATA,CODING_13_TRIPLETS,CODING_HAMMING_8_4};
 enum PageFunction {LOP, DATABROADCAST, GPOP, POP, GDRCS, DRCS, MOT, MIP, BTT, AIT, MPT, MPT_EX};
 
 class TTXPage
@@ -203,6 +203,8 @@ class TTXPage
         PageCoding GetPageCoding() {return m_pagecoding;}
         PageFunction GetPageFunction() {return m_pagefunction;}
 
+        bool Special() {return (m_pagefunction == GPOP || m_pagefunction == POP || m_pagefunction == GDRCS || m_pagefunction == DRCS || m_pagefunction == MOT || m_pagefunction == MIP);} // more convenient way to tell if a page is special.
+
         /** @todo migrate this deep copy into the standard copy constructor
          * Warning. Only deep copies the top page. Not for carousels (yet)
          */
@@ -272,7 +274,7 @@ class TTXPage
          */
         bool m_LoadTTX(std::string filename);
 
-        bool _elected; /// True if this page has been selected.
+        bool _Selected; /// True if this page has been selected.
 
 };
 
