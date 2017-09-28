@@ -15,9 +15,14 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _priorityCount(priority),
     _state(PACKETSTATE_HEADER),
     _thisRow(0),
-    _lastTxt(nullptr)
+    _lastTxt(nullptr),
+    _nextPacket29DC(0)
 {
   //ctor
+  for (int i=0;i<MAXPACKET29TYPES;i++)
+  {
+    _packet29[i]=nullptr;
+  }
   if (_pageSet->size()>0)
   {
     //std::cerr << "[Mag::Mag] enters. page size=" << _pageSet->size() << std::endl;
@@ -44,7 +49,9 @@ Packet* PacketMag::GetPacket(Packet* p)
   unsigned int thisSubcode;
   int thisStatus;
   int* links=NULL;
-
+  TTXLine* tempLine;
+  int Packet29Index;
+  
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
 
   // We should only call GetPacket if IsReady has returned true
@@ -62,13 +69,32 @@ Packet* PacketMag::GetPacket(Packet* p)
   // If there is no page, we should send a filler
   if (_pageSet->size()<1)
   {
-    p->SetMRAG(8,25); // we set the MRAG but the contents of pkt is still whatever the last packet was.
-    return filler;
+    p->Set_packet(filler->Get_packet());
+    return p;
   }
 
   switch (_state)
   {
     case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
+        if (GetEvent(EVENT_PACKET_29))
+        {
+            while (_packet29[_nextPacket29DC] == nullptr)
+            {
+                _nextPacket29DC++;
+            }
+            
+            if (_nextPacket29DC >= MAXPACKET29TYPES)
+            {
+                _nextPacket29DC = 0;
+                ClearEvent(EVENT_PACKET_29);
+            }
+            else
+            {
+                p->SetRow(_magNumber, 29, _packet29[_nextPacket29DC]->GetLine(), CODING_13_TRIPLETS);
+                _nextPacket29DC++;
+                return p;
+            }
+        }
         if (GetEvent(EVENT_SPECIAL_PAGES))
         {
             _page=_specialPages->NextPage();
@@ -84,7 +110,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 }
                     
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
-                thisStatus=0x8010;
+                thisStatus = _page->GetPageStatus() & 0x8000; // get transmit flag
+                thisStatus |= 0x0010;
                 
                 /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
                 if (_page->IsCarousel())
@@ -206,6 +233,38 @@ Packet* PacketMag::GetPacket(Packet* p)
                 //std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->deletePage(_page);
             }
+        }
+        
+        tempLine = _page->GetTxRow(29);
+        while (tempLine != nullptr)
+        {
+            // TODO: we don't want to do this every time the page is encountered. We should do it once then check to see if it has changed
+            // Other issues include: multiple pages with packets 29 will overwrite each other, and when the page is deleted the packets will remain.
+            //std::cerr << "page includes packet 29" << std::endl;
+            switch (tempLine->GetCharAt(0))
+            {
+                case '@':
+                    Packet29Index = 0;
+                    break;
+                case 'A':
+                    Packet29Index = 1;
+                    break;
+                case 'D':
+                    Packet29Index = 2;
+                    break;
+                default:
+                    Packet29Index = -1;
+            }
+            if (Packet29Index > -1)
+            {
+                if (_packet29[Packet29Index]==nullptr)
+                    _packet29[Packet29Index]=new TTXLine(tempLine->GetLine(),true); // Didn't exist before
+                else
+                    _packet29[Packet29Index]->Setm_textline(tempLine->GetLine(), true);
+            }
+            
+            tempLine = tempLine->GetNextLine();
+            // loop until every row 29 is copied
         }
         
         if (!(thisStatus & 0x8000))

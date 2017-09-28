@@ -32,7 +32,7 @@
 #define PAGESTATUS_C11_SERIALMAG    0x0040
 
 // Allow for enhancement packets
-#define MAXROW 28
+#define MAXROW 29
 
 // @todo more page codings
 enum PageCoding {CODING_7BIT_TEXT,CODING_8BIT_DATA,CODING_13_TRIPLETS,CODING_HAMMING_8_4};

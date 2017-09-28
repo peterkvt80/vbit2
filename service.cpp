@@ -151,6 +151,7 @@ void Service::_updateEvents()
         for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
         {
           (*iterator)->SetEvent(EVENT_SPECIAL_PAGES);
+          (*iterator)->SetEvent(EVENT_PACKET_29);
         }
       }
       // if (seconds>30) exit(0); // JUST FOR DEBUGGING!!!!  Must remove

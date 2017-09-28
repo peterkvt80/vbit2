@@ -7,6 +7,8 @@
 #include "specialpages.h"
 #include "configure.h"
 
+#define MAXPACKET29TYPES 3
+
 namespace vbit
 {
 
@@ -44,7 +46,9 @@ class PacketMag : public PacketSource
       uint8_t _thisRow; // The current line that we are outputting
       TTXLine* _lastTxt; // The text of the last row that we fetched. Used for enhanced packets
 
-
+      TTXLine* _packet29[MAXPACKET29TYPES]; // space to store magazine related enhancement packets
+      TTXLine* _nextPacket29;
+      int _nextPacket29DC;
 };
 
 }
