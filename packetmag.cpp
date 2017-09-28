@@ -235,36 +235,45 @@ Packet* PacketMag::GetPacket(Packet* p)
             }
         }
         
-        tempLine = _page->GetTxRow(29);
-        while (tempLine != nullptr)
+        // Assemble the header. (we can simplify this code or leave it for the optimiser)
+        thisPageNum=_page->GetPageNumber();
+        thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
+        
+        if ((thisPageNum & 0xFF) == 0xFF)
         {
-            // TODO: we don't want to do this every time the page is encountered. We should do it once then check to see if it has changed
-            // Other issues include: multiple pages with packets 29 will overwrite each other, and when the page is deleted the packets will remain.
-            //std::cerr << "page includes packet 29" << std::endl;
-            switch (tempLine->GetCharAt(0))
+            // only read packet 29 from page mFF
+            //std::cerr << "updating packet 29" << std::endl;
+            // TODO: we needn't do this every time round the carousel
+            tempLine = _page->GetTxRow(29);
+            while (tempLine != nullptr)
             {
-                case '@':
-                    Packet29Index = 0;
-                    break;
-                case 'A':
-                    Packet29Index = 1;
-                    break;
-                case 'D':
-                    Packet29Index = 2;
-                    break;
-                default:
-                    Packet29Index = -1;
+                // TODO: when the page is deleted the packets will remain.
+                //std::cerr << "page includes packet 29" << std::endl;
+                switch (tempLine->GetCharAt(0))
+                {
+                    case '@':
+                        Packet29Index = 0;
+                        break;
+                    case 'A':
+                        Packet29Index = 1;
+                        break;
+                    case 'D':
+                        Packet29Index = 2;
+                        break;
+                    default:
+                        Packet29Index = -1;
+                }
+                if (Packet29Index > -1)
+                {
+                    if (_packet29[Packet29Index]==nullptr)
+                        _packet29[Packet29Index]=new TTXLine(tempLine->GetLine(),true); // Didn't exist before
+                    else
+                        _packet29[Packet29Index]->Setm_textline(tempLine->GetLine(), true);
+                }
+                
+                tempLine = tempLine->GetNextLine();
+                // loop until every row 29 is copied
             }
-            if (Packet29Index > -1)
-            {
-                if (_packet29[Packet29Index]==nullptr)
-                    _packet29[Packet29Index]=new TTXLine(tempLine->GetLine(),true); // Didn't exist before
-                else
-                    _packet29[Packet29Index]->Setm_textline(tempLine->GetLine(), true);
-            }
-            
-            tempLine = tempLine->GetNextLine();
-            // loop until every row 29 is copied
         }
         
         if (!(thisStatus & 0x8000))
@@ -272,10 +281,6 @@ Packet* PacketMag::GetPacket(Packet* p)
             _page=nullptr;
             return nullptr;
         }
-
-        // Assemble the header. (we can simplify this code or leave it for the optimiser)
-        thisPageNum=_page->GetPageNumber();
-        thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
 
         // p=new Packet();
         p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!

@@ -917,7 +917,7 @@ int TTXPage::GetLanguage()
 
 void TTXPage::SetPageNumber(int page)
 {
-    if ((page<0x10000) || (page>0x8ff99) || (page&0xFF00) == 0xFF00)
+    if ((page<0x10000) || (page>0x8ff99))
     {
         std::cerr << "[TTXPage::SetPageNumber] Page number is out of range: " << std::hex << page << std::endl;
     }
