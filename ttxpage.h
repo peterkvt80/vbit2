@@ -200,10 +200,15 @@ class TTXPage
 
         inline bool Loaded() const {return m_Loaded;};
 
+        // get the function or coding of a page as the enum
         PageCoding GetPageCoding() {return m_pagecoding;}
         PageFunction GetPageFunction() {return m_pagefunction;}
+        
+        // set the page function or coding based on their integer representations in ETS 300 706 section 9.4.2.1
+        void SetPageFunctionInt(int pageFunction);
+        void SetPageCodingInt(int pageCoding);
 
-        bool Special() {return (m_pagefunction == GPOP || m_pagefunction == POP || m_pagefunction == GDRCS || m_pagefunction == DRCS || m_pagefunction == MOT || m_pagefunction == MIP);} // more convenient way to tell if a page is special.
+        bool Special() {return (m_pagefunction == GPOP || m_pagefunction == POP || m_pagefunction == GDRCS || m_pagefunction == DRCS || m_pagefunction == MOT || m_pagefunction == MIP);} // more convenient way to tell if a page is 'special'.
 
         /** @todo migrate this deep copy into the standard copy constructor
          * Warning. Only deep copies the top page. Not for carousels (yet)

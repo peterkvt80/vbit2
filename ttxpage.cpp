@@ -429,8 +429,8 @@ int TTXPage::findPageNumber(char* buf)
 
 bool TTXPage::m_LoadTTI(std::string filename)
 {
-    const std::string cmd[]={"DS","SP","DE","CT","PN","SC","PS","MS","OL","FL","RD","RE"};
-    const int cmdCount = 12; // There are 12 possible commands, maybe DT and RT too on really old files
+    const std::string cmd[]={"DS","SP","DE","CT","PN","SC","PS","MS","OL","FL","RD","RE","PF"};
+    const int cmdCount = 13; // There are 13 possible commands, maybe DT and RT too on really old files
     unsigned int lineNumber;
     int lines=0;
     // Open the file
@@ -571,6 +571,16 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     std::getline(filein, line); // TODO: Implement this
                     m_region=std::strtol(line.c_str(), &ptr, 16);
                     break;
+                case 12 : // "PF"; - not in the tti spec, page function and coding
+                    std::getline(filein, line);
+                    if (line.length()==3)
+                    {
+                        SetPageFunctionInt(std::strtol(line.substr(0,1).c_str(), &ptr, 16));
+                        SetPageCodingInt(std::strtol(line.substr(2,1).c_str(), &ptr, 16));
+                    }
+                    else
+                        std::cerr << "invalid page function/coding " << line << std::endl;
+                    break;
                 default:
                     std::cerr << "Command not understood " << line << std::endl;
                 } // switch
@@ -674,60 +684,9 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 			int triplet = line.at(1) & 0x3F;
 			triplet |= (line.at(2) & 0x3F) << 6;
 			triplet |= (line.at(3) & 0x3F) << 12; // first triplet contains page function and coding
-
-			switch ((triplet & 0x70) >> 4){
-				default: // treat codings we don't know yet as normal text.
-				case 0:
-					m_pagecoding = CODING_7BIT_TEXT;
-					break;
-				case 1:
-					m_pagecoding = CODING_8BIT_DATA;
-					break;
-				case 2:
-					m_pagecoding = CODING_13_TRIPLETS;
-					break;
-				case 3:
-					m_pagecoding = CODING_HAMMING_8_4;
-					break;
-			}
-
-			switch (triplet & 0x0F){
-				default: // treat page functions we don't know as level one pages
-				case 0:
-					m_pagefunction = LOP;
-					break;
-				case 2:
-					m_pagefunction = GPOP;
-					break;
-				case 3:
-					m_pagefunction = POP;
-					break;
-				case 4:
-					m_pagefunction = GDRCS;
-					break;
-				case 5:
-					m_pagefunction = DRCS;
-					break;
-				case 7:
-					m_pagefunction = MOT;
-					break;
-				case 8:
-					m_pagefunction = MIP;
-					break;
-				case 9:
-					m_pagefunction = BTT;
-					break;
-				case 10:
-					m_pagefunction = AIT;
-					break;
-				case 11:
-					m_pagefunction = MPT;
-					break;
-				case 12:
-					m_pagefunction = MPT_EX;
-					break;
-			}
-
+            // function and coding packet 28 override values set by an earlier PF row
+			SetPageCodingInt((triplet & 0x70) >> 4);
+			SetPageFunctionInt(triplet & 0x0F);
 			m_region = 0; // ignore any region from RE line as X/28 sets the character set
 		}
 	}
@@ -967,25 +926,6 @@ void TTXPage::SetPageNumber(int page)
     //std::cerr << "PageNumber changed from " << std::hex << m_PageNumber << " to ";
     m_PageNumber=page;
     //std::cerr << std::hex << m_PageNumber << std::endl;
-
-    // compare page tens and units to reserved page numbers and set page function and coding as required
-    switch ((page >> 8) & 0xFF)
-    {
-        case 0xF0: // Basic Top Table
-            m_pagefunction = BTT;
-            m_pagecoding = CODING_HAMMING_8_4;
-            break;
-
-        case 0xFD: // Magazine Organisation Table
-            m_pagefunction = MOT;
-            m_pagecoding = CODING_HAMMING_8_4;
-            break;
-
-        case 0xFE: // Magazine Inventory Page
-            m_pagefunction = MIP;
-            m_pagecoding = CODING_HAMMING_8_4;
-            break;
-    }
 }
 
 int TTXPage::GetFastextLink(int link)
@@ -1056,4 +996,63 @@ void TTXPage::Copy(TTXPage* src)
 	this->m_SubPage=nullptr;  // (Might want to copy carousels but this is only used for subtitles so far)
   // Copy everything else
   this->CopyMetaData(src);
+}
+
+void TTXPage::SetPageFunctionInt(int pageFunction)
+{
+    switch (pageFunction){
+        default: // treat page functions we don't know as level one pages
+        case 0:
+            m_pagefunction = LOP;
+            break;
+        case 2:
+            m_pagefunction = GPOP;
+            break;
+        case 3:
+            m_pagefunction = POP;
+            break;
+        case 4:
+            m_pagefunction = GDRCS;
+            break;
+        case 5:
+            m_pagefunction = DRCS;
+            break;
+        case 6:
+            m_pagefunction = MOT;
+            break;
+        case 7:
+            m_pagefunction = MIP;
+            break;
+        case 8:
+            m_pagefunction = BTT;
+            break;
+        case 9:
+            m_pagefunction = AIT;
+            break;
+        case 10:
+            m_pagefunction = MPT;
+            break;
+        case 11:
+            m_pagefunction = MPT_EX;
+            break;
+    }
+}
+
+void TTXPage::SetPageCodingInt(int pageCoding)
+{
+    switch (pageCoding){
+        default: // treat codings we don't know yet as normal text.
+        case 0:
+            m_pagecoding = CODING_7BIT_TEXT;
+            break;
+        case 1:
+            m_pagecoding = CODING_8BIT_DATA;
+            break;
+        case 2:
+            m_pagecoding = CODING_13_TRIPLETS;
+            break;
+        case 3:
+            m_pagecoding = CODING_HAMMING_8_4;
+            break;
+    }
 }

@@ -199,11 +199,11 @@ Packet* PacketMag::GetPacket(Packet* p)
         if (_page->Special() != _page->GetSpecialFlag()){
             _page->SetSpecialFlag(_page->Special());
             if (_page->Special()){
-                std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
+                //std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->addPage(_page);
                 return nullptr;
             } else {
-                std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
+                //std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->deletePage(_page);
             }
         }
