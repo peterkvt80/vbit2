@@ -25,7 +25,6 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
   }
   if (_pageSet->size()>0)
   {
-    //std::cerr << "[Mag::Mag] enters. page size=" << _pageSet->size() << std::endl;
     _it=_pageSet->begin();
     //_it->DebugDump();
     _page=&*_it;
@@ -151,7 +150,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
                 //_outp("c");
                 _page->StepNextSubpage();
-                //std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
+                //std::cerr << "[PacketMag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
             }
             else  // No carousel? Take the next page in the main sequence
             {
@@ -228,15 +227,15 @@ Packet* PacketMag::GetPacket(Packet* p)
             }
         }
         
-        // the function of a page changes
+        // the page has stopped being special, or become special without getting its flag set
         if (_page->Special() != _page->GetSpecialFlag()){
             _page->SetSpecialFlag(_page->Special());
             if (_page->Special()){
-                //std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
+                std::cerr << "[PacketMag::GetPacket] page became special " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->addPage(_page);
                 return nullptr;
             } else {
-                //std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
+                std::cerr << "[PacketMag::GetPacket] page became normal " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->deletePage(_page);
             }
         }
@@ -345,7 +344,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 val.replace(1,1,1,(triplet & 0x3F) | 0x40);
                 val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
                 val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
-                //std::cerr << "[Mag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
+                //std::cerr << "[PacketMag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
                 p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
                 _lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
                 _state=PACKETSTATE_PACKET26;
@@ -412,7 +411,7 @@ Packet* PacketMag::GetPacket(Packet* p)
         //_outp("J");
         if (_lastTxt->IsBlank() && (_configure->GetRowAdaptive() || _page->GetPageFunction() != LOP)) // If a row is empty then skip it if row adaptive mode on, or not a level 1 page
         {
-          // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
+          // std::cerr << "[PacketMag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
           return nullptr;
         }
         else

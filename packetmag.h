@@ -22,10 +22,20 @@ class PacketMag : public PacketSource
     /** Default destructor */
     virtual ~PacketMag();
 
+    /** Access _pageSet
+    * \return The current value of _pageSet
+    */
+    std::list<TTXPageStream>*  Get_pageSet() { return _pageSet; }
+    
+    SpecialPages* GetSpecialPages() { return _specialPages; }
+    Carousel* GetCarousel() { return _carousel; }
+    
     /** Get the next packet
      *  @return The next packet OR if IsReady() would return false then a filler packet
      */
     Packet* GetPacket(Packet* p) override;
+    
+    void SetPriority(uint8_t priority) { _priority = priority; }
 
     bool IsReady(bool force=false);
 

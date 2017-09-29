@@ -18,13 +18,13 @@ Service::Service(Configure *configure, PageList *pageList) :
   // @todo Put priority into config and add commands to allow updates.
   uint8_t priority[8]={9,3,3,6,3,3,5,6};	// 1=High priority,9=low. Note: priority[0] is mag 8
 
-  vbit::Mag **magList=_pageList->GetMagazines();
+  vbit::PacketMag **magList=_pageList->GetMagazines();
   // Register all the packet sources
   for (uint8_t mag=0;mag<8;mag++)
   {
-    vbit::Mag* m=magList[mag];
-    std::list<TTXPageStream>* p=m->Get_pageSet();
-    _register(new PacketMag(mag,p,_configure,priority[mag]));
+    vbit::PacketMag* m=magList[mag];
+    m->SetPriority(priority[mag]); // set the mags to the desired priorities
+    _register(m); // use the PacketMags created in pageList rather than duplicating them
   }
   // Add packet sources for subtitles, databroadcast and packet 830
   _register(_subtitle=new PacketSubtitle(_configure));
@@ -144,7 +144,6 @@ void Service::_updateEvents()
     if (_fieldCounter>=50)
     {
       _fieldCounter=0;
-      seconds++;
       // std::cerr << "Seconds=" << seconds << std::endl;
       // Could implement a seconds counter here if we needed it
       if (seconds%10==0){ // how often do we want to trigger sending special packets?
@@ -154,6 +153,7 @@ void Service::_updateEvents()
           (*iterator)->SetEvent(EVENT_PACKET_29);
         }
       }
+      seconds++;
       // if (seconds>30) exit(0); // JUST FOR DEBUGGING!!!!  Must remove
     }
     // New field, so set the FIELD event in all the sources.

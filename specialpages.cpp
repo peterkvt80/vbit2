@@ -20,10 +20,8 @@ void SpecialPages::addPage(TTXPageStream* p)
 
 void SpecialPages::deletePage(TTXPageStream* p)
 {
-    if (*_iter == p)
-        _iter--; // if iterator is pointing at this page wind it back
     _specialPagesList.remove(p);
-    _page = nullptr;
+    ResetIter();
 }
 
 TTXPageStream* SpecialPages::NextPage()

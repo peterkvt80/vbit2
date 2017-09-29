@@ -1,4 +1,5 @@
 /// @todo THIS MODULE WILL BE REDUNDANT AUG 2017
+// Nothing using this as of 2017-09-27
 
 #include "mag.h"
 

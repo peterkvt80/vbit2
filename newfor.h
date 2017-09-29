@@ -9,7 +9,6 @@
 
 //@todo Update these to the VBIT2 equivalents
 //#include "buffer.h"
-//#include "mag.h"
 //#include "hamm.h"
 
 

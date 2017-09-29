@@ -59,19 +59,15 @@ int PageList::LoadPageList(std::string filepath)
 	// How many files did we accept?
 	for (int i=0;i<8;i++)
   {
-    //std::cerr << "Page list count[" << i << "]=" << _pageList[i].size() << std::endl;
-    // Initialise a magazine streamer with a page list
-/*
-    std::list<TTXPageStream> pageSet;
-    pageSet=_pageList[i];
-    _mag[i]=new vbit::Mag(pageSet);
-*/
-    _mag[i]=new vbit::Mag(i, &_pageList[i], _configure);
+    _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
   }
+  
+  AddSpecialPagesAndCarousels(); // add any special pages that were loaded in
+  
   // Just for testing
   if (1) for (int i=0;i<8;i++)
   {
-    vbit::Mag* m=_mag[i];
+    vbit::PacketMag* m=_mag[i];
     std::list<TTXPageStream>* p=m->Get_pageSet();
     for (std::list<TTXPageStream>::const_iterator it=p->begin();it!=p->end();++it)
     {
@@ -363,6 +359,28 @@ void PageList::DeleteOldPages()
   }
 }
 
+void PageList::AddSpecialPagesAndCarousels()
+{
+  // moves any special pages and carousels into the magazine's _specialPages and _carousels lists immediately so that it doesn't have to wait for the page to next be transmitted
+  for (int mag=0;mag<8;mag++)
+  {
+    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    {
+        TTXPageStream* ptr;
+        ptr=&(*p);
+        if (ptr->IsCarousel() && !(ptr->GetCarouselFlag()))
+        {
+            ptr->SetCarouselFlag(ptr->IsCarousel());
+            _mag[mag]->GetCarousel()->addPage(ptr);
+        }
+        if (ptr->Special() && !(ptr->GetSpecialFlag()))
+        {
+            ptr->SetSpecialFlag(true);
+            _mag[mag]->GetSpecialPages()->addPage(ptr);
+        }
+    }
+  }
+}
 
 /* Want this to happen in the Service thread.
       // Not the best idea, to check for deletes here

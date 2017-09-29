@@ -10,7 +10,7 @@
 
 #include "configure.h"
 #include "ttxpagestream.h"
-#include "mag.h"
+#include "packetmag.h"
 
 namespace ttx
 {
@@ -33,7 +33,7 @@ public:
    */
 	int LoadPageList(std::string filepath);
 
-	vbit::Mag **GetMagazines(){vbit::Mag **p=_mag;return p;};
+	vbit::PacketMag **GetMagazines(){vbit::PacketMag **p=_mag;return p;};
 
   /** Return the page object that was loaded from <filename>
    * @param filename The filename of the page we are looking for.
@@ -66,6 +66,10 @@ public:
   /** Delete all pages that no longer exist
    */
 	void DeleteOldPages();
+    
+  /** Get special pages into a list in magazine
+   */
+    void AddSpecialPagesAndCarousels();
 
   /** \brief Iterate through all pages
    *  \return Returns the next page or nullptr if we are at the end
@@ -96,7 +100,7 @@ public:
 private:
 	Configure* _configure; // The configuration object
 	std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
-	vbit::Mag* _mag[8];
+	vbit::PacketMag* _mag[8];
 
 	// iterators through selected pages. (use the same iterator for D command and MD, L etc.)
 	uint8_t _iterMag;  /// Magazine number for the iterator

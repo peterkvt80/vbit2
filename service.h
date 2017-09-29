@@ -10,7 +10,6 @@
 #include "configure.h"
 #include "pagelist.h"
 #include "packet.h"
-// #include "mag.h" // @todo THIS WILL BE REDUNDANT
 #include <packetsource.h>
 #include <packetmag.h>
 #include <packet830.h>
