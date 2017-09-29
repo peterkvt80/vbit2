@@ -21,6 +21,8 @@ void SpecialPages::addPage(TTXPageStream* p)
 void SpecialPages::deletePage(TTXPageStream* p)
 {
     _specialPagesList.remove(p);
+    _page = nullptr;
+    _iter--; // roll back iterator in case this was the last in list
 }
 
 TTXPageStream* SpecialPages::NextPage()

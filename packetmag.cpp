@@ -99,6 +99,12 @@ Packet* PacketMag::GetPacket(Packet* p)
         {
             _page=_specialPages->NextPage();
             
+            if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
+            {
+                _specialPages->deletePage(_page);
+                return nullptr;
+            }
+            
             if (_page)
             {
                 // got a special page
@@ -108,7 +114,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                     // Magazine Inventory Page
                     ClearEvent(EVENT_FIELD); // enforce 20ms page erasure interval
                 }
-                    
+                
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
                 thisStatus = _page->GetPageStatus() & 0x8000; // get transmit flag
                 thisStatus |= 0x0010;
