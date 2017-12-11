@@ -33,8 +33,8 @@
 using namespace vbit;
 using namespace ttx;
 
-Command::Command(const uint32_t port=5570, PacketSubtitle* subtitle=nullptr, PageList *pageList=nullptr) :
-	_portNumber(port),
+Command::Command(Configure *configure, PacketSubtitle* subtitle=nullptr, PageList *pageList=nullptr) :
+	_portNumber(configure->GetCommandPort()),
 	_client(subtitle, pageList)
 {
     // Constructor
