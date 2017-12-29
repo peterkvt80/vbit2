@@ -298,7 +298,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 
         links=_page->GetLinkSet();
         if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
-            _state=PACKETSTATE_FASTEXT; // a non zero FL row will override an OL,27 row
+            _state=PACKETSTATE_FASTEXT;
             break;
         } else {
             _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
@@ -434,8 +434,8 @@ Packet* PacketMag::GetPacket(Packet* p)
       p->SetMRAG(_magNumber,27);
       links=_page->GetLinkSet();
       p->Fastext(links,_magNumber);
-      _lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
-      _state=PACKETSTATE_PACKET28;
+      _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
+      _state=PACKETSTATE_PACKET27; // makes no attempt to prevent an FL row and an X/27/0 both being sent
 //      std::cerr << "PACKETSTATE_FASTEXT exits" << std::endl;
       break;
 
