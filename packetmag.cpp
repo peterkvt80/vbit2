@@ -312,7 +312,10 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
                 //std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
                 //_lastTxt->Dump();
-                p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_7BIT_TEXT); // TODO coding for navigation packets
+                if ((_lastTxt->GetLine()[0] & 0xF) > 3) // designation codes > 3
+                    p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_13_TRIPLETS); // enhancement linking
+                else
+                    p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_HAMMING_8_4); // navigation packets (TODO: CRC in DC=0 is wrong)
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
             }
