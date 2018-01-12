@@ -211,13 +211,15 @@ Packet* PacketMag::GetPacket(Packet* p)
             if (_page->IsCarousel())
             {
                 thisSubcode=_page->GetCarouselPage()->GetSubCode();
+                thisStatus=_page->GetCarouselPage()->GetPageStatus();
             }
             else
             {
                 thisSubcode=_page->GetSubCode();
+                thisStatus=_page->GetPageStatus();
             }
             
-            thisStatus=_page->GetPageStatus();
+            
             
             // If the page has changed, then set the update bit.
             // This is by request of Nate. It isn't a feature required in ETSI
