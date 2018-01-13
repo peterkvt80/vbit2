@@ -244,6 +244,9 @@ Packet* PacketMag::GetPacket(Packet* p)
             _page=nullptr;
             return nullptr;
         }
+        
+        // clear a flag we use to prevent duplicated X/28/0 packets
+        _hasX28Region = false;
 
         // p=new Packet();
         p->Header(_magNumber,thisPageNum,thisSubcode,_status);// loads of stuff to do here!
@@ -288,14 +291,15 @@ Packet* PacketMag::GetPacket(Packet* p)
                 //_lastTxt->Dump();
 
                 p->SetRow(_magNumber, 28, _lastTxt->GetLine(), CODING_13_TRIPLETS);
+                if ((_lastTxt->GetCharAt(0) & 0xF) == 0 || (_lastTxt->GetCharAt(0) & 0xF) == 4)
+                    _hasX28Region = true; // don't generate an X/28/0 for a RE line
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
             }
-            else if (_region != _magRegion)
+            else if (!(_hasX28Region) && (_region != _magRegion))
             {
                 // create X/28/0 packet for pages which have a region set with RE in file
-                // it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
-
+                
                 // this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
                 std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
                 int NOS = (_status & 0x380) >> 7;
@@ -443,4 +447,13 @@ void PacketMag::SetPacket29(TTXLine *lines[MAXPACKET29TYPES]){
 	//std::cerr << "[PacketMag::setPacket29]" << std::endl;
 	for (int i=0;i<MAXPACKET29TYPES;i++)
 		_packet29[i] = lines[i];
+	
+	if (_packet29[0])
+	{
+		_magRegion = ((_packet29[0]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[0]->GetCharAt(3) & 0x3) << 2);
+	} 
+	else if (_packet29[2])
+	{
+		_magRegion = ((_packet29[2]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[2]->GetCharAt(3) & 0x3) << 2);
+	}
 }

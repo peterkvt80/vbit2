@@ -685,7 +685,6 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
             // function and coding packet 28 override values set by an earlier PF row
 			SetPageCodingInt((triplet & 0x70) >> 4);
 			SetPageFunctionInt(triplet & 0x0F);
-			m_region = 0; // ignore any region from RE line as X/28 sets the character set
 		}
 	}
 

@@ -64,6 +64,7 @@ class PacketMag : public PacketSource
       int _magRegion;
       int _status;
       int _region;
+	  bool _hasX28Region;
 };
 
 }
