@@ -33,29 +33,27 @@ TTXPageStream* SpecialPages::NextPage()
     }
     else
     {
-        if (_page->GetCarouselFlag())
+        if (_page->IsCarousel())
         {
             _page->StepNextSubpageNoLoop();
-            
             if (_page->GetCarouselPage() != NULL)
             {
                 return _page;
             }
-            else
-            {
-                // looped through all the carousel pages
-                 _page->StepNextSubpage(); // loop back to beginning of carousel
-            }
         }
-        
+
         ++_iter;
         _page = *_iter;
     }
-
+    
     if (_iter == _specialPagesList.end())
     {
         _page = nullptr;
     }
+	else if (_page->IsCarousel() && _page->GetCarouselPage() == NULL)
+	{
+		_page->StepNextSubpageNoLoop(); // ensure we don't point at a null subpage
+	}
     
     return _page;
 }

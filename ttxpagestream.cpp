@@ -3,7 +3,7 @@
 TTXPageStream::TTXPageStream() :
      _isCarousel(false),
      _transitionTime(0),
-		 _CarouselPage(this),
+		 _CarouselPage(NULL),
 		 _fileStatus(NEW),
          _isSpecial(false)
 {
@@ -14,7 +14,7 @@ TTXPageStream::TTXPageStream(std::string filename) :
      TTXPage(filename),
      _isCarousel(false),
      _transitionTime(0),
-		 _CarouselPage(this),
+		 _CarouselPage(NULL),
 		 _fileStatus(NEW),
          _isSpecial(false)
 {
@@ -52,8 +52,10 @@ TTXLine* TTXPageStream::GetTxRow(uint8_t row)
 
 void TTXPageStream::StepNextSubpageNoLoop()
 {
-    if (_CarouselPage==NULL) _CarouselPage=this;
-    _CarouselPage=_CarouselPage->Getm_SubPage();
+    if (_CarouselPage==NULL)
+        _CarouselPage=this;
+    else
+        _CarouselPage=_CarouselPage->Getm_SubPage();
 }
 
 void TTXPageStream::StepNextSubpage()

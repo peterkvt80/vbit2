@@ -113,19 +113,22 @@ Packet* PacketMag::GetPacket(Packet* p)
                     ClearEvent(EVENT_FIELD); // enforce 20ms page erasure interval
                 }
                 
-                /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
-                _status = _page->GetPageStatus() & 0x8000; // get transmit flag
-                _status |= 0x0010;
-                
-                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
                 if (_page->IsCarousel())
                 {
-                    thisSubcode=(_page->GetCarouselPage()->GetSubCode()) & 0x000F; // will break if carousel has more than 16 subpages but that would be out of spec anyway.
+                    _status = _page->GetCarouselPage()->GetPageStatus() & 0x8000; // get transmit flag
+                    _region = _page->GetCarouselPage()->GetRegion();
+                    thisSubcode=_page->GetCarouselPage()->GetSubCode() & 0x000F; // will break if carousel has more than 16 subpages but that would be out of spec anyway.
                 }
                 else
                 {
+                    _status = _page->GetPageStatus() & 0x8000; // get transmit flag
+                    _region = _page->GetRegion();
                     thisSubcode = 0; // no subpages
                 }
+                
+                /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
+                _status |= 0x0010;
+                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
                 thisSubcode|=0x2900; // Set the last X/26 row as the final packet for now but this is WRONG
             } else {
                 // got to the end of the special pages
