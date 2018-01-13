@@ -113,11 +113,11 @@ void FileMonitor::run()
             // lock
             p->LoadPage(name); // What if this fails? We can see the bool. What to do ?
             p->GetPageCount(); // renumber the subpages
+			int mag=(p->GetPageNumber() >> 16) & 0x7;
             if (p->IsCarousel() && !(p->GetCarouselFlag()))
             {
                 // page has become a carousel so add it to its mag's carousel list
                 p->SetCarouselFlag(p->IsCarousel());
-                int mag=(p->GetPageNumber() >> 16) & 0x7;
                 _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
                 std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << p->GetPageNumber() << std::endl;
             }
@@ -125,10 +125,15 @@ void FileMonitor::run()
             {
                 // page has become special so add it to its mag's special pages list
                 p->SetSpecialFlag(p->Special());
-                int mag=(p->GetPageNumber() >> 16) & 0x7;
                 _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(p);
                 std::cerr << "[FileMonitor::run] page is now special " << std::hex << p->GetPageNumber() << std::endl;
             }
+			if (_pageList->CheckForPacket29(p))
+			{
+				std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
+				_pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
+			}
+			
             p->SetModifiedTime(attrib.st_mtime);
             // unlock
 
@@ -145,18 +150,22 @@ void FileMonitor::run()
                         p->SetCarouselFlag(p->IsCarousel());
                         p->GetPageCount(); // renumber the subpages
                         _pageList->AddPage(p);
+						int mag=(p->GetPageNumber() >> 16) & 0x7;
                         if (p->GetCarouselFlag())
                         {
-                            int mag=(p->GetPageNumber() >> 16) & 0x7;
                             _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
                             std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << p->GetPageNumber() << std::endl;
                         }
                         if (p->GetSpecialFlag())
                         {
-                            int mag=(p->GetPageNumber() >> 16) & 0x7;
                             _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(p);
                             std::cerr << "[FileMonitor::run] new page is special " << std::hex << p->GetPageNumber() << std::endl;
                         }
+						if (_pageList->CheckForPacket29(p))
+						{
+							std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
+							_pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
+						}
 					}
 					else
 						std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;

@@ -16,7 +16,8 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _state(PACKETSTATE_HEADER),
     _thisRow(0),
     _lastTxt(nullptr),
-    _nextPacket29DC(0)
+    _nextPacket29DC(0),
+    _magRegion(0)
 {
   //ctor
   for (int i=0;i<MAXPACKET29TYPES;i++)
@@ -47,8 +48,6 @@ Packet* PacketMag::GetPacket(Packet* p)
   int thisPageNum;
   unsigned int thisSubcode;
   int* links=NULL;
-  TTXLine* tempLine;
-  int Packet29Index;
   
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
 
@@ -240,43 +239,6 @@ Packet* PacketMag::GetPacket(Packet* p)
         thisPageNum=_page->GetPageNumber();
         thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
         
-        if ((thisPageNum & 0xFF) == 0xFF)
-        {
-            // only read packet 29 from page mFF
-            //std::cerr << "updating packet 29" << std::endl;
-            // TODO: we needn't do this every time round the carousel
-            tempLine = _page->GetTxRow(29);
-            while (tempLine != nullptr)
-            {
-                // TODO: when the page is deleted the packets will remain.
-                //std::cerr << "page includes packet 29" << std::endl;
-                switch (tempLine->GetCharAt(0))
-                {
-                    case '@':
-                        Packet29Index = 0;
-                        break;
-                    case 'A':
-                        Packet29Index = 1;
-                        break;
-                    case 'D':
-                        Packet29Index = 2;
-                        break;
-                    default:
-                        Packet29Index = -1;
-                }
-                if (Packet29Index > -1)
-                {
-                    if (_packet29[Packet29Index]==nullptr)
-                        _packet29[Packet29Index]=new TTXLine(tempLine->GetLine(),true); // Didn't exist before
-                    else
-                        _packet29[Packet29Index]->Setm_textline(tempLine->GetLine(), true);
-                }
-                
-                tempLine = tempLine->GetNextLine();
-                // loop until every row 29 is copied
-            }
-        }
-        
         if (!(_status & 0x8000))
         {
             _page=nullptr;
@@ -329,7 +291,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
             }
-            else if (_region)
+            else if (_region != _magRegion)
             {
                 // create X/28/0 packet for pages which have a region set with RE in file
                 // it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
@@ -476,3 +438,9 @@ bool PacketMag::IsReady(bool force)
     */
   return result;
 };
+
+void PacketMag::SetPacket29(TTXLine *lines[MAXPACKET29TYPES]){
+	//std::cerr << "[PacketMag::setPacket29]" << std::endl;
+	for (int i=0;i<MAXPACKET29TYPES;i++)
+		_packet29[i] = lines[i];
+}

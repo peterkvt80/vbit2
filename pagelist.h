@@ -96,11 +96,17 @@ public:
    *  \return the initial page or nullptr if there is no page
    */
   TTXPageStream* FirstPage();
+  
+  bool CheckForPacket29(TTXPageStream* page);
+  
+  TTXLine** GetPacket29(int mag){ return _magPacket29[mag];};
 
 private:
 	Configure* _configure; // The configuration object
 	std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
 	vbit::PacketMag* _mag[8];
+	
+	TTXLine* _magPacket29[8][MAXPACKET29TYPES];
 
 	// iterators through selected pages. (use the same iterator for D command and MD, L etc.)
 	uint8_t _iterMag;  /// Magazine number for the iterator

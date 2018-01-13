@@ -38,6 +38,8 @@ class PacketMag : public PacketSource
     void SetPriority(uint8_t priority) { _priority = priority; }
 
     bool IsReady(bool force=false);
+	
+	void SetPacket29(TTXLine *lines[MAXPACKET29TYPES]);
 
   protected:
 
@@ -59,6 +61,7 @@ class PacketMag : public PacketSource
       TTXLine* _packet29[MAXPACKET29TYPES]; // space to store magazine related enhancement packets
       TTXLine* _nextPacket29;
       int _nextPacket29DC;
+      int _magRegion;
       int _status;
       int _region;
 };

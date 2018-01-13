@@ -9,8 +9,14 @@ PageList::PageList(Configure *configure) :
 	_iterMag(0),
 	_iterSubpage(nullptr)
 {
-  for (int i=0;i<8;i++)
-      _mag[i]=nullptr;
+	for (int i=0;i<8;i++)
+	{
+		_mag[i]=nullptr;
+		for (int j=0;j<MAXPACKET29TYPES;j++)
+		{
+			_magPacket29[i][j]=nullptr;
+		}
+	}
 	if (_configure==nullptr)
 	{
 		std::cerr << "NULL configuration object" << std::endl;
@@ -46,10 +52,12 @@ int PageList::LoadPageList(std::string filepath)
       // If the page loaded, then push it into the appropriate magazine
       if (q->Loaded())
       {
-					q->GetPageCount(); // Use for the side effect of renumbering the subcodes
+        q->GetPageCount(); // Use for the side effect of renumbering the subcodes
 
-          int mag=(q->GetPageNumber() >> 16) & 0x7;
-          _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
+        int mag=(q->GetPageNumber() >> 16) & 0x7;
+        _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
+		if (CheckForPacket29(q))
+			std::cerr << "[PageList::LoadPageList] found packet 29" << std::endl;
       }
     }
 	}
@@ -60,7 +68,9 @@ int PageList::LoadPageList(std::string filepath)
 	for (int i=0;i<8;i++)
   {
     _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
+	_mag[i]->SetPacket29(_magPacket29[i]);
   }
+  
   
   AddSpecialPagesAndCarousels(); // add any special pages that were loaded in
   
@@ -84,10 +94,54 @@ int PageList::LoadPageList(std::string filepath)
 
 void PageList::AddPage(TTXPageStream* page)
 {
-		int mag=(page->GetPageNumber() >> 16) & 0x7;
-		_pageList[mag].push_back(*page);
+	int mag=(page->GetPageNumber() >> 16) & 0x7;
+	_pageList[mag].push_back(*page);
+	if (CheckForPacket29(page))
+	{
+		std::cerr << "[PageList::AddPage] found packet 29" << std::endl;
+		_mag[mag]->SetPacket29(_magPacket29[mag]);
+	}
 }
 
+bool PageList::CheckForPacket29(TTXPageStream* page)
+{
+	int Packet29Flag = false;
+	int mag=(page->GetPageNumber() >> 16) & 0x7;
+	if (((page->GetPageNumber() >> 8) & 0xFF) == 0xFF)
+	{
+		// only read packet 29 from page mFF
+		
+		// clear any previous packet 29
+		_magPacket29[mag][0] = nullptr;
+		_magPacket29[mag][1] = nullptr;
+		_magPacket29[mag][2] = nullptr;
+		TTXLine* tempLine = page->GetTxRow(29);
+		while (tempLine != nullptr)
+		{
+			// TODO: when the page is deleted the packets will remain.
+			//std::cerr << "page includes packet 29" << std::endl;
+			switch (tempLine->GetCharAt(0))
+			{
+				case '@':
+					Packet29Flag = true;
+					_magPacket29[mag][0] = new TTXLine(tempLine->GetLine(), true);
+					break;
+				case 'A':
+					Packet29Flag = true;
+					_magPacket29[mag][1] = new TTXLine(tempLine->GetLine(), true);
+					break;
+				case 'D':
+					Packet29Flag = true;
+					_magPacket29[mag][2] = new TTXLine(tempLine->GetLine(), true);
+					break;
+			}
+			
+			tempLine = tempLine->GetNextLine();
+			// loop until every row 29 is copied
+		}
+	}
+	return Packet29Flag;
+}
 
 // Find a page by filename
 TTXPageStream* PageList::Locate(std::string filename)
@@ -351,8 +405,17 @@ void PageList::DeleteOldPages()
       ptr=&(*p);
       if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
       {
-				// std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
-				// Pages marked here get deleted in the Service thread
+		if (((ptr->GetPageNumber() >> 8) & 0xFF) == 0xFF)
+		{
+			// page mFF - make sure packet 29 is removed
+			_magPacket29[mag][0] = nullptr;
+			_magPacket29[mag][1] = nullptr;
+			_magPacket29[mag][2] = nullptr;
+			_mag[mag]->SetPacket29(_magPacket29[mag]);
+		}
+		
+		// std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
+		// Pages marked here get deleted in the Service thread
         ptr->SetState(TTXPageStream::MARKED);
       }
     }
