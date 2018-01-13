@@ -46,7 +46,6 @@ Packet* PacketMag::GetPacket(Packet* p)
   // std::cerr << "[PacketMag::GetPacket] mag=" << _magNumber << " state=" << _state << std::endl;
   int thisPageNum;
   unsigned int thisSubcode;
-  int thisStatus;
   int* links=NULL;
   TTXLine* tempLine;
   int Packet29Index;
@@ -115,8 +114,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 }
                 
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
-                thisStatus = _page->GetPageStatus() & 0x8000; // get transmit flag
-                thisStatus |= 0x0010;
+                _status = _page->GetPageStatus() & 0x8000; // get transmit flag
+                _status |= 0x0010;
                 
                 /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
                 if (_page->IsCarousel())
@@ -211,12 +210,14 @@ Packet* PacketMag::GetPacket(Packet* p)
             if (_page->IsCarousel())
             {
                 thisSubcode=_page->GetCarouselPage()->GetSubCode();
-                thisStatus=_page->GetCarouselPage()->GetPageStatus();
+                _status=_page->GetCarouselPage()->GetPageStatus();
+                _region=_page->GetCarouselPage()->GetRegion();
             }
             else
             {
                 thisSubcode=_page->GetSubCode();
-                thisStatus=_page->GetPageStatus();
+                _status=_page->GetPageStatus();
+                _region=_page->GetRegion();
             }
             
             
@@ -225,7 +226,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             // This is by request of Nate. It isn't a feature required in ETSI
             if (_page->Changed())
             {
-              thisStatus|=PAGESTATUS_C8_UPDATE;
+              _status|=PAGESTATUS_C8_UPDATE;
             }
         }
         
@@ -283,14 +284,14 @@ Packet* PacketMag::GetPacket(Packet* p)
             }
         }
         
-        if (!(thisStatus & 0x8000))
+        if (!(_status & 0x8000))
         {
             _page=nullptr;
             return nullptr;
         }
 
         // p=new Packet();
-        p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!
+        p->Header(_magNumber,thisPageNum,thisSubcode,_status);// loads of stuff to do here!
 
         p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
 
@@ -335,16 +336,15 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
             }
-            else if (_page->GetRegion())
+            else if (_region)
             {
                 // create X/28/0 packet for pages which have a region set with RE in file
                 // it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
 
                 // this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
                 std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
-                int region = _page->GetRegion();
-                int NOS = (_page->GetPageStatus() & 0x380) >> 7;
-                int language = NOS | (region << 3);
+                int NOS = (_status & 0x380) >> 7;
+                int language = NOS | (_region << 3);
                 int triplet = 0x3C000 | (language << 7); // construct triplet 1
                 val.replace(1,1,1,(triplet & 0x3F) | 0x40);
                 val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);

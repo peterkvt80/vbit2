@@ -59,6 +59,8 @@ class PacketMag : public PacketSource
       TTXLine* _packet29[MAXPACKET29TYPES]; // space to store magazine related enhancement packets
       TTXLine* _nextPacket29;
       int _nextPacket29DC;
+      int _status;
+      int _region;
 };
 
 }
