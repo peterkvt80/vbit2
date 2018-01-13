@@ -532,8 +532,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                 case 6 : // "PS" - Page status flags
                     // PS,8000
                     std::getline(filein, line);
-                    m_pagestatus=std::strtol(line.c_str(), &ptr, 16);
-                    p->SetPageStatus(m_pagestatus); // set status bits on subpage
+                    p->SetPageStatus(std::strtol(line.c_str(), &ptr, 16));
                     break;
                 case 7 : // "MS" - Mask
                     // MS,0
@@ -568,8 +567,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     break;
                 case 11 : // "RE"; - Set page region code 0..f
                     std::getline(filein, line); // TODO: Implement this
-                    m_region=std::strtol(line.c_str(), &ptr, 16);
-					p->SetRegion(m_region); // set region on subpage
+                    p->SetRegion(std::strtol(line.c_str(), &ptr, 16));
                     break;
                 case 12 : // "PF"; - not in the tti spec, page function and coding
                     std::getline(filein, line);

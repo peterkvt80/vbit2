@@ -151,8 +151,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             if (_page) // Carousel? Step to the next subpage
             {
                 //_outp("c");
-                _page->StepNextSubpage();
-                //std::cerr << "[PacketMag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
+                
             }
             else  // No carousel? Take the next page in the main sequence
             {
@@ -210,20 +209,11 @@ Packet* PacketMag::GetPacket(Packet* p)
                 return nullptr;
             }
             
-            if (_page->IsCarousel())
-            {
-                thisSubcode=_page->GetCarouselPage()->GetSubCode();
-                _status=_page->GetCarouselPage()->GetPageStatus();
-                _region=_page->GetCarouselPage()->GetRegion();
-            }
-            else
-            {
-                thisSubcode=_page->GetSubCode();
-                _status=_page->GetPageStatus();
-                _region=_page->GetRegion();
-            }
-            
-            
+            // for a non carousel page GetCarouselPage() just returns the page itself
+            _page->StepNextSubpage();
+            thisSubcode=_page->GetCarouselPage()->GetSubCode();
+            _status=_page->GetCarouselPage()->GetPageStatus();
+            _region=_page->GetCarouselPage()->GetRegion();
             
             // If the page has changed, then set the update bit.
             // This is by request of Nate. It isn't a feature required in ETSI
