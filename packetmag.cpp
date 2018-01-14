@@ -135,7 +135,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                 return nullptr;
             }
         } else {
-            ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
             _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
 
             // But before that, do some housekeeping
@@ -248,6 +247,8 @@ Packet* PacketMag::GetPacket(Packet* p)
             _page=nullptr;
             return nullptr;
         }
+        
+        ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
         
         // clear a flag we use to prevent duplicated X/28/0 packets
         _hasX28Region = false;
