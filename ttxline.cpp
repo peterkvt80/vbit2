@@ -259,7 +259,7 @@ void TTXLine::AppendLine(std::string  const& line)
 	//std::cerr << "[TTXLine::AppendLine] called" << std::endl;
 	TTXLine* p;
 	for (p=this;p->_nextLine;p=p->_nextLine);
-	p->_nextLine=new TTXLine(line,false);
+	p->_nextLine=new TTXLine(line,true);
 }
 
 void TTXLine::Dump()

@@ -16,7 +16,8 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _state(PACKETSTATE_HEADER),
     _thisRow(0),
     _lastTxt(nullptr),
-    _nextPacket29DC(0)
+    _nextPacket29DC(0),
+    _magRegion(0)
 {
   //ctor
   for (int i=0;i<MAXPACKET29TYPES;i++)
@@ -25,7 +26,6 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
   }
   if (_pageSet->size()>0)
   {
-    //std::cerr << "[Mag::Mag] enters. page size=" << _pageSet->size() << std::endl;
     _it=_pageSet->begin();
     //_it->DebugDump();
     _page=&*_it;
@@ -47,10 +47,7 @@ Packet* PacketMag::GetPacket(Packet* p)
   // std::cerr << "[PacketMag::GetPacket] mag=" << _magNumber << " state=" << _state << std::endl;
   int thisPageNum;
   unsigned int thisSubcode;
-  int thisStatus;
   int* links=NULL;
-  TTXLine* tempLine;
-  int Packet29Index;
   
   static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
 
@@ -115,19 +112,22 @@ Packet* PacketMag::GetPacket(Packet* p)
                     ClearEvent(EVENT_FIELD); // enforce 20ms page erasure interval
                 }
                 
-                /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
-                thisStatus = _page->GetPageStatus() & 0x8000; // get transmit flag
-                thisStatus |= 0x0010;
-                
-                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
                 if (_page->IsCarousel())
                 {
-                    thisSubcode=(_page->GetCarouselPage()->GetSubCode()) & 0x000F; // will break if carousel has more than 16 subpages but that would be out of spec anyway.
+                    _status = _page->GetCarouselPage()->GetPageStatus() & 0x8000; // get transmit flag
+                    _region = _page->GetCarouselPage()->GetRegion();
+                    thisSubcode=_page->GetCarouselPage()->GetSubCode() & 0x000F; // will break if carousel has more than 16 subpages but that would be out of spec anyway.
                 }
                 else
                 {
+                    _status = _page->GetPageStatus() & 0x8000; // get transmit flag
+                    _region = _page->GetRegion();
                     thisSubcode = 0; // no subpages
                 }
+                
+                /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
+                _status |= 0x0010;
+                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
                 thisSubcode|=0x2900; // Set the last X/26 row as the final packet for now but this is WRONG
             } else {
                 // got to the end of the special pages
@@ -150,8 +150,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             if (_page) // Carousel? Step to the next subpage
             {
                 //_outp("c");
-                _page->StepNextSubpage();
-                //std::cerr << "[Mag::GetPacket] Header thisSubcode=" << std::hex << _page->GetCarouselPage()->GetSubCode() << std::endl;
+                
             }
             else  // No carousel? Take the next page in the main sequence
             {
@@ -171,6 +170,12 @@ Packet* PacketMag::GetPacket(Packet* p)
                 // If it is marked for deletion, then remove it.
                 if (_page->GetStatusFlag()==TTXPageStream::MARKED)
                 {
+                    // ensure pages are removed from carousel and special lists so that we don't try to access them after deletion
+                    if (_page->IsCarousel())
+                        _carousel->deletePage(_page);
+                    if (_page->Special())
+                        _specialPages->deletePage(_page);
+                    
                     _pageSet->remove(*(_it++));
                     _page=nullptr;
                     return nullptr;
@@ -178,10 +183,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 }
                 if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
                 {
-                    //std::cerr << "This can not happen. Carousel found but it isn't a carousel?" << std::endl;
-                    // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
-                    // Page is a carousel. This can not happen
-                    _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
+                    // Page is a carousel - it should be in the carousel list but will also still be in the pageSet
+                    _page=nullptr; // clear everything for now so that we keep running
                     return nullptr;
                 }
             }
@@ -209,34 +212,29 @@ Packet* PacketMag::GetPacket(Packet* p)
                 return nullptr;
             }
             
-            if (_page->IsCarousel())
-            {
-                thisSubcode=_page->GetCarouselPage()->GetSubCode();
-            }
-            else
-            {
-                thisSubcode=_page->GetSubCode();
-            }
-            
-            thisStatus=_page->GetPageStatus();
+            // for a non carousel page GetCarouselPage() just returns the page itself
+            _page->StepNextSubpage();
+            thisSubcode=_page->GetCarouselPage()->GetSubCode();
+            _status=_page->GetCarouselPage()->GetPageStatus();
+            _region=_page->GetCarouselPage()->GetRegion();
             
             // If the page has changed, then set the update bit.
             // This is by request of Nate. It isn't a feature required in ETSI
             if (_page->Changed())
             {
-              thisStatus|=PAGESTATUS_C8_UPDATE;
+              _status|=PAGESTATUS_C8_UPDATE;
             }
         }
         
-        // the function of a page changes
+        // the page has stopped being special, or become special without getting its flag set
         if (_page->Special() != _page->GetSpecialFlag()){
             _page->SetSpecialFlag(_page->Special());
             if (_page->Special()){
-                //std::cerr << "page became special " << std::hex << _page->GetPageNumber() << std::endl;
+                std::cerr << "[PacketMag::GetPacket] page became special " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->addPage(_page);
                 return nullptr;
             } else {
-                //std::cerr << "page became normal " << std::hex << _page->GetPageNumber() << std::endl;
+                std::cerr << "[PacketMag::GetPacket] page became normal " << std::hex << _page->GetPageNumber() << std::endl;
                 _specialPages->deletePage(_page);
             }
         }
@@ -245,51 +243,17 @@ Packet* PacketMag::GetPacket(Packet* p)
         thisPageNum=_page->GetPageNumber();
         thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
         
-        if ((thisPageNum & 0xFF) == 0xFF)
-        {
-            // only read packet 29 from page mFF
-            //std::cerr << "updating packet 29" << std::endl;
-            // TODO: we needn't do this every time round the carousel
-            tempLine = _page->GetTxRow(29);
-            while (tempLine != nullptr)
-            {
-                // TODO: when the page is deleted the packets will remain.
-                //std::cerr << "page includes packet 29" << std::endl;
-                switch (tempLine->GetCharAt(0))
-                {
-                    case '@':
-                        Packet29Index = 0;
-                        break;
-                    case 'A':
-                        Packet29Index = 1;
-                        break;
-                    case 'D':
-                        Packet29Index = 2;
-                        break;
-                    default:
-                        Packet29Index = -1;
-                }
-                if (Packet29Index > -1)
-                {
-                    if (_packet29[Packet29Index]==nullptr)
-                        _packet29[Packet29Index]=new TTXLine(tempLine->GetLine(),true); // Didn't exist before
-                    else
-                        _packet29[Packet29Index]->Setm_textline(tempLine->GetLine(), true);
-                }
-                
-                tempLine = tempLine->GetNextLine();
-                // loop until every row 29 is copied
-            }
-        }
-        
-        if (!(thisStatus & 0x8000))
+        if (!(_status & 0x8000))
         {
             _page=nullptr;
             return nullptr;
         }
+        
+        // clear a flag we use to prevent duplicated X/28/0 packets
+        _hasX28Region = false;
 
         // p=new Packet();
-        p->Header(_magNumber,thisPageNum,thisSubcode,thisStatus);// loads of stuff to do here!
+        p->Header(_magNumber,thisPageNum,thisSubcode,_status);// loads of stuff to do here!
 
         p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
 
@@ -299,7 +263,7 @@ Packet* PacketMag::GetPacket(Packet* p)
 
         links=_page->GetLinkSet();
         if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
-            _state=PACKETSTATE_FASTEXT; // a non zero FL row will override an OL,27 row
+            _state=PACKETSTATE_FASTEXT;
             break;
         } else {
             _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
@@ -313,7 +277,10 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
                 //std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
                 //_lastTxt->Dump();
-                p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_7BIT_TEXT); // TODO coding for navigation packets
+                if ((_lastTxt->GetLine()[0] & 0xF) > 3) // designation codes > 3
+                    p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_13_TRIPLETS); // enhancement linking
+                else
+                    p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_HAMMING_8_4); // navigation packets (TODO: CRC in DC=0 is wrong)
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
             }
@@ -328,24 +295,24 @@ Packet* PacketMag::GetPacket(Packet* p)
                 //_lastTxt->Dump();
 
                 p->SetRow(_magNumber, 28, _lastTxt->GetLine(), CODING_13_TRIPLETS);
+                if ((_lastTxt->GetCharAt(0) & 0xF) == 0 || (_lastTxt->GetCharAt(0) & 0xF) == 4)
+                    _hasX28Region = true; // don't generate an X/28/0 for a RE line
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
             }
-            else if (_page->GetRegion())
+            else if (!(_hasX28Region) && (_region != _magRegion))
             {
                 // create X/28/0 packet for pages which have a region set with RE in file
-                // it is important that pages with X/28/0,2,3,4 packets don't set a region otherwise an extra X/28/0 will be generated. TTXPage::SetRow sets the region to 0 for these packets just in case.
-
+                
                 // this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
                 std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
-                int region = _page->GetRegion();
-                int NOS = (_page->GetPageStatus() & 0x380) >> 7;
-                int language = NOS | (region << 3);
+                int NOS = (_status & 0x380) >> 7;
+                int language = NOS | (_region << 3);
                 int triplet = 0x3C000 | (language << 7); // construct triplet 1
                 val.replace(1,1,1,(triplet & 0x3F) | 0x40);
                 val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
                 val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
-                //std::cerr << "[Mag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
+                //std::cerr << "[PacketMag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
                 p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
                 _lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
                 _state=PACKETSTATE_PACKET26;
@@ -412,7 +379,7 @@ Packet* PacketMag::GetPacket(Packet* p)
         //_outp("J");
         if (_lastTxt->IsBlank() && (_configure->GetRowAdaptive() || _page->GetPageFunction() != LOP)) // If a row is empty then skip it if row adaptive mode on, or not a level 1 page
         {
-          // std::cerr << "[Mag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
+          // std::cerr << "[PacketMag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
           return nullptr;
         }
         else
@@ -432,8 +399,8 @@ Packet* PacketMag::GetPacket(Packet* p)
       p->SetMRAG(_magNumber,27);
       links=_page->GetLinkSet();
       p->Fastext(links,_magNumber);
-      _lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
-      _state=PACKETSTATE_PACKET28;
+      _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
+      _state=PACKETSTATE_PACKET27; // makes no attempt to prevent an FL row and an X/27/0 both being sent
 //      std::cerr << "PACKETSTATE_FASTEXT exits" << std::endl;
       break;
 
@@ -479,3 +446,18 @@ bool PacketMag::IsReady(bool force)
     */
   return result;
 };
+
+void PacketMag::SetPacket29(TTXLine *lines[MAXPACKET29TYPES]){
+    //std::cerr << "[PacketMag::setPacket29]" << std::endl;
+    for (int i=0;i<MAXPACKET29TYPES;i++)
+        _packet29[i] = lines[i];
+    
+    if (_packet29[0])
+    {
+        _magRegion = ((_packet29[0]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[0]->GetCharAt(3) & 0x3) << 2);
+    } 
+    else if (_packet29[2])
+    {
+        _magRegion = ((_packet29[2]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[2]->GetCharAt(3) & 0x3) << 2);
+    }
+}

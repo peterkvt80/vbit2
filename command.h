@@ -66,7 +66,7 @@ class Command
 		 * @description Listens on port 5570 and accepts connections.
 		 * When connected it can be sent Newfor commands.
      */
-		Command(const uint32_t port, vbit::PacketSubtitle* subtitle, ttx::PageList* pageList);
+		Command(ttx::Configure *configure, vbit::PacketSubtitle* subtitle, ttx::PageList* pageList);
 
 		/**
      * @brief Constructor

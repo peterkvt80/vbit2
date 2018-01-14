@@ -106,12 +106,34 @@ void FileMonitor::run()
 
           if (attrib.st_mtime!=p->GetModifiedTime()) // File exists. Has it changed?
           {
-            std::cerr << "File has been modified" << dirp->d_name << std::endl;
+            std::cerr << "[FileMonitor::run] File has been modified " << dirp->d_name << std::endl;
             // We just load the new page and update the modified time
             // This isn't good enough.
             // We need a mutex or semaphore to lock out this page while we do that
             // lock
             p->LoadPage(name); // What if this fails? We can see the bool. What to do ?
+            p->GetPageCount(); // renumber the subpages
+			int mag=(p->GetPageNumber() >> 16) & 0x7;
+            if (p->IsCarousel() && !(p->GetCarouselFlag()))
+            {
+                // page has become a carousel so add it to its mag's carousel list
+                p->SetCarouselFlag(p->IsCarousel());
+                _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
+                std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << p->GetPageNumber() << std::endl;
+            }
+            if (p->Special() && !(p->GetSpecialFlag()))
+            {
+                // page has become special so add it to its mag's special pages list
+                p->SetSpecialFlag(p->Special());
+                _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(p);
+                std::cerr << "[FileMonitor::run] page is now special " << std::hex << p->GetPageNumber() << std::endl;
+            }
+			if (_pageList->CheckForPacket29(p))
+			{
+				std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
+				_pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
+			}
+			
             p->SetModifiedTime(attrib.st_mtime);
             // unlock
 
@@ -120,11 +142,30 @@ void FileMonitor::run()
         }
         else
         {
-          std::cerr << "[FileMonitor::run] " << " Adding a new page" << dirp->d_name << std::endl;
+          std::cerr << "[FileMonitor::run] Adding a new page " << dirp->d_name << std::endl;
 					// A new file. Create the page object and add it to the page list.
 					if ((p=new TTXPageStream(name)))
 					{
-						_pageList->AddPage(p);
+                        p->SetSpecialFlag(p->Special());
+                        p->SetCarouselFlag(p->IsCarousel());
+                        p->GetPageCount(); // renumber the subpages
+                        _pageList->AddPage(p);
+						int mag=(p->GetPageNumber() >> 16) & 0x7;
+                        if (p->GetCarouselFlag())
+                        {
+                            _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
+                            std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << p->GetPageNumber() << std::endl;
+                        }
+                        if (p->GetSpecialFlag())
+                        {
+                            _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(p);
+                            std::cerr << "[FileMonitor::run] new page is special " << std::hex << p->GetPageNumber() << std::endl;
+                        }
+						if (_pageList->CheckForPacket29(p))
+						{
+							std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
+							_pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
+						}
 					}
 					else
 						std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;

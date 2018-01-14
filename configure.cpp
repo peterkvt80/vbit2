@@ -35,6 +35,9 @@ Configure::Configure(int argc, char** argv) :
 #endif
 	// This is where the default header template is defined.
 	_headerTemplate = "VBIT2    %%# %%a %d %%b" "\x03" "%H:%M:%S";
+	
+	// the default command interface port
+	_commandPort = 5570;
 
 	_rowAdaptive = false;
 
@@ -49,10 +52,14 @@ Configure::Configure(int argc, char** argv) :
 			if (strncmp(argv[i],"--dir",5)==0)
 			{
 				strncpy(_pageDir,argv[i+1],MAXPATH-1);
-				break;
+			} else if (strncmp(argv[i],"--port",6)==0)
+			{
+				_commandPort = std::stoi(argv[i+1]);
+				// ought to catch exceptions and validate value
 			}
 		}
 	}
+	
 	if (!DirExists(_pageDir)){
 		std::cerr << "[Configure::Configure] " << _pageDir << " does not exist or is not a directory" << std::endl;
 		exit(EXIT_FAILURE);

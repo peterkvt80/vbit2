@@ -41,6 +41,7 @@ public:
 	uint8_t GetInitialPage(){return _initialPage;}
 	uint16_t GetInitialSubcode(){return _initialSubcode;}
 	uint8_t GetSubtitleRepeats(){return _subtitleRepeats;}
+	uint16_t GetCommandPort(){return _commandPort;}
 
 private:
 	int DirExists(char *path);
@@ -49,6 +50,8 @@ private:
 
 	// template string for generating header packets
 	std::string _headerTemplate;
+	
+	uint16_t _commandPort;
 
 	bool _rowAdaptive;
 
