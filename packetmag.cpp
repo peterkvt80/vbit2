@@ -170,6 +170,12 @@ Packet* PacketMag::GetPacket(Packet* p)
                 // If it is marked for deletion, then remove it.
                 if (_page->GetStatusFlag()==TTXPageStream::MARKED)
                 {
+                    // ensure pages are removed from carousel and special lists so that we don't try to access them after deletion
+                    if (_page->IsCarousel())
+                        _carousel->deletePage(_page);
+                    if (_page->Special())
+                        _specialPages->deletePage(_page);
+                    
                     _pageSet->remove(*(_it++));
                     _page=nullptr;
                     return nullptr;
@@ -177,10 +183,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 }
                 if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
                 {
-                    //std::cerr << "This can not happen. Carousel found but it isn't a carousel?" << std::endl;
-                    // exit(0); // @todo MUST FIX THIS. Need to find out how we are getting here and stop it doing that!
-                    // Page is a carousel. This can not happen
-                    _page=nullptr; // clear everything for now so that we keep running @todo THIS IS AN ERROR
+                    // Page is a carousel - it should be in the carousel list but will also still be in the pageSet
+                    _page=nullptr; // clear everything for now so that we keep running
                     return nullptr;
                 }
             }
@@ -444,16 +448,16 @@ bool PacketMag::IsReady(bool force)
 };
 
 void PacketMag::SetPacket29(TTXLine *lines[MAXPACKET29TYPES]){
-	//std::cerr << "[PacketMag::setPacket29]" << std::endl;
-	for (int i=0;i<MAXPACKET29TYPES;i++)
-		_packet29[i] = lines[i];
-	
-	if (_packet29[0])
-	{
-		_magRegion = ((_packet29[0]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[0]->GetCharAt(3) & 0x3) << 2);
-	} 
-	else if (_packet29[2])
-	{
-		_magRegion = ((_packet29[2]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[2]->GetCharAt(3) & 0x3) << 2);
-	}
+    //std::cerr << "[PacketMag::setPacket29]" << std::endl;
+    for (int i=0;i<MAXPACKET29TYPES;i++)
+        _packet29[i] = lines[i];
+    
+    if (_packet29[0])
+    {
+        _magRegion = ((_packet29[0]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[0]->GetCharAt(3) & 0x3) << 2);
+    } 
+    else if (_packet29[2])
+    {
+        _magRegion = ((_packet29[2]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[2]->GetCharAt(3) & 0x3) << 2);
+    }
 }
