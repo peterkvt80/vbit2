@@ -148,7 +148,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _page=nullptr;
             }
 
-            if (_page) // Carousel? Step to the next subpage
+            if (_page) // Carousel?
             {
                 //_outp("c");
                 if (_page->Special() && _page->GetSpecialFlag()){
@@ -186,26 +186,22 @@ Packet* PacketMag::GetPacket(Packet* p)
                     // Get pointer to the page we are sending
                     // todo: Find a way to skip carousels without going into an infinite loop
                     _page=&*_it;
-                    // If it is marked for deletion, then remove it.
-                    if (_page->GetStatusFlag()==TTXPageStream::MARKED)
-                    {
-                        // ensure pages are removed from carousel and special lists so that we don't try to access them after deletion
-                        if (_page->IsCarousel())
-                            _carousel->deletePage(_page);
-                        if (_page->Special())
-                            _specialPages->deletePage(_page);
-                        
-                        _pageSet->remove(*(_it++));
-                        _page=nullptr;
-                      // Stays in HEADER mode so that we run this again
-                    }
                     if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
                     {
                         // Page is a carousel - it should be in the carousel list but will also still be in the pageSet
                         _page=nullptr; // clear everything for now so that we keep running
-                    } else if (_page->Special() && _page->GetSpecialFlag()){
+                    }
+                    else if (_page->Special() && _page->GetSpecialFlag())
+                    {
                         // don't let special pages into normal sequence
                         _page=nullptr;
+                    }
+                    else if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+                    {
+                        // If it is marked for deletion, then remove it.
+                        _pageSet->remove(*(_it++));
+                        _page=nullptr;
+                      // Stays in HEADER mode so that we run this again
                     }
                 }
                 while (_page == nullptr);
