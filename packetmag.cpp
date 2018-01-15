@@ -24,12 +24,10 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
   {
     _packet29[i]=nullptr;
   }
-  if (_pageSet->size()>0)
-  {
-    _it=_pageSet->begin();
-    //_it->DebugDump();
-    _page=&*_it;
-  }
+
+  _it=_pageSet->begin();
+  _page=&*_it;
+  
   _carousel=new vbit::Carousel();
   _specialPages=new vbit::SpecialPages();
 }
@@ -96,12 +94,6 @@ Packet* PacketMag::GetPacket(Packet* p)
         {
             _page=_specialPages->NextPage();
             
-            if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
-            {
-                _specialPages->deletePage(_page);
-                return nullptr;
-            }
-            
             if (_page)
             {
                 // got a special page
@@ -139,25 +131,9 @@ Packet* PacketMag::GetPacket(Packet* p)
         {
             _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
 
-            // But before that, do some housekeeping
-
-            // Is this page deleted?
-            if (_page && _page->GetStatusFlag()==TTXPageStream::MARKED)
-            {
-                _carousel->deletePage(_page);
-                _page=nullptr;
-            }
-
             if (_page) // Carousel?
             {
                 //_outp("c");
-                if (_page->Special() && _page->GetSpecialFlag()){
-                    // don't let special pages into normal sequence as carousels
-                    std::cerr << "special page got into carousel this should not happen" << std::endl;
-                    _carousel->deletePage(_page);
-                    _page=nullptr;
-                    return nullptr;
-                }
             }
             else  // No carousel? Take the next page in the main sequence
             {
@@ -166,8 +142,11 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     if (_it==_pageSet->end())
                     {
-                        std::cerr << "This can not happen (we can't get the next page?)" << std::endl;
-                        exit(0);
+						// last page in list got deleted
+                        std::cerr << "can't get the next page" << std::endl;
+						_it=_pageSet->begin();
+                        _page = nullptr;
+						return nullptr;
                     }
                     ++_it;
                     if (_it==_pageSet->end())
@@ -189,21 +168,16 @@ Packet* PacketMag::GetPacket(Packet* p)
 					// If it is marked for deletion, then remove it.
                     if (_page->GetStatusFlag()==TTXPageStream::MARKED)
                     {
-                        // ensure pages are removed from carousel and special lists so that we don't try to access them after deletion
-                        if (_page->IsCarousel())
-                            _carousel->deletePage(_page);
-                        if (_page->Special())
-                            _specialPages->deletePage(_page);
-                        
-                        _pageSet->remove(*(_it++));
+						// never delete anything until we sort out the deleting from carousel issue
+                        //_pageSet->remove(*(_it++)); 
                         _page=nullptr;
                     }
-                    else if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
+                    else if (_page->IsCarousel()) // Don't let carousel pages into the main page sequence
                     {
                         // Page is a carousel - it should be in the carousel list but will also still be in the pageSet
                         _page=nullptr; // clear everything for now so that we keep running
                     }
-                    else if (_page->Special() && _page->GetSpecialFlag())
+                    else if (_page->Special())
                     {
                         // don't let special pages into normal sequence
                         _page=nullptr;
@@ -212,23 +186,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                 while (_page == nullptr);
             }
             _thisRow=0;
-
-            // When a single page is changed into a carousel
-            if (_page->IsCarousel() != _page->GetCarouselFlag())
-            {
-              _page->SetCarouselFlag(_page->IsCarousel());
-              if (_page->IsCarousel())
-              {
-                  // std::cerr << "This page has become a carousel. Add it to the list" << std::endl;
-                  _carousel->addPage(_page);
-              }
-              else
-              {
-                // @todo Implement this
-                //std::cerr << "@todo This page has no longer a carousel. Remove it from the list" << std::endl;
-                //exit(3); //
-              }
-            }
             
             if (_page->GetCarouselFlag()){
                 _page->StepNextSubpage();
@@ -254,19 +211,6 @@ Packet* PacketMag::GetPacket(Packet* p)
         {
             // there is nothing we can transmit
             return nullptr;
-        }
-        
-        // the page has stopped being special, or become special without getting its flag set
-        if (_page->Special() != _page->GetSpecialFlag()){
-            _page->SetSpecialFlag(_page->Special());
-            if (_page->Special()){
-                std::cerr << "[PacketMag::GetPacket] page became special " << std::hex << _page->GetPageNumber() << std::endl;
-                _specialPages->addPage(_page);
-                return nullptr;
-            } else {
-                std::cerr << "[PacketMag::GetPacket] page became normal " << std::hex << _page->GetPageNumber() << std::endl;
-                _specialPages->deletePage(_page);
-            }
         }
         
         // Assemble the header. (we can simplify this code or leave it for the optimiser)

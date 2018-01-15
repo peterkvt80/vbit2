@@ -146,21 +146,22 @@ void FileMonitor::run()
 					// A new file. Create the page object and add it to the page list.
 					if ((p=new TTXPageStream(name)))
 					{
-                        p->SetSpecialFlag(p->Special());
-                        p->SetCarouselFlag(p->IsCarousel());
                         p->GetPageCount(); // renumber the subpages
                         _pageList->AddPage(p);
 						int mag=(p->GetPageNumber() >> 16) & 0x7;
-                        if (p->GetCarouselFlag())
+						if (p->Special())
                         {
-                            _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
-                            std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << p->GetPageNumber() << std::endl;
-                        }
-                        if (p->GetSpecialFlag())
-                        {
+							p->SetSpecialFlag(p->Special());
                             _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(p);
                             std::cerr << "[FileMonitor::run] new page is special " << std::hex << p->GetPageNumber() << std::endl;
                         }
+                        else if (p->IsCarousel())
+                        {
+							p->SetCarouselFlag(p->IsCarousel());
+                            _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
+                            std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << p->GetPageNumber() << std::endl;
+                        }
+                        
 						if (_pageList->CheckForPacket29(p))
 						{
 							std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
