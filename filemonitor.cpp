@@ -114,7 +114,7 @@ void FileMonitor::run()
             p->LoadPage(name); // What if this fails? We can see the bool. What to do ?
             p->GetPageCount(); // renumber the subpages
 			int mag=(p->GetPageNumber() >> 16) & 0x7;
-            if (p->IsCarousel() && !(p->GetCarouselFlag()))
+            if (p->IsCarousel() && !(p->GetCarouselFlag()) && !(p->Special()))
             {
                 // page has become a carousel so add it to its mag's carousel list
                 p->SetCarouselFlag(p->IsCarousel());

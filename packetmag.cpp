@@ -134,7 +134,9 @@ Packet* PacketMag::GetPacket(Packet* p)
                 ClearEvent(EVENT_SPECIAL_PAGES);
                 return nullptr;
             }
-        } else {
+        } 
+		else if (GetEvent(EVENT_FIELD))
+        {
             _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
 
             // But before that, do some housekeeping
@@ -149,43 +151,64 @@ Packet* PacketMag::GetPacket(Packet* p)
             if (_page) // Carousel? Step to the next subpage
             {
                 //_outp("c");
-                
+                if (_page->Special() && _page->GetSpecialFlag()){
+                    // don't let special pages into normal sequence as carousels
+                    std::cerr << "special page got into carousel this should not happen" << std::endl;
+                    _carousel->deletePage(_page);
+                    _page=nullptr;
+                    return nullptr;
+                }
             }
             else  // No carousel? Take the next page in the main sequence
             {
-                if (_it==_pageSet->end())
+                bool loopBreaker = false;
+                do
                 {
-                    std::cerr << "This can not happen (we can't get the next page?)" << std::endl;
-                    exit(0);
+                    if (_it==_pageSet->end())
+                    {
+                        std::cerr << "This can not happen (we can't get the next page?)" << std::endl;
+                        exit(0);
+                    }
+                    ++_it;
+                    if (_it==_pageSet->end())
+                    {
+                        _it=_pageSet->begin();
+                        if (loopBreaker)
+                        {
+                            // we have looped through entire page list and not found any non-carousel or non-special pages to transmit, so sent a time filling header
+                            p->Header(_magNumber,0xFF,0x3F7F,0x8010);
+                            p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
+                            ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
+                            return p;
+                        }
+                        loopBreaker = true;
+                    }
+                    // Get pointer to the page we are sending
+                    // todo: Find a way to skip carousels without going into an infinite loop
+                    _page=&*_it;
+                    // If it is marked for deletion, then remove it.
+                    if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+                    {
+                        // ensure pages are removed from carousel and special lists so that we don't try to access them after deletion
+                        if (_page->IsCarousel())
+                            _carousel->deletePage(_page);
+                        if (_page->Special())
+                            _specialPages->deletePage(_page);
+                        
+                        _pageSet->remove(*(_it++));
+                        _page=nullptr;
+                      // Stays in HEADER mode so that we run this again
+                    }
+                    if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
+                    {
+                        // Page is a carousel - it should be in the carousel list but will also still be in the pageSet
+                        _page=nullptr; // clear everything for now so that we keep running
+                    } else if (_page->Special() && _page->GetSpecialFlag()){
+                        // don't let special pages into normal sequence
+                        _page=nullptr;
+                    }
                 }
-                ++_it;
-                if (_it==_pageSet->end())
-                {
-                    _it=_pageSet->begin();
-                }
-                // Get pointer to the page we are sending
-                // todo: Find a way to skip carousels without going into an infinite loop
-                _page=&*_it;
-                // If it is marked for deletion, then remove it.
-                if (_page->GetStatusFlag()==TTXPageStream::MARKED)
-                {
-                    // ensure pages are removed from carousel and special lists so that we don't try to access them after deletion
-                    if (_page->IsCarousel())
-                        _carousel->deletePage(_page);
-                    if (_page->Special())
-                        _specialPages->deletePage(_page);
-                    
-                    _pageSet->remove(*(_it++));
-                    _page=nullptr;
-                    return nullptr;
-                  // Stays in HEADER mode so that we run this again
-                }
-                if (_page->IsCarousel() && _page->GetCarouselFlag()) // Don't let registered carousel pages into the main page sequence
-                {
-                    // Page is a carousel - it should be in the carousel list but will also still be in the pageSet
-                    _page=nullptr; // clear everything for now so that we keep running
-                    return nullptr;
-                }
+                while (_page == nullptr);
             }
             _thisRow=0;
 
@@ -206,11 +229,6 @@ Packet* PacketMag::GetPacket(Packet* p)
               }
             }
             
-            if (_page->Special() && _page->GetSpecialFlag()){
-                // don't let special pages into normal sequence
-                return nullptr;
-            }
-            
             // for a non carousel page GetCarouselPage() just returns the page itself
             _page->StepNextSubpage();
             thisSubcode=_page->GetCarouselPage()->GetSubCode();
@@ -223,6 +241,11 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
               _status|=PAGESTATUS_C8_UPDATE;
             }
+        }
+        else
+        {
+            // there is nothing we can transmit
+            return nullptr;
         }
         
         // the page has stopped being special, or become special without getting its flag set

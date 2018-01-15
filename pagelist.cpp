@@ -431,7 +431,7 @@ void PageList::AddSpecialPagesAndCarousels()
     {
         TTXPageStream* ptr;
         ptr=&(*p);
-        if (ptr->IsCarousel() && !(ptr->GetCarouselFlag()))
+        if (ptr->IsCarousel() && !(ptr->GetCarouselFlag()) && !(ptr->Special()))
         {
             ptr->SetCarouselFlag(ptr->IsCarousel());
             _mag[mag]->GetCarousel()->addPage(ptr);
