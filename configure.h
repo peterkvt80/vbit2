@@ -42,6 +42,7 @@ public:
 	uint16_t GetInitialSubcode(){return _initialSubcode;}
 	uint8_t GetSubtitleRepeats(){return _subtitleRepeats;}
 	uint16_t GetCommandPort(){return _commandPort;}
+	bool GetCommandPortEnabled(){return _commandPortEnabled;}
 
 private:
 	int DirExists(char *path);
@@ -66,6 +67,7 @@ private:
 	char _configFile[MAXPATH]; /// Configuration file name --config
 	char _pageDir[MAXPATH]; /// Configuration file name --dir
 	uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
+	bool _commandPortEnabled;
 };
 
 }

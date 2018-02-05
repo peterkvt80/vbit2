@@ -106,7 +106,7 @@ void FileMonitor::run()
 
           if (attrib.st_mtime!=p->GetModifiedTime()) // File exists. Has it changed?
           {
-            std::cerr << "[FileMonitor::run] File has been modified " << dirp->d_name << std::endl;
+            //std::cerr << "[FileMonitor::run] File has been modified " << dirp->d_name << std::endl;
             // We just load the new page and update the modified time
             // This isn't good enough.
             // We need a mutex or semaphore to lock out this page while we do that

@@ -59,12 +59,17 @@ int main(int argc, char** argv)
 
 	std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
 	std::thread serviceThread(&Service::run, svc);
-	std::thread commandThread(&Command::run, Command(configure, svc->GetSubtitle(), pageList) );
-
-  // The threads should never stop, but just in case...
+	
+	if (configure->GetCommandPortEnabled())
+	{
+		// only start command thread if required
+		std::thread commandThread(&Command::run, Command(configure, svc->GetSubtitle(), pageList) );
+		commandThread.join();
+	}
+	
+	// The threads should never stop, but just in case...
 	monitorThread.join();
 	serviceThread.join();
-	commandThread.join();
 
 	std::cout << "VBIT2 ended. Press any key to continue" << std::endl;
     system("pause"); // @todo Only apply this line in debug

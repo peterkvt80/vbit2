@@ -38,6 +38,7 @@ Configure::Configure(int argc, char** argv) :
 	
 	// the default command interface port
 	_commandPort = 5570;
+	_commandPortEnabled = false;
 
 	_rowAdaptive = false;
 
@@ -52,10 +53,6 @@ Configure::Configure(int argc, char** argv) :
 			if (strncmp(argv[i],"--dir",5)==0)
 			{
 				strncpy(_pageDir,argv[i+1],MAXPATH-1);
-			} else if (strncmp(argv[i],"--port",6)==0)
-			{
-				_commandPort = std::stoi(argv[i+1]);
-				// ought to catch exceptions and validate value
 			}
 		}
 	}
@@ -88,7 +85,7 @@ int Configure::LoadConfigFile(std::string filename)
 
 	std::vector<std::string>::iterator iter;
 	// these are all the valid strings for config lines
-	std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats" };
+	std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats","enable_command_port","command_port" };
 
 	if (filein.is_open()){
 		std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
@@ -196,6 +193,18 @@ int Configure::LoadConfigFile(std::string filename)
 								break;
 							case 7: // "subtitle_repeats" - The number of times a subtitle transmission is repeated 0..9
 								_subtitleRepeats = stoi(std::string(value, 0, 1));
+								break;
+							case 8: // "enable_command_port"
+								if (!value.compare("true")){
+									_commandPortEnabled = true;
+								} else if (!value.compare("false")){
+									_commandPortEnabled = false;
+								} else {
+									error = 1;
+								}
+								break;
+							case 9: // "command_port"
+								_commandPort = stoi(std::string(value, 0, 5));
 								break;
 						}
 					} else {
