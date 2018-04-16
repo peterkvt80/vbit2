@@ -121,15 +121,14 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
 /** get_offset_time. @todo Convert this to c++
  * Given a parameter of say %t+02
  * where str[2] is + or -
- * str[4:3] is a two digit of half hour offsets from local time (GMT/BST in our case)
- * @return Local time plus offset as 5 characters in the form 21:30
+ * str[4:3] is a two digit of half hour offsets from UTC
+ * @return local time at offset from UTC
  */
 bool Packet::get_offset_time(char* str)
 {
 	char strTime[6];
-	// get the time (UTC I think)
 	time_t rawtime;
-	struct tm *info;
+	struct tm tmGMT;
 	time( &rawtime );
 
 	// What is our offset in seconds?
@@ -144,9 +143,9 @@ bool Packet::get_offset_time(char* str)
 	// Add the offset to the time value
 	rawtime+=offset;
 
-	info = localtime( &rawtime );
+	gmtime_r(&rawtime, &tmGMT);
 
-	strftime(strTime, 21, "%H:%M", info);
+	strftime(strTime, 21, "%H:%M", &tmGMT);
 	strncpy(str,strTime,5);
 	return true; // @todo
 }
@@ -275,10 +274,10 @@ char* Packet::tx(bool debugMode)
 		else if (_coding == CODING_7BIT_TEXT) // Other text rows
 		{
 			char *tmpptr;
+			for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
 			// ======= TEMPERATURE ========
 			char strtemp[]="                    ";
 			#ifndef WIN32
-			for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
 			tmpptr=strstr((char*)_packet,"%%%T");
 			if (tmpptr) {
 				get_temp(strtemp);
