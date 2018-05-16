@@ -113,6 +113,7 @@ void TTXPage::m_Init()
     m_cycletimeseconds=8;
     m_cycletimetype='T';
     m_pagestatus=0x8000;
+    m_lastpacket=0;
     m_pagecoding=CODING_7BIT_TEXT;
     m_pagefunction=LOP;
     instance=instanceCount++;
@@ -625,6 +626,7 @@ TTXPage::TTXPage(const TTXPage& other)
     m_cycletimeseconds=other.m_cycletimeseconds;
     m_subcode=other.m_subcode;              // SC
     m_pagestatus=other.m_pagestatus;           // PS
+    m_lastpacket=other.m_lastpacket;
     m_region=other.m_region;               // RE
     m_pagecoding=other.m_pagecoding;
     m_pagefunction=other.m_pagefunction;
@@ -672,11 +674,13 @@ TTXLine* TTXPage::GetRow(unsigned int row)
 
 void TTXPage::SetRow(unsigned int rownumber, std::string line)
 {
+	unsigned int dc;
+	
 	// assert(rownumber<=MAXROW);
 	if (rownumber>MAXROW) return;
 
 	if (rownumber == 28){
-		int dc = line.at(0) & 0x0F;
+		dc = line.at(0) & 0x0F;
 		if (dc == 0 || dc == 2 || dc == 3 || dc == 4){
 			// packet is X/28/0, X/28/2, X/28/3, or X/28/4
 			int triplet = line.at(1) & 0x3F;
@@ -686,6 +690,18 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 			SetPageCodingInt((triplet & 0x70) >> 4);
 			SetPageFunctionInt(triplet & 0x0F);
 		}
+	}
+	
+	if (rownumber == 26)
+	{
+		dc = line.at(0) & 0x0F;
+		if ((dc + 26) > m_lastpacket)
+			m_lastpacket = dc + 26;
+	}
+	else if (rownumber < 26)
+	{
+		if (rownumber > m_lastpacket)
+			m_lastpacket = rownumber;
 	}
 
 	if (m_pLine[rownumber]==nullptr)
@@ -893,6 +909,7 @@ void TTXPage::CopyMetaData(TTXPage* page)
     m_cycletimetype=page->m_cycletimetype;       // CT
     m_subcode=page->m_subcode;              // SC
     m_pagestatus=page->m_pagestatus;           // PS
+    m_lastpacket=page->m_lastpacket;
     m_region=page->m_region;            // RE
 }
 

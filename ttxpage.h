@@ -199,7 +199,9 @@ class TTXPage
         void DebugDump() const;
 
         inline bool Loaded() const {return m_Loaded;};
-
+        
+        unsigned int GetLastPacket() {return m_lastpacket;};
+        
         // get the function or coding of a page as the enum
         PageCoding GetPageCoding() {return m_pagecoding;}
         PageFunction GetPageFunction() {return m_pagefunction;}
@@ -251,6 +253,7 @@ class TTXPage
         unsigned int m_subcode;     // SC
         int m_pagestatus;           // PS
         int m_region;               // RE
+        unsigned int m_lastpacket;
         PageCoding m_pagecoding;
         PageFunction m_pagefunction;
         // Private functions

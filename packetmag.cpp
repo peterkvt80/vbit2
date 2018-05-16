@@ -109,18 +109,18 @@ Packet* PacketMag::GetPacket(Packet* p)
                     _status = _page->GetCarouselPage()->GetPageStatus() & 0x8000; // get transmit flag
                     _region = _page->GetCarouselPage()->GetRegion();
                     thisSubcode=_page->GetCarouselPage()->GetSubCode() & 0x000F; // will break if carousel has more than 16 subpages but that would be out of spec anyway.
+                    thisSubcode |= _page->GetCarouselPage()->GetLastPacket() << 8;
                 }
                 else
                 {
                     _status = _page->GetPageStatus() & 0x8000; // get transmit flag
                     _region = _page->GetRegion();
-                    thisSubcode = 0; // no subpages
+                    thisSubcode = _page->GetLastPacket() << 8; // S3 and S4
                 }
                 
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
                 _status |= 0x0010;
-                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number that will be transmitted for this page which needs calculating somehow. */
-                thisSubcode|=0x2900; // Set the last X/26 row as the final packet for now but this is WRONG
+                /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number */
             } else {
                 // got to the end of the special pages
                 ClearEvent(EVENT_SPECIAL_PAGES);
@@ -262,6 +262,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             }
             _lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
             _state=PACKETSTATE_PACKET28; //  // Intentional fall through to PACKETSTATE_PACKET28
+            __attribute__ ((fallthrough));
         case PACKETSTATE_PACKET28:
                   //std::cerr << "TRACE-28 " << std::endl;
 
@@ -302,6 +303,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _state=PACKETSTATE_TEXTROW;
                 return nullptr;
             }
+            __attribute__ ((fallthrough));
         case PACKETSTATE_PACKET26:
             if (_lastTxt)
             {
@@ -319,6 +321,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _thisRow=0;
                 return nullptr;
             }
+            __attribute__ ((fallthrough));
     case PACKETSTATE_TEXTROW:
           // std::cerr << "TRACE-T " << std::endl;
 
