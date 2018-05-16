@@ -262,7 +262,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             }
             _lastTxt=_page->GetTxRow(28); // Get _lastTxt ready for packet 28 processing
             _state=PACKETSTATE_PACKET28; //  // Intentional fall through to PACKETSTATE_PACKET28
-            __attribute__ ((fallthrough));
+            /* fallthrough */
         case PACKETSTATE_PACKET28:
                   //std::cerr << "TRACE-28 " << std::endl;
 
@@ -303,7 +303,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _state=PACKETSTATE_TEXTROW;
                 return nullptr;
             }
-            __attribute__ ((fallthrough));
+            /* fallthrough */
         case PACKETSTATE_PACKET26:
             if (_lastTxt)
             {
@@ -321,7 +321,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _thisRow=0;
                 return nullptr;
             }
-            __attribute__ ((fallthrough));
+            /* fallthrough */
     case PACKETSTATE_TEXTROW:
           // std::cerr << "TRACE-T " << std::endl;
 
