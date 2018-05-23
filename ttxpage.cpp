@@ -512,9 +512,11 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     if (p->m_PageNumber!=FIRSTPAGE) // // Subsequent pages need new page instances
                     {
                         // std::cerr << "Created a new subpage" << std::endl;
+                        int pagestatus = p->GetPageStatus();
                         TTXPage* newSubPage=new TTXPage();  // Create a new instance for the subpage
                         p->Setm_SubPage(newSubPage);            // Put in a link to it
                         p=newSubPage;                       // And jump to the next subpage ready to populate
+                        p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
                     }
                     p->SetPageNumber(pageNumber);
 
