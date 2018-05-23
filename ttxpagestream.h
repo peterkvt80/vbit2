@@ -47,6 +47,9 @@ class TTXPageStream : public TTXPage
 
     bool GetSpecialFlag() { return _isSpecial; }
     void SetSpecialFlag(bool val) { _isSpecial = val; }
+    
+    int GetUpdateCount() {return _updateCount;}
+    void IncrementUpdateCount();
 
     ///** Access _CurrentPage
      //* \return The current value of _CurrentPage
@@ -142,6 +145,9 @@ class TTXPageStream : public TTXPage
     bool _Selected;   /// Marked as selected by the inserter P command
 
     bool _isSpecial;
+
+    int _updateCount; // update counter for special pages.
+
 };
 
 #endif // _TTXPAGESTREAM_H_

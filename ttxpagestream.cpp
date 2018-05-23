@@ -1,22 +1,24 @@
 #include "ttxpagestream.h"
 
 TTXPageStream::TTXPageStream() :
-     _isCarousel(false),
-     _transitionTime(0),
-		 _CarouselPage(NULL),
-		 _fileStatus(NEW),
-         _isSpecial(false)
+    _isCarousel(false),
+    _transitionTime(0),
+        _CarouselPage(NULL),
+        _fileStatus(NEW),
+        _isSpecial(false),
+        _updateCount(0)
 {
     //ctor
 }
 
 TTXPageStream::TTXPageStream(std::string filename) :
-     TTXPage(filename),
-     _isCarousel(false),
-     _transitionTime(0),
-		 _CarouselPage(NULL),
-		 _fileStatus(NEW),
-         _isSpecial(false)
+    TTXPage(filename),
+    _isCarousel(false),
+    _transitionTime(0),
+        _CarouselPage(NULL),
+        _fileStatus(NEW),
+        _isSpecial(false),
+        _updateCount(0)
 {
   struct stat attrib;               // create a file attribute structure
   stat(filename.c_str(), &attrib);  // get the attributes of the file
@@ -87,4 +89,8 @@ bool TTXPageStream::operator==(const TTXPageStream& rhs) const
   if (this->GetSourcePage()==rhs.GetSourcePage())
     return true;
   return false;
+}
+
+void TTXPageStream::IncrementUpdateCount(){
+    _updateCount = (_updateCount + 1) % 8;
 }

@@ -108,15 +108,16 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     _status = _page->GetCarouselPage()->GetPageStatus() & 0x8000; // get transmit flag
                     _region = _page->GetCarouselPage()->GetRegion();
-                    thisSubcode=_page->GetCarouselPage()->GetSubCode() & 0x000F; // will break if carousel has more than 16 subpages but that would be out of spec anyway.
-                    thisSubcode |= _page->GetCarouselPage()->GetLastPacket() << 8;
+                    thisSubcode = (_page->GetCarouselPage()->GetSubCode() & 0x000F) | (_page->GetCarouselPage()->GetLastPacket() << 8);
                 }
                 else
                 {
                     _status = _page->GetPageStatus() & 0x8000; // get transmit flag
                     _region = _page->GetRegion();
-                    thisSubcode = _page->GetLastPacket() << 8; // S3 and S4
+                    thisSubcode = (_page->GetSubCode() & 0x000F) | (_page->GetLastPacket() << 8);
                 }
+                
+                thisSubcode |= _page->GetUpdateCount() << 4;
                 
                 /* rules for the control bits are complicated. There are rules to allow the page to be sent as fragments. Since we aren't doing that, all the flags are left clear except for C9 (interrupted sequence) to keep special pages out of rolling headers */
                 _status |= 0x0010;

@@ -112,6 +112,7 @@ void FileMonitor::run()
             // We need a mutex or semaphore to lock out this page while we do that
             // lock
             p->LoadPage(name); // What if this fails? We can see the bool. What to do ?
+            p->IncrementUpdateCount();
             p->GetPageCount(); // renumber the subpages
 			int mag=(p->GetPageNumber() >> 16) & 0x7;
             if (p->IsCarousel() && !(p->GetCarouselFlag()) && !(p->Special()))
