@@ -10,18 +10,21 @@ Packet::Packet() :
 {
     //ctor
     SetMRAG(8,25);
+    _packet[45] = '\0'; // ensure termination
 }
 
 Packet::Packet(char *val) : _isHeader(false), _mag(1), _page(999), _row(99)
 {
     //ctor
-    strncpy(_packet,val,45+1);
+    strncpy(_packet,val,45);
+    _packet[45] = '\0'; // ensure termination
 }
 
 Packet::Packet(std::string val) : _isHeader(false), _mag(1), _page(999), _row(99)
 {
     //ctor
-    strncpy(_packet,val.c_str(),45+1);
+    strncpy(_packet,val.c_str(),45);
+    _packet[45] = '\0'; // ensure termination
 }
 
 Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag), _page(999), _row(row)
@@ -29,6 +32,7 @@ Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag),
 	SetMRAG(_mag, _row);
 	SetPacketText(val);
 	assert(_row!=0); // Use Header for row 0
+	_packet[45] = '\0'; // ensure termination
 }
 
 void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
@@ -72,7 +76,6 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
 Packet::~Packet()
 {
     //dtor
-    strcpy(_packet,"This packet constructed with default txt");
 }
 
 void Packet::Set_packet(char *val)

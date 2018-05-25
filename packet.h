@@ -35,9 +35,7 @@ class Packet
 
         /** Default destructor */
         virtual ~Packet();
-        /** Access _packet[45]
-         * \return The current value of _packet[45]
-         */
+
         inline char* Get_packet() { return _packet; }
         /** Set _packet
          * \param *val New value to set
@@ -134,7 +132,7 @@ class Packet
 
     protected:
 private:
-	char _packet[45]; //!< Member variable "_packet[45]"
+	char _packet[46]; // 45 byte packet with room for a null terminator
 	bool _isHeader; //<! True if the packet is a header
 	uint8_t _mag;//<! The magazine number this packet belongs to 0..7 where 0 is maazine 8
 	uint32_t _page;//<! The page number this packet belongs to 00 to ff

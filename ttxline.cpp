@@ -232,11 +232,6 @@ bool TTXLine::IsAlphaMode(int loc)
 
 std::string TTXLine::GetLine()
 {
-    if (this==nullptr)
-    {
-        std::cerr << "[TTXLine::GetLine] this can never happen" << std::endl;
-        return "***This is a null object U dun goofed  ***";
-    }
     // If the string is less than 40 characters we need to pad it or get weird render errors
     int len=m_textline.length();
     if (len>40)

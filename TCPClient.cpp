@@ -466,6 +466,7 @@ bool TCPClient::Validate(char* dest, char* src)
         {
           valid=false;
         }
+        /* fallthrough */
       case 3: // aa - internal subpage (related to subcode but NOT the same thing)
       case 4:
         if ((ch<'0' || ch>'9') &&
