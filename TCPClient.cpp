@@ -37,7 +37,7 @@ void TCPClient::command(char* cmd, char* response)
 	char* ptr;
 	int row;
 	int status=0;
-	char statusText[4];
+	//char statusText[4];
 #ifdef DEBUG
 	strcpy(response,"todo");
 #endif

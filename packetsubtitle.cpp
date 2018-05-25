@@ -84,6 +84,7 @@ bool PacketSubtitle::IsReady(bool force)
   // After the header row goes out it must wait for the next field like any other page
   // What states are there? No subtitles, header sent and waiting.
 	// Must call GetPacket if this returns true
+  (void)force; // silence error about unused parameter
   bool result=false;
 	_mtx.lock();						// lock the critical section
 	switch (_state)

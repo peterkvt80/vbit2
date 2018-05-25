@@ -127,6 +127,7 @@ int Newfor::GetRowCount(char* cmd)
  */
 void Newfor::saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd)
 {
+	(void)mag; // temporary silence error about unused parameter
 	// What @todo about the mag? This needs to be decoded and passed on
 	// std::cerr << "[Newfor::saveSubtitleRow] cmd=" << cmd << std::endl;
 	if (cmd[0]==0) cmd[0]='?'; // @todo Temporary measure to defeat null strings (this will inevitably multiply problems!)

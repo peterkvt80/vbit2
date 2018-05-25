@@ -138,13 +138,14 @@ Packet* Packet830::GetPacket(Packet* p)
 
 bool Packet830::IsReady(bool force)
 {
-  // We will be waiting for 10 fields between becoming true
-	// 8/30/1 should go out on the system clock seconds interval.
-  bool result=GetEvent(EVENT_P830_FORMAT_1) ||
-      GetEvent(EVENT_P830_FORMAT_2_LABEL_0) ||
-      GetEvent(EVENT_P830_FORMAT_2_LABEL_1) ||
-      GetEvent(EVENT_P830_FORMAT_2_LABEL_2) ||
-      GetEvent(EVENT_P830_FORMAT_2_LABEL_3);
+    // We will be waiting for 10 fields between becoming true
+    // 8/30/1 should go out on the system clock seconds interval.
+    (void)force; // silence error about unused parameter
+    bool result=GetEvent(EVENT_P830_FORMAT_1) ||
+        GetEvent(EVENT_P830_FORMAT_2_LABEL_0) ||
+        GetEvent(EVENT_P830_FORMAT_2_LABEL_1) ||
+        GetEvent(EVENT_P830_FORMAT_2_LABEL_2) ||
+        GetEvent(EVENT_P830_FORMAT_2_LABEL_3);
   return result;
 }
 
