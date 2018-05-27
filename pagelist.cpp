@@ -105,6 +105,8 @@ void PageList::AddPage(TTXPageStream* page)
 
 bool PageList::CheckForPacket29(TTXPageStream* page)
 {
+	if (page->IsCarousel()) // page mFF should never be a carousel and this code leads to a crash if it is so bail out now
+		return false;
 	int Packet29Flag = false;
 	int mag=(page->GetPageNumber() >> 16) & 0x7;
 	if (((page->GetPageNumber() >> 8) & 0xFF) == 0xFF)
