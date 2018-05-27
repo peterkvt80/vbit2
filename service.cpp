@@ -146,7 +146,7 @@ void Service::_updateEvents()
       _fieldCounter=0;
       // std::cerr << "Seconds=" << seconds << std::endl;
       // Could implement a seconds counter here if we needed it
-      if (seconds%10==0){ // how often do we want to trigger sending special packets?
+      if (seconds%15==0){ // how often do we want to trigger sending special packets?
         for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
         {
           (*iterator)->SetEvent(EVENT_SPECIAL_PAGES);

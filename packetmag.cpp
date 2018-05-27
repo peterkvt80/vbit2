@@ -17,7 +17,8 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _thisRow(0),
     _lastTxt(nullptr),
     _nextPacket29DC(0),
-    _magRegion(0)
+    _magRegion(0),
+    _specialPagesFlipFlop(false)
 {
   //ctor
   for (int i=0;i<MAXPACKET29TYPES;i++)
@@ -90,7 +91,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 return p;
             }
         }
-        if (GetEvent(EVENT_SPECIAL_PAGES))
+        _specialPagesFlipFlop = !_specialPagesFlipFlop; // toggle the flag so that we interleave special pages and regular pages during the special pages event so that rolling headers aren't stopped completely
+        if (GetEvent(EVENT_SPECIAL_PAGES) && _specialPagesFlipFlop)
         {
             _page=_specialPages->NextPage();
             
