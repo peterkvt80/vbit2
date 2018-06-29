@@ -162,7 +162,7 @@ private:
 	void vbi_ham24p(uint8_t *		p, unsigned int c);
 
 
-	#ifndef WIN32
+	#ifdef RASPBIAN
 	bool get_temp(char* str);
 #endif
 };

@@ -7,8 +7,14 @@ CXXFLAGS = -g -O2 -Wall -std=gnu++11 -fstack-protector-all -Wextra -I.
 LIBS = -lpthread -fstack-protector
 
 ifeq ($(OS),Windows_NT)
-CXXFLAGS += -DWIN32
-LIBS += -lwsock32
+	CXXFLAGS += -DWIN32
+	LIBS += -lwsock32
+else
+	ifeq ($(shell test -e /etc/os-release && echo -n yes),yes)
+		ifeq ($(shell if [ `grep -c raspbian /etc/os-release` -gt 0 ]; then echo true ; else echo false ; fi), true)
+			CXXFLAGS += -DRASPBIAN
+		endif
+	endif
 endif
 
 #Set any dependent files (e.g. header files) so that if they are edited they cause a re-compile (e.g. "main.h my_sub_functions.h some_definitions_file.h"), or leave blank

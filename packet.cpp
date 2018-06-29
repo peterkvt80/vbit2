@@ -280,7 +280,7 @@ char* Packet::tx(bool debugMode)
 			for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
 			// ======= TEMPERATURE ========
 			char strtemp[]="                    ";
-			#ifndef WIN32
+			#ifdef RASPBIAN
 			tmpptr=strstr((char*)_packet,"%%%T");
 			if (tmpptr) {
 				get_temp(strtemp);
@@ -459,7 +459,7 @@ void Packet::Fastext(int* links, int mag)
 	}
 }
 
-#ifndef WIN32
+#ifdef RASPBIAN
 /** get_temp
  *  Pinched from raspi-teletext demo.c
  * @return Four character temperature in degrees C eg. "45.7"
