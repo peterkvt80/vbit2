@@ -67,9 +67,9 @@ public:
    */
 	void DeleteOldPages();
     
-  /** Get special pages into a list in magazine
+  /** Get pages of each type into their respective lists
    */
-    void AddSpecialPagesAndCarousels();
+    void PopulatePageTypeLists();
 
   /** \brief Iterate through all pages
    *  \return Returns the next page or nullptr if we are at the end

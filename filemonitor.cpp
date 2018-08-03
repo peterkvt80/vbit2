@@ -55,140 +55,145 @@ std::thread FileMonitor::run()
 
 void FileMonitor::run()
 {
-	// @todo This thread will clash. They need proper protection.
+    // @todo This thread will clash. They need proper protection.
 
-  std::string path=_configure->GetPageDirectory() ; //
-  std::cerr << "[FileMonitor::run] Monitoring " << path << std::endl;
+    std::string path=_configure->GetPageDirectory() ; //
+    std::cerr << "[FileMonitor::run] Monitoring " << path << std::endl;
 
-  while (true)
-  {
-    DIR *dp;
-    struct dirent *dirp;
-
-   	// Open the directory
-    if ( (dp = opendir(path.c_str())) == NULL)
+    while (true)
     {
-      std::cerr << "Error(" << errno << ") opening " << path << std::endl;
-      return;
-    }
+        DIR *dp;
+        struct dirent *dirp;
 
-		_pageList->ClearFlags(); // Assume that no files exist
-
-    // Load the filenames into a list
-    while ((dirp = readdir(dp)) != NULL)
-    {
-      // Select only pages that might be teletext. tti or ttix at the moment.
-			// strcasestr doesn't seem to be in my Windows compiler.
-#ifdef _WIN32
-      char* p=strstr(dirp->d_name,".tti");
-#else
-      char* p=strcasestr(dirp->d_name,".tti");
-#endif
-//			std::cerr << path << "/" << dirp->d_name << std::endl;
-      if (p)
-      {
-        std::string name;
-        name=path;
-        name+="/";
-        name+=dirp->d_name;
-        // Find the modification time
-        struct stat attrib;         // create a file attribute structure
-        stat(name.c_str(), &attrib);     // get the attributes of the file
-
-        // struct tm* clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
-        // std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
-        // Now we want to process changes
-        // 1) Is it a new page? Then add it.
-        TTXPageStream* p=_pageList->Locate(name);
-        if (p) // File was found
+        // Open the directory
+        if ( (dp = opendir(path.c_str())) == NULL)
         {
-          //std::cerr << dirp->d_name << " was found" << std::endl;
-
-          if (attrib.st_mtime!=p->GetModifiedTime()) // File exists. Has it changed?
-          {
-            //std::cerr << "[FileMonitor::run] File has been modified " << dirp->d_name << std::endl;
-            // We just load the new page and update the modified time
-            // This isn't good enough.
-            // We need a mutex or semaphore to lock out this page while we do that
-            // lock
-            p->LoadPage(name); // What if this fails? We can see the bool. What to do ?
-            p->IncrementUpdateCount();
-            p->GetPageCount(); // renumber the subpages
-			int mag=(p->GetPageNumber() >> 16) & 0x7;
-            if (p->IsCarousel() && !(p->GetCarouselFlag()) && !(p->Special()))
-            {
-                // page has become a carousel so add it to its mag's carousel list
-                p->SetCarouselFlag(p->IsCarousel());
-                _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
-                std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << p->GetPageNumber() << std::endl;
-            }
-            if (p->Special() && !(p->GetSpecialFlag()))
-            {
-                // page has become special so add it to its mag's special pages list
-                p->SetSpecialFlag(p->Special());
-                _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(p);
-                std::cerr << "[FileMonitor::run] page is now special " << std::hex << p->GetPageNumber() << std::endl;
-            }
-			if (_pageList->CheckForPacket29(p))
-			{
-				std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
-				_pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
-			}
-			
-            p->SetModifiedTime(attrib.st_mtime);
-            // unlock
-
-          }
-					p->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
+            std::cerr << "Error(" << errno << ") opening " << path << std::endl;
+            return;
         }
-        else
+
+        _pageList->ClearFlags(); // Assume that no files exist
+
+        // Load the filenames into a list
+        while ((dirp = readdir(dp)) != NULL)
         {
-          std::cerr << "[FileMonitor::run] Adding a new page " << dirp->d_name << std::endl;
-					// A new file. Create the page object and add it to the page list.
-					if ((p=new TTXPageStream(name)))
-					{
+            // Select only pages that might be teletext. tti or ttix at the moment.
+            // strcasestr doesn't seem to be in my Windows compiler.
+            #ifdef _WIN32
+            char* p=strstr(dirp->d_name,".tti");
+            #else
+            char* p=strcasestr(dirp->d_name,".tti");
+            #endif
+            // std::cerr << path << "/" << dirp->d_name << std::endl;
+            if (p)
+            {
+                std::string name;
+                name=path;
+                name+="/";
+                name+=dirp->d_name;
+                // Find the modification time
+                struct stat attrib;         // create a file attribute structure
+                stat(name.c_str(), &attrib);     // get the attributes of the file
+
+                // struct tm* clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
+                // std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
+                // Now we want to process changes
+                // 1) Is it a new page? Then add it.
+                TTXPageStream* p=_pageList->Locate(name);
+                if (p) // File was found
+                {
+                    //std::cerr << dirp->d_name << " was found" << std::endl;
+                    if (attrib.st_mtime!=p->GetModifiedTime()) // File exists. Has it changed?
+                    {
+                        //std::cerr << "[FileMonitor::run] File has been modified " << dirp->d_name << std::endl;
+                        // We just load the new page and update the modified time
+                        // This isn't good enough.
+                        // We need a mutex or semaphore to lock out this page while we do that
+                        // lock
+                        p->LoadPage(name); // What if this fails? We can see the bool. What to do ?
+                        p->IncrementUpdateCount();
+                        p->GetPageCount(); // renumber the subpages
+                        int mag=(p->GetPageNumber() >> 16) & 0x7;
+                        if (p->IsCarousel() && !(p->GetCarouselFlag()) && !(p->Special()))
+                        {
+                            // page has become a carousel so add it to its mag's carousel list
+                            p->SetCarouselFlag(p->IsCarousel());
+                            _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
+                            std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << p->GetPageNumber() << std::endl;
+                        }
+                        if (p->Special() && !(p->GetSpecialFlag()))
+                        {
+                            // page has become special so add it to its mag's special pages list
+                            p->SetSpecialFlag(p->Special());
+                            _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(p);
+                            std::cerr << "[FileMonitor::run] page is now special " << std::hex << p->GetPageNumber() << std::endl;
+                        }
+                        if (_pageList->CheckForPacket29(p))
+                        {
+                            std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
+                            _pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
+                        }
+                        
+                        p->SetModifiedTime(attrib.st_mtime);
+                        // unlock
+                    }
+                    p->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
+                }
+                else
+                {
+                    std::cerr << "[FileMonitor::run] Adding a new page " << dirp->d_name << std::endl;
+                    // A new file. Create the page object and add it to the page list.
+                    if ((p=new TTXPageStream(name)))
+                    {
                         p->GetPageCount(); // renumber the subpages
                         _pageList->AddPage(p);
-						int mag=(p->GetPageNumber() >> 16) & 0x7;
-						if (p->Special())
+                        int mag=(p->GetPageNumber() >> 16) & 0x7;
+                        if (p->Special())
                         {
-							p->SetSpecialFlag(p->Special());
+                            // Page is 'special'
+                            p->SetSpecialFlag(p->Special());
                             _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(p);
                             std::cerr << "[FileMonitor::run] new page is special " << std::hex << p->GetPageNumber() << std::endl;
                         }
                         else if (p->IsCarousel())
                         {
-							p->SetCarouselFlag(p->IsCarousel());
+                            // Page is a 'carousel'
+                            p->SetCarouselFlag(p->IsCarousel());
                             _pageList->GetMagazines()[mag]->GetCarousel()->addPage(p);
                             std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << p->GetPageNumber() << std::endl;
                         }
+                        else
+                        {
+                            // Page is 'normal'
+                            _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(p);
+                        }
                         
-						if (_pageList->CheckForPacket29(p))
-						{
-							std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
-							_pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
-						}
-					}
-					else
-						std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;
+                        if (_pageList->CheckForPacket29(p))
+                        {
+                            std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
+                            _pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
+                        }
+                    }
+                    else
+                        std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;
+                }
+            }
         }
-      }
+        closedir(dp);
+        // std::cerr << "[FileMonitor::run] Finished scan" << std::endl;
+
+        // Delete pages that no longer exist (this blocks the thread until the pages are removed)
+        _pageList->DeleteOldPages();
+
+        // Wait 5 seconds.
+        // WARNING. We must allow enough time for Service to complete the delete or this process might crash
+        // Sounds like a job for a mutex.
+        struct timespec rec;
+        int ms;
+
+        ms=5000;
+        rec.tv_sec = ms / 1000;
+        rec.tv_nsec=(ms % 1000) *1000000;
+        nanosleep(&rec,nullptr);
     }
-    closedir(dp);
-    // std::cerr << "[FileMonitor::run] Finished scan" << std::endl;
-
-		// Delete pages that no longer exist (this blocks the thread until the pages are removed)
-		_pageList->DeleteOldPages();
-
-    // Wait 5 seconds.
-    // WARNING. We must allow enough time for Service to complete the delete or this process might crash
-    // Sounds like a job for a mutex.
-    struct timespec rec;
-    int ms;
-
-    ms=5000;
-    rec.tv_sec = ms / 1000;
-    rec.tv_nsec=(ms % 1000) *1000000;
-    nanosleep(&rec,nullptr);
-  }
 } // run

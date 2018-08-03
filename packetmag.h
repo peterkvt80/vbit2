@@ -5,6 +5,7 @@
 #include "ttxpagestream.h"
 #include "carousel.h"
 #include "specialpages.h"
+#include "normalpages.h"
 #include "configure.h"
 
 #define MAXPACKET29TYPES 3
@@ -28,6 +29,7 @@ class PacketMag : public PacketSource
     std::list<TTXPageStream>*  Get_pageSet() { return _pageSet; }
     
     SpecialPages* GetSpecialPages() { return _specialPages; }
+    NormalPages* GetNormalPages() { return _normalPages; }
     Carousel* GetCarousel() { return _carousel; }
     
     /** Get the next packet
@@ -53,6 +55,7 @@ class PacketMag : public PacketSource
       std::list<TTXPageStream>::iterator _it;
       Carousel* _carousel;
       SpecialPages* _specialPages;
+      NormalPages* _normalPages;
       uint8_t _priorityCount; /// Controls transmission priority
       PacketState _state; /// State machine to sequence packet types
       uint8_t _thisRow; // The current line that we are outputting
@@ -65,7 +68,7 @@ class PacketMag : public PacketSource
       int _status;
       int _region;
       bool _hasX28Region;
-      bool _specialPagesFlipFlop; // toggle to alternate between special pages and regluar list
+      bool _specialPagesFlipFlop; // toggle to alternate between special pages and normal pages
 };
 
 }
