@@ -50,12 +50,8 @@ TTXPageStream* Carousel::nextCarousel()
         if (p->Expired())
         {
             // We found a carousel that is ready to step
-            // std::cerr << "[Carousel::nextCarousel] page " << std::hex << p->GetPageNumber() << std::dec << " cycle time=" << p->GetCycleTime() << std::endl;
-            TTXPage* q = p->GetCarouselPage();
-            if (q) // if _carouselPage is not null
-                p->SetTransitionTime(q->GetCycleTime());
-            else
-                p->SetTransitionTime(p->GetCycleTime());
+            p->StepNextSubpage();
+            p->SetTransitionTime(p->GetCarouselPage()->GetCycleTime());
             break;
         }
         p=nullptr;

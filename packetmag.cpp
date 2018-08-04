@@ -152,7 +152,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _thisRow=0;
                 
                 if (_page->GetCarouselFlag()){
-                    _page->StepNextSubpage();
                     thisSubcode=_page->GetCarouselPage()->GetSubCode();
                     _status=_page->GetCarouselPage()->GetPageStatus();
                     _region=_page->GetCarouselPage()->GetRegion();
