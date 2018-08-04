@@ -67,9 +67,6 @@ public:
    */
 	void DeleteOldPages();
     
-  /** Get pages of each type into their respective lists
-   */
-    void PopulatePageTypeLists();
 
   /** \brief Iterate through all pages
    *  \return Returns the next page or nullptr if we are at the end
@@ -105,6 +102,10 @@ private:
 	Configure* _configure; // The configuration object
 	std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
 	vbit::PacketMag* _mag[8];
+    
+    /** Get pages of each type into their respective lists
+   */
+    void PopulatePageTypeLists();
 	
 	TTXLine* _magPacket29[8][MAXPACKET29TYPES];
 

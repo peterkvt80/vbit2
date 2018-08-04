@@ -25,9 +25,6 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
   {
     _packet29[i]=nullptr;
   }
-
-  _it=_pageSet->begin();
-  _page=&*_it;
   
   _normalPages=new vbit::NormalPages();
   _carousel=new vbit::Carousel();
