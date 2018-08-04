@@ -382,9 +382,12 @@ void PageList::DeleteOldPages()
         
         std::cerr << "[PageList::DeleteOldPages] Deleted " << ptr->GetSourcePage() << std::endl;
         // page has been removed from lists
-        _pageList[mag].remove(*p);
-        p--;
-        // TODO: reset iterators ?
+        _pageList[mag].remove(*p--);
+        
+        if (_iterMag == mag){
+            // _iter is iterating _pageList[mag]
+            _iter=_pageList[_iterMag].begin(); // reset it?
+        }
       }
       else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
       {
