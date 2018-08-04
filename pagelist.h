@@ -40,12 +40,6 @@ public:
    */
   TTXPageStream* Locate(std::string filename);
 
-  /** Find a page given the page number
-   * @param filename The page number of the page (in MPPSS hex)
-	 * \return A Page object if it exists, otherwise null
-   */
-  TTXPageStream* FindPage(char* pageNumber);
-
   // Probably want a nextPage function to scan using a wildcard
 
   /**

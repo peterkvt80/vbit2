@@ -18,7 +18,7 @@ Carousel::~Carousel()
 void Carousel::addPage(TTXPageStream* p)
 {
     // @todo Don't allow duplicate entries
-    p->SetTransitionTime();
+    p->SetTransitionTime(p->GetCycleTime());
     _carouselList.push_front(p);
     //std::cerr << "[Carousel::addPage]";
 }
@@ -49,8 +49,13 @@ TTXPageStream* Carousel::nextCarousel()
         
         if (p->Expired())
         {
+            // We found a carousel that is ready to step
             // std::cerr << "[Carousel::nextCarousel] page " << std::hex << p->GetPageNumber() << std::dec << " cycle time=" << p->GetCycleTime() << std::endl;
-            p->SetTransitionTime(); // We found a carousel that is ready to step
+            TTXPage* q = p->GetCarouselPage();
+            if (q) // if _carouselPage is not null
+                p->SetTransitionTime(q->GetCycleTime());
+            else
+                p->SetTransitionTime(p->GetCycleTime());
             break;
         }
         p=nullptr;

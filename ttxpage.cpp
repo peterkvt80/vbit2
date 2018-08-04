@@ -480,7 +480,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     // CT,8,T
                     // std::cerr << "CT not implemented\n";
                     std::getline(filein, line, ',');
-                    m_cycletimeseconds=atoi(line.c_str());
+                    p->SetCycleTime(atoi(line.c_str()));
                     std::getline(filein, line);
                     m_cycletimetype=line[0]=='T'?'T':'C';
                     // TODO: CT is not decoded correctly

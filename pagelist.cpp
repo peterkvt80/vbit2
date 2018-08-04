@@ -167,43 +167,6 @@ TTXPageStream* PageList::Locate(std::string filename)
  return NULL; // @todo placeholder What should we do here?
 }
 
-// Find a page by page number. THIS IS TO BE REPLACED BY Match().
-TTXPageStream* PageList::FindPage(char* pageNumber)
-{
-	std::cerr << "[PageList::FindPage] Need to extend to multiple page selection" << std::endl;
-	int mag=(pageNumber[0]-'0') & 0x07;
-	// For each page
-	for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
-	{
-		TTXPageStream* ptr;
-		std::stringstream ss;
-		char s[6];
-		char* ps=s;
-		bool match=true;
-		ptr=&(*p);
-		// Convert the page number into a string so we can compare it
-		ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
-		strcpy(ps,ss.str().c_str());
-
-		for (int i=0;i<5;i++)
-    {
-      if (pageNumber[i]!='*') // wildcard
-      {
-        if (pageNumber[i]!=s[i])
-        {
-          match=false;
-        }
-      }
-    }
-		if (match)
-    {
-			return ptr;
-    }
-  }
-	return nullptr; // Not found
-
-}
-
 int PageList::Match(char* pageNumber)
 {
   int matchCount=0;
