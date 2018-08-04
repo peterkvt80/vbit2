@@ -406,9 +406,9 @@ void PageList::DeleteOldPages()
     {
       TTXPageStream* ptr;
       ptr=&(*p);
-      if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
+      if (ptr->GetStatusFlag()==TTXPageStream::GONE)
       {
-		if (((ptr->GetPageNumber() >> 8) & 0xFF) == 0xFF)
+        if (((ptr->GetPageNumber() >> 8) & 0xFF) == 0xFF)
 		{
 			// page mFF - make sure packet 29 is removed
 			_magPacket29[mag][0] = nullptr;
@@ -416,8 +416,16 @@ void PageList::DeleteOldPages()
 			_magPacket29[mag][2] = nullptr;
 			_mag[mag]->SetPacket29(_magPacket29[mag]);
 		}
-		
-		// std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
+        
+        std::cerr << "[PageList::DeleteOldPages] Deleted " << ptr->GetSourcePage() << std::endl;
+        // page has been removed from lists
+        _pageList[mag].remove(*p);
+        p--;
+        // TODO: reset iterators ?
+      }
+      else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
+      {
+		std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
 		// Pages marked here get deleted in the Service thread
         ptr->SetState(TTXPageStream::MARKED);
       }

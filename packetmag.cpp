@@ -139,34 +139,19 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     //_outp("c");
                 }
-                else  // No carousel? Take the next page in the main sequence
+                else  // No carousel? Take the next normal page
                 {
                     _page=_normalPages->NextPage();
-                    if (_page == nullptr){
-                        // couldn't get a page to send so sent a time filling header
-                        p->Header(_magNumber,0xFF,0x3F7F,0x8010);
-                        p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
-                        ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
-                        return p;
-                    }
-                    else if (_page->GetStatusFlag()==TTXPageStream::MARKED)
-                    {
-                        // If it is marked for deletion, then remove it.
-                        // never delete anything until we sort out the deleting from carousel issue
-                        //_pageSet->remove(*(_it++)); 
-                        _page=nullptr;
-                    }
-                    else if (_page->IsCarousel()) // Don't let carousel pages into the main page sequence
-                    {
-                        // Page is a carousel, this shouldn't happen
-                        _page=nullptr; // clear everything for now so that we keep running
-                    }
-                    else if (_page->Special())
-                    {
-                        // Page is special, this shouldn't happen
-                        _page=nullptr;
-                    }
                 }
+                
+                if (_page == nullptr){
+                    // couldn't get a page to send so sent a time filling header
+                    p->Header(_magNumber,0xFF,0x3F7F,0x8010);
+                    p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
+                    ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
+                    return p;
+                }
+                
                 _thisRow=0;
                 
                 if (_page->GetCarouselFlag()){

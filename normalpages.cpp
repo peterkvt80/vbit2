@@ -42,6 +42,18 @@ TTXPageStream* NormalPages::NextPage()
         _page = nullptr;
     }
     
+    if (_page)
+    {
+        if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+        {
+            std::cerr << "[NormalPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
+            _page->SetState(TTXPageStream::GONE);
+            _NormalPagesList.remove(_page);
+            ResetIter();
+            return nullptr;
+        }
+    }
+    
     return _page;
 }
 
