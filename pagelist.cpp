@@ -380,7 +380,7 @@ void PageList::DeleteOldPages()
 			_mag[mag]->SetPacket29(_magPacket29[mag]);
 		}
         
-        std::cerr << "[PageList::DeleteOldPages] Deleted " << ptr->GetSourcePage() << std::endl;
+        //std::cerr << "[PageList::DeleteOldPages] Deleted " << ptr->GetSourcePage() << std::endl;
         // page has been removed from lists
         _pageList[mag].remove(*p--);
         
@@ -391,7 +391,7 @@ void PageList::DeleteOldPages()
       }
       else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
       {
-		std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
+		//std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
 		// Pages marked here get deleted in the Service thread
         ptr->SetState(TTXPageStream::MARKED);
       }

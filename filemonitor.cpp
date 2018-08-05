@@ -237,20 +237,20 @@ void FileMonitor::run()
                                 // Page is 'special'
                                 q->SetSpecialFlag(q->Special());
                                 _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                                std::cerr << "[FileMonitor::run] new page is special " << std::hex << q->GetPageNumber() << std::endl;
+                                //std::cerr << "[FileMonitor::run] new page is special " << std::hex << q->GetPageNumber() << std::endl;
                             }
                             else if (q->IsCarousel())
                             {
                                 // Page is a 'carousel'
                                 q->SetCarouselFlag(q->IsCarousel());
                                 _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                                std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << q->GetPageNumber() << std::endl;
+                                //std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << q->GetPageNumber() << std::endl;
                             }
                             else
                             {
                                 // Page is 'normal'
                                 _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                                std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
+                                //std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
                             }
                             
                             if (_pageList->CheckForPacket29(q))
@@ -273,9 +273,7 @@ void FileMonitor::run()
         // Delete pages that no longer exist (this blocks the thread until the pages are removed)
         _pageList->DeleteOldPages();
 
-        /*
-        // Wait 5 seconds.
-        // WARNING. We must allow enough time for Service to complete the delete or this process might crash
+        // Wait 5 seconds to avoid hogging cpu
         // Sounds like a job for a mutex.
         struct timespec rec;
         int ms;
@@ -284,6 +282,5 @@ void FileMonitor::run()
         rec.tv_sec = ms / 1000;
         rec.tv_nsec=(ms % 1000) *1000000;
         nanosleep(&rec,nullptr);
-        */
     }
 } // run
