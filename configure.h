@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include "ttxline.h"
+
 #define CONFIGFILE "vbit.conf" // default config file name
 #define MAXPATH 132
 

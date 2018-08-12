@@ -93,6 +93,7 @@ int Configure::LoadConfigFile(std::string filename)
 		std::string line;
 		std::string name;
 		std::string value;
+        TTXLine* header = new TTXLine();
 		while (std::getline(filein >> std::ws, line)){
 			if (line.front() != ';'){ // ignore comments
 				/// todo: parsing!
@@ -107,8 +108,11 @@ int Configure::LoadConfigFile(std::string filename)
 						// matched string
 						switch(iter - nameStrings.begin()){
 							case 0: // header_template
+                                header->Setm_textline(value,true);
+                                value = header->GetLine();
 								value.resize(32,' ');
 								_headerTemplate.assign(value);
+                                
 								break;
 
 							case 1: // initial_teletext_page
