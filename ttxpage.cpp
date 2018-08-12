@@ -498,7 +498,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                         break;
                     pageNumber=std::strtol(line.c_str(), &ptr, 16);
                     // std::cerr << "Line=" << line << " " << "line length=" << line.length() << std::endl;
-                    if (line.length()<5 && pageNumber<0x8ff) // Page number without subpage? Shouldn't happen but you never know.
+                    if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
                     {
                         pageNumber*=0x100;
                     }
@@ -681,7 +681,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 	// assert(rownumber<=MAXROW);
 	if (rownumber>MAXROW) return;
 
-	if (rownumber == 28){
+	if (rownumber == 28 && line.length() >= 40){
 		dc = line.at(0) & 0x0F;
 		if (dc == 0 || dc == 2 || dc == 3 || dc == 4){
 			// packet is X/28/0, X/28/2, X/28/3, or X/28/4
@@ -694,7 +694,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 		}
 	}
 	
-	if (rownumber == 26)
+	if (rownumber == 26 && line.length() >= 40)
 	{
 		dc = line.at(0) & 0x0F;
 		if ((dc + 26) > m_lastpacket)
@@ -936,9 +936,8 @@ void TTXPage::SetPageNumber(int page)
     if ((page<0x10000) || (page>0x8ff99))
     {
         std::cerr << "[TTXPage::SetPageNumber] Page number is out of range: " << std::hex << page << std::endl;
+        page = 0x8FF00;
     }
-    if (page<0x10000) page=0x10000;
-    if (page>0x8ff99) page=0x8ff99;
     //std::cerr << "PageNumber changed from " << std::hex << m_PageNumber << " to ";
     m_PageNumber=page;
     //std::cerr << std::hex << m_PageNumber << std::endl;
