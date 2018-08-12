@@ -32,64 +32,65 @@ PageList::~PageList()
 
 int PageList::LoadPageList(std::string filepath)
 {
-	// std::cerr << "[PageList::LoadPageList] Loading pages from " << filepath << std::endl;
-	// Open the directory
-	DIR *dp;
-	TTXPageStream* q;
-	struct dirent *dirp;
-	if ((dp = opendir(filepath.c_str())) == NULL)
-  {
-		std::cerr << "Error(" << errno << ") opening " << filepath << std::endl;
-		return errno;
-	}
-	// Load the filenames into a list
-	while ((dirp = readdir(dp)) != NULL)
-	{
-		//p=new TTXPageStream(filepath+"/"+dirp->d_name);
-    if (std::string(dirp->d_name).find(".tti") != std::string::npos)	// Is the file type .tti or ttix?
+    // std::cerr << "[PageList::LoadPageList] Loading pages from " << filepath << std::endl;
+    // Open the directory
+    DIR *dp;
+    TTXPageStream* q;
+    struct dirent *dirp;
+    if ((dp = opendir(filepath.c_str())) == NULL)
     {
-      q=new TTXPageStream(filepath+"/"+dirp->d_name);
-      // If the page loaded, then push it into the appropriate magazine
-      if (q->Loaded())
-      {
-        q->GetPageCount(); // Use for the side effect of renumbering the subcodes
-
-        int mag=(q->GetPageNumber() >> 16) & 0x7;
-        _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
-		if (CheckForPacket29(q))
-			std::cerr << "[PageList::LoadPageList] found packet 29" << std::endl;
-      }
+        std::cerr << "Error(" << errno << ") opening " << filepath << std::endl;
+        return errno;
     }
-	}
-	closedir(dp);
-  // std::cerr << "[PageList::LoadPageList]FINISHED LOADING PAGES" << std::endl;
-
-	// How many files did we accept?
-	for (int i=0;i<8;i++)
-  {
-    _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
-	_mag[i]->SetPacket29(_magPacket29[i]);
-  }
-  
-  
-  AddSpecialPagesAndCarousels(); // add any special pages that were loaded in
-  
-  // Just for testing
-  if (1) for (int i=0;i<8;i++)
-  {
-    vbit::PacketMag* m=_mag[i];
-    std::list<TTXPageStream>* p=m->Get_pageSet();
-    for (std::list<TTXPageStream>::const_iterator it=p->begin();it!=p->end();++it)
+    // Load the filenames into a list
+    while ((dirp = readdir(dp)) != NULL)
     {
-      if (&(*it)==NULL)
-          std::cerr << "[PageList::LoadPageList] This can't happen unless something is broken" << std::endl;
-       // std::cerr << "[PageList::LoadPageList]Dumping :" << std::endl;
-       // it->DebugDump();
-       std::cerr << "[PageList::LoadPageList] mag["<<i<<"] Filename =" << it->GetSourcePage()  << std::endl;
-    }
-  }
+        //p=new TTXPageStream(filepath+"/"+dirp->d_name);
+        if (std::string(dirp->d_name).find(".tti") != std::string::npos)	// Is the file type .tti or ttix?
+        {
+            q=new TTXPageStream(filepath+"/"+dirp->d_name);
+            // If the page loaded, then push it into the appropriate magazine
+            if (q->Loaded())
+            {
+            q->GetPageCount(); // Use for the side effect of renumbering the subcodes
 
-	return 0;
+            int mag=(q->GetPageNumber() >> 16) & 0x7;
+            _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
+            
+            if (CheckForPacket29(q))
+                std::cerr << "[PageList::LoadPageList] found packet 29" << std::endl;
+            }
+        }
+    }
+    closedir(dp);
+    // std::cerr << "[PageList::LoadPageList]FINISHED LOADING PAGES" << std::endl;
+
+    // How many files did we accept?
+    for (int i=0;i<8;i++)
+    {
+        _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
+        _mag[i]->SetPacket29(_magPacket29[i]);
+    }
+  
+  
+    PopulatePageTypeLists(); // add pages to the appropriate lists for their type
+  
+    // Just for testing
+    if (1) for (int i=0;i<8;i++)
+    {
+        vbit::PacketMag* m=_mag[i];
+        std::list<TTXPageStream>* p=m->Get_pageSet();
+        for (std::list<TTXPageStream>::const_iterator it=p->begin();it!=p->end();++it)
+        {
+            if (&(*it)==NULL)
+                std::cerr << "[PageList::LoadPageList] This can't happen unless something is broken" << std::endl;
+            // std::cerr << "[PageList::LoadPageList]Dumping :" << std::endl;
+            // it->DebugDump();
+            std::cerr << "[PageList::LoadPageList] mag["<<i<<"] Filename =" << it->GetSourcePage()  << std::endl;
+        }
+    }
+
+    return 0;
 }
 
 void PageList::AddPage(TTXPageStream* page)
@@ -164,43 +165,6 @@ TTXPageStream* PageList::Locate(std::string filename)
 
   }
  return NULL; // @todo placeholder What should we do here?
-}
-
-// Find a page by page number. THIS IS TO BE REPLACED BY Match().
-TTXPageStream* PageList::FindPage(char* pageNumber)
-{
-	std::cerr << "[PageList::FindPage] Need to extend to multiple page selection" << std::endl;
-	int mag=(pageNumber[0]-'0') & 0x07;
-	// For each page
-	for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
-	{
-		TTXPageStream* ptr;
-		std::stringstream ss;
-		char s[6];
-		char* ps=s;
-		bool match=true;
-		ptr=&(*p);
-		// Convert the page number into a string so we can compare it
-		ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
-		strcpy(ps,ss.str().c_str());
-
-		for (int i=0;i<5;i++)
-    {
-      if (pageNumber[i]!='*') // wildcard
-      {
-        if (pageNumber[i]!=s[i])
-        {
-          match=false;
-        }
-      }
-    }
-		if (match)
-    {
-			return ptr;
-    }
-  }
-	return nullptr; // Not found
-
 }
 
 int PageList::Match(char* pageNumber)
@@ -405,9 +369,9 @@ void PageList::DeleteOldPages()
     {
       TTXPageStream* ptr;
       ptr=&(*p);
-      if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
+      if (ptr->GetStatusFlag()==TTXPageStream::GONE)
       {
-		if (((ptr->GetPageNumber() >> 8) & 0xFF) == 0xFF)
+        if (((ptr->GetPageNumber() >> 8) & 0xFF) == 0xFF)
 		{
 			// page mFF - make sure packet 29 is removed
 			_magPacket29[mag][0] = nullptr;
@@ -415,8 +379,19 @@ void PageList::DeleteOldPages()
 			_magPacket29[mag][2] = nullptr;
 			_mag[mag]->SetPacket29(_magPacket29[mag]);
 		}
-		
-		// std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
+        
+        //std::cerr << "[PageList::DeleteOldPages] Deleted " << ptr->GetSourcePage() << std::endl;
+        // page has been removed from lists
+        _pageList[mag].remove(*p--);
+        
+        if (_iterMag == mag){
+            // _iter is iterating _pageList[mag]
+            _iter=_pageList[_iterMag].begin(); // reset it?
+        }
+      }
+      else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
+      {
+		//std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
 		// Pages marked here get deleted in the Service thread
         ptr->SetState(TTXPageStream::MARKED);
       }
@@ -424,24 +399,30 @@ void PageList::DeleteOldPages()
   }
 }
 
-void PageList::AddSpecialPagesAndCarousels()
+void PageList::PopulatePageTypeLists()
 {
-  // moves any special pages and carousels into the magazine's _specialPages and _carousels lists immediately so that it doesn't have to wait for the page to next be transmitted
   for (int mag=0;mag<8;mag++)
   {
     for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
     {
         TTXPageStream* ptr;
         ptr=&(*p);
-        if (ptr->IsCarousel() && !(ptr->GetCarouselFlag()) && !(ptr->Special()))
+        if (ptr->Special() && !(ptr->GetSpecialFlag()))
         {
+            // Page is 'special'
+            ptr->SetSpecialFlag(true);
+            _mag[mag]->GetSpecialPages()->addPage(ptr);
+        }
+        else if (ptr->IsCarousel() && !(ptr->GetCarouselFlag()))
+        {
+            // Page is a 'carousel'
             ptr->SetCarouselFlag(ptr->IsCarousel());
             _mag[mag]->GetCarousel()->addPage(ptr);
         }
-        if (ptr->Special() && !(ptr->GetSpecialFlag()))
+        else
         {
-            ptr->SetSpecialFlag(true);
-            _mag[mag]->GetSpecialPages()->addPage(ptr);
+            // Page is 'normal'
+            _mag[mag]->GetNormalPages()->addPage(ptr);
         }
     }
   }

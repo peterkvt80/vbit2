@@ -55,6 +55,18 @@ TTXPageStream* SpecialPages::NextPage()
 		_page->StepNextSubpageNoLoop(); // ensure we don't point at a null subpage
 	}
     
+    if (_page)
+    {
+        if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+        {
+            std::cerr << "[SpecialPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
+            _page->SetState(TTXPageStream::GONE);
+            _specialPagesList.remove(_page);
+            ResetIter();
+            return nullptr;
+        }
+    }
+    
     return _page;
 }
 

@@ -23,7 +23,8 @@ class TTXPageStream : public TTXPage
       NEW,      // Just created
       NOTFOUND, // Not found yet
       FOUND,    // Matched on drive
-      MARKED
+      MARKED,   // To be deleted
+      GONE      // Safe to delete
     };
 
     /** Default constructor. Don't call this */
@@ -71,7 +72,7 @@ class TTXPageStream : public TTXPage
     /** Set the time when this carousel expires
      *  ...which is the current time plus the cycle time
      */
-    inline void SetTransitionTime(){_transitionTime=time(nullptr)+m_cycletimeseconds;};
+    inline void SetTransitionTime(int cycleTime){_transitionTime=time(nullptr) + cycleTime;};
 
     /** Used to time carousels
      *  @return true if it is time to change carousel page

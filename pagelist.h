@@ -40,12 +40,6 @@ public:
    */
   TTXPageStream* Locate(std::string filename);
 
-  /** Find a page given the page number
-   * @param filename The page number of the page (in MPPSS hex)
-	 * \return A Page object if it exists, otherwise null
-   */
-  TTXPageStream* FindPage(char* pageNumber);
-
   // Probably want a nextPage function to scan using a wildcard
 
   /**
@@ -67,9 +61,6 @@ public:
    */
 	void DeleteOldPages();
     
-  /** Get special pages into a list in magazine
-   */
-    void AddSpecialPagesAndCarousels();
 
   /** \brief Iterate through all pages
    *  \return Returns the next page or nullptr if we are at the end
@@ -105,6 +96,10 @@ private:
 	Configure* _configure; // The configuration object
 	std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
 	vbit::PacketMag* _mag[8];
+    
+    /** Get pages of each type into their respective lists
+   */
+    void PopulatePageTypeLists();
 	
 	TTXLine* _magPacket29[8][MAXPACKET29TYPES];
 
