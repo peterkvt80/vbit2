@@ -574,13 +574,13 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     break;
                 case 12 : // "PF"; - not in the tti spec, page function and coding
                     std::getline(filein, line);
-                    if (line.length()==3)
+                    if (line.length()<3)
+                        std::cerr << "invalid page function/coding " << line << std::endl;
+                    else
                     {
                         SetPageFunctionInt(std::strtol(line.substr(0,1).c_str(), &ptr, 16));
                         SetPageCodingInt(std::strtol(line.substr(2,1).c_str(), &ptr, 16));
                     }
-                    else
-                        std::cerr << "invalid page function/coding " << line << std::endl;
                     break;
                 default:
                     std::cerr << "Command not understood " << line << std::endl;
