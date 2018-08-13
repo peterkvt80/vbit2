@@ -145,7 +145,6 @@ void Service::_updateEvents()
   time(&now);
   if (difftime(now,_then) > 0) // system clock second has ticked
   {
-      std::cerr << "tick " << asctime(localtime(&now)) << std::endl;
       _then = now;
       seconds++;
       _fieldCounter=0; // reset field counter
@@ -172,7 +171,7 @@ void Service::_updateEvents()
     
     if (_fieldCounter%10==0 && _fieldCounter<50) // Packet 830 happens every 200ms.
     {
-      Event ev;
+      Event ev=EVENT_P830_FORMAT_1;
       switch (_fieldCounter/10)
       {
       case 0:
@@ -191,7 +190,6 @@ void Service::_updateEvents()
         ev=EVENT_P830_FORMAT_2_LABEL_3;
         break;
       }
-      std::cerr << (int)_fieldCounter << std::endl;
       for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
       {
         (*iterator)->SetEvent(ev);
