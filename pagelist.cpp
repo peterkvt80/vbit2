@@ -86,7 +86,7 @@ int PageList::LoadPageList(std::string filepath)
                 std::cerr << "[PageList::LoadPageList] This can't happen unless something is broken" << std::endl;
             // std::cerr << "[PageList::LoadPageList]Dumping :" << std::endl;
             // it->DebugDump();
-            std::cerr << "[PageList::LoadPageList] mag["<<i<<"] Filename =" << it->GetSourcePage()  << std::endl;
+            //std::cerr << "[PageList::LoadPageList] mag["<<i<<"] Filename =" << it->GetSourcePage()  << std::endl;
         }
     }
 
