@@ -517,6 +517,8 @@ bool TTXPage::m_LoadTTI(std::string filename)
                         p->Setm_SubPage(newSubPage);            // Put in a link to it
                         p=newSubPage;                       // And jump to the next subpage ready to populate
                         p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
+                        p->SetCycleTimeMode(m_cycletimetype); // inherit cycle time
+                        p->SetCycleTime(m_cycletimeseconds);
                     }
                     p->SetPageNumber(pageNumber);
 
