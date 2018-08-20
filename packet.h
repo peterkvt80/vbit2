@@ -65,7 +65,7 @@ class Packet
          * Sometimes we need to reverse the bit order
          *
          */
-        char* tx(bool debugMode=false);
+        char* tx(bool reverse=false);
 
         /** SetMRAG
          * Sets the first five bytes of the packet

@@ -108,7 +108,7 @@ void Packet::PacketQuiet()
 // Set CRI and MRAG. Leave the rest of the packet alone
 void Packet::SetMRAG(uint8_t mag, uint8_t row)
 {
-	char *p=_packet; // Remember that the bit order gets reversed later
+	char *p=_packet;
 	*p++=0x55; // clock run in
 	*p++=0x55; // clock run in
 	*p++=0x27; // framing code
@@ -157,7 +157,7 @@ bool Packet::get_offset_time(char* str)
  * but hard code this for now
  * Most of this should be rewritten for c++
  */
-char* Packet::tx(bool debugMode)
+char* Packet::tx(bool reverse)
 {
 	// Get local time
 	time_t rawtime;
@@ -329,27 +329,15 @@ char* Packet::tx(bool debugMode)
 			Parity(5); // redo the parity because substitutions will need processing
 		}
 
-    if (!debugMode)
+    if (reverse)
     {
-        // @todo drop off the first three characters for raspi-teletext
-        return &_packet[3]; // For raspi-pi we skip clock run in and framing code
-    }
-    else
-    {
-        std::cerr << "Packet::tx:" << std::setfill('0') <<  std::hex ;
-        for (int i=0;i<45;i++)
-            std::cerr << std::setw(2)  << (int)(_packet[i] & 0xff) << " ";
-        std::cerr << std::dec << std::endl;
-        for (int i=0;i<45;i++)
+        for (int i=0;i<PACKETSIZE;i++)
         {
-            char ch=_packet[i] & 0x7f;
-            if (ch<' ') ch='.';
-            std::cerr << " " << ch << " ";
+            _packet[i]=_vbi_bit_reverse[(uint8_t)(_packet[i])];
         }
-        // std::cerr << std::endl;
-        return &_packet[3];
     }
-
+    
+    return &_packet[3]; // For raspi-pi we skip clock run in and framing code
 }
 
 
@@ -413,16 +401,6 @@ void Packet::Parity(uint8_t offset)
 	{
 		_packet[i]=ParTab[(uint8_t)(_packet[i]&0x7f)];
 	}
-	/* DO NOT REVERSE for Raspi. Other devices may need byte endian reversed
-	for (i=0;i<PACKETSIZE;i++)
-	{
-		c=(uint8_t)_packet[i];
-		c = (c & 0x0F) << 4 | (c & 0xF0) >> 4;
-		c = (c & 0x33) << 2 | (c & 0xCC) >> 2;
-		c = (c & 0x55) << 1 | (c & 0xAA) >> 1;
-		_packet[i]=(char)c;
-	}
-	*/
 } // Parity
 
 void Packet::Fastext(int* links, int mag)

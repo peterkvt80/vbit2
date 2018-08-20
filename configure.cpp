@@ -38,6 +38,8 @@ Configure::Configure(int argc, char** argv) :
     // the default command interface port
     _commandPort = 5570;
     _commandPortEnabled = false;
+    
+    _reverseBits = false;
 
     _rowAdaptive = false;
     _linesPerField = 16; // default to 16 lines per field
@@ -48,11 +50,16 @@ Configure::Configure(int argc, char** argv) :
     //std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
     if (argc>1)
     {
-        for (int i=1;i<argc-1;i++)
+        for (int i=1;i<argc;i++)
         {
             if (strncmp(argv[i],"--dir",5)==0)
             {
-                strncpy(_pageDir,argv[i+1],MAXPATH-1);
+                i++;
+                strncpy(_pageDir,argv[i],MAXPATH-1);
+            }
+            else if (strncmp(argv[i],"--reverse",9)==0)
+            {
+                _reverseBits = true;
             }
         }
     }

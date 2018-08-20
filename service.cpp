@@ -53,7 +53,14 @@ int Service::run()
 
   static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
   
-  time(&_then); // prepare timer
+    bool reverse = _configure->GetReverseFlag();
+    if (reverse)
+    {
+        std::cerr << "[Service::run] output reversed bytes" << std::endl;
+        filler->tx(true); // reverse bytes in filler packet, this modifies the packet so don't reverse it when used below
+    }
+  
+    time(&_then); // prepare timer
 
   std::cerr << "[Service::run] Loop starts" << std::endl;
   std::cerr << "[Service::run] Lines per field: " << (int)_linesPerField << std::endl;
@@ -77,7 +84,7 @@ int Service::run()
 		if (_subtitle->IsReady())
 		{
 			if (_subtitle->GetPacket(pkt) != nullptr){
-				std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+				std::cout.write(pkt->tx(reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
 			} else {
 				std::cout.write(filler->tx(), 42);
 			}
@@ -121,7 +128,7 @@ int Service::run()
 			{
 				// GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
 				if (p->GetPacket(pkt) != nullptr){
-					std::cout.write(pkt->tx(), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+					std::cout.write(pkt->tx(reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
 				} else {
 					std::cout.write(filler->tx(), 42);
 				}

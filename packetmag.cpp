@@ -296,7 +296,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             if (_thisRow>25 || _lastTxt==NULL)
             {
                 // std::cerr << "[PacketMag::GetPacket] FOO row " << std::dec << p->GetRow() << std::endl;
-                // std::cerr << p->tx() << std::endl;
+                // std::cerr << p->tx(_configure->GetReverseFlag()) << std::endl;
                 if(_page->GetPageCoding() == CODING_7BIT_TEXT){
                     // if this is a normal page we've finished
                     _state=PACKETSTATE_HEADER;

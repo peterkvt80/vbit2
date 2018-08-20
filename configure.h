@@ -46,6 +46,7 @@ public:
 	uint16_t GetCommandPort(){return _commandPort;}
 	bool GetCommandPortEnabled(){return _commandPortEnabled;}
     uint8_t GetLinesPerField(){return _linesPerField;}
+    bool GetReverseFlag(){return _reverseBits;}
 
 private:
 	int DirExists(char *path);
@@ -71,6 +72,7 @@ private:
 	char _pageDir[MAXPATH]; /// Configuration file name --dir
 	uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
 	bool _commandPortEnabled;
+    bool _reverseBits;
 };
 
 }
