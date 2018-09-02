@@ -109,8 +109,8 @@ bool PacketSubtitle::IsReady(bool force)
 		{
 			if (!_page[_swap].GetRow(_rowCount)->IsBlank())
 			{
-				std::cerr << "[PacketSubtitle::IsReady] found non blank row=" << (int) _rowCount << std::endl;
-				std::cerr << "[PacketSubtitle::IsReady] row=" << _page[_swap].GetRow(_rowCount)->GetLine() << std::endl;
+				// std::cerr << "[PacketSubtitle::IsReady] found non blank row=" << (int) _rowCount << std::endl;
+				// std::cerr << "[PacketSubtitle::IsReady] row=" << _page[_swap].GetRow(_rowCount)->GetLine() << std::endl;
 				/**
 				for (int i=0;i<40;i++)
 				{
@@ -137,9 +137,9 @@ bool PacketSubtitle::IsReady(bool force)
 		}
 		else
 		{
-      _state=SUBTITLE_STATE_IDLE; // Subtitle is done so state is idle
 		  if (_repeatCount==0)
       {
+        _state=SUBTITLE_STATE_IDLE; // Subtitle is done so state is idle
         result=false; // No more repeats
       }
       else

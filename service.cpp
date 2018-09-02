@@ -83,6 +83,7 @@ int Service::run()
 		// Special case for subtitles. Subtitles always go if there is one waiting
 		if (_subtitle->IsReady())
 		{
+      std::cerr << "Subtitle packet tx" << std::endl;
 			if (_subtitle->GetPacket(pkt) != nullptr){
 				std::cout.write(pkt->tx(reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
 			} else {

@@ -275,7 +275,7 @@ void TCPClient::addChar(char ch, char* response)
 		_pkt=_cmd;
 		if (_pCmd==_cmd) // On the first character we check if it is a Softel
 		{
-			switch (ch)
+			switch (ch &0x7f)
 			{
 			case 0x0e :
 				mode=MODESOFTELPAGEINIT; // page 0nnn
@@ -286,16 +286,16 @@ void TCPClient::addChar(char ch, char* response)
 				break;
 			case 0x10 :
 				// Put the subtitle on air immediately
+				std::cerr << "Newfor: Onair" << std::endl;  
 				_newfor.SubtitleOnair(response);
-				// std::cerr << "[TCPClient::addChar] On air" << std::endl;
 				clearCmd();
 				mode=MODENORMAL;
 				return;
-			case 0x18 :
+			case 0x18 :  // or not. Whatever
 				// Remove the subtitle immediately
 				// std::cerr << "[TCPClient::addChar] Subtitle Off" << std::endl;
+				std::cerr << "Newfor: Offair" << std::endl;        
 				_newfor.SubtitleOffair();
-				strcpy(response, "[addChar]Clear");
 				clearCmd();
 				mode=MODENORMAL;
 				return;
@@ -343,7 +343,8 @@ void TCPClient::addChar(char ch, char* response)
 		  char* p=_cmd;
 		  _row=_newfor.GetRowCount(p);
 		}
-	  sprintf(response,"[TCPClient::addChar] MODEGETROWCOUNT =%d\n",_row);
+	  // sprintf(response,"[TCPClient::addChar] MODEGETROWCOUNT =%d\n",_row);
+	  sprintf(response,"Row count=%d\n",_row);
   	// std::cerr << response << std::endl;
 		mode=MODESUBTITLEDATAHIGHNYBBLE;
 		break;
@@ -356,7 +357,7 @@ void TCPClient::addChar(char ch, char* response)
 	case MODESUBTITLEDATALOWNYBBLE:
 		*_pCmd++=ch;
 		_rowAddress+=vbi_unham8(ch); // @todo Check validity
-	  sprintf(response,"[addChar]MODESUBTITLEDATALOWNYBBLE _rowAddress=%d\n",_rowAddress);
+	  // sprintf(response,"[addChar]MODESUBTITLEDATALOWNYBBLE _rowAddress=%d\n",_rowAddress);
 		// std::cerr << response << std::endl;
 		mode=MODEGETROW;
 		_pkt=_pCmd; // Save the start of this packet
@@ -367,6 +368,7 @@ void TCPClient::addChar(char ch, char* response)
 		charCount--;
 		if (charCount<=0) // End of line?
 		{
+      std::cerr << "Reading a row: " << _pkt << std::endl;
 			sprintf(response,"[TCPClient::addChar] MODEGETROW _rowAddress=%d _pkt=%s\n",_rowAddress,_pkt);
 			// std::cerr << response << std::endl;
 			// Generate the teletext packet
@@ -380,6 +382,7 @@ void TCPClient::addChar(char ch, char* response)
 			{
 				// Now that we are done, set up for the next command
 				sprintf(response,"subtitle data complete\n");
+        std::cerr << "Finished reading the subtitle rows" << std::endl;
 				mode=MODENORMAL;
 				clearCmd();
 			}
@@ -407,7 +410,10 @@ void TCPClient::Handler(int clntSocket)
   {
     /* See if there is more data to receive */
     if ((recvMsgSize = recv(clntSocket, echoBuffer, RCVBUFSIZE, 0)) < 0)
-      DieWithError("recv() failed");
+    {
+      // DieWithError("recv() failed"); // This is a bit harsh
+      break;
+    }
 		for (i=0;i<recvMsgSize;i++)
 		{
 			addChar(echoBuffer[i], response);

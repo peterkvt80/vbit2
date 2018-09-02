@@ -88,7 +88,7 @@ int Newfor::SoftelPageInit(char* cmd)
 void Newfor::SubtitleOnair(char* response)
 {
   // std::cerr << "[Newfor::SubtitleOnair] page=" << std::hex << ttxpage.GetPageNumber() << std::dec << std::endl;
-	strcpy(response,"Response not implemented, sorry\n");
+	strcpy(response,"*"); // If there is no response then there will be ab *
 	// Send the page to the subtitle object in the service thread, then clear the lines.
   _subtitle->SendSubtitle(&ttxpage);
 
