@@ -281,7 +281,8 @@ void TCPClient::addChar(char ch, char* response)
 				mode=MODESOFTELPAGEINIT; // page 0nnn
 				charCount=4;
 				break;
-			case 0x0f :
+			case 0x8f :; // Load rows
+			case 0x0f : // [not the standard]
 				mode=MODEGETROWCOUNT; // n and n*(rowhigh, rowlow, 40 bytes)
 				break;
 			case 0x10 :
@@ -291,6 +292,7 @@ void TCPClient::addChar(char ch, char* response)
 				clearCmd();
 				mode=MODENORMAL;
 				return;
+			case 0x98 :;  // Delete subtitle
 			case 0x18 :  // or not. Whatever
 				// Remove the subtitle immediately
 				// std::cerr << "[TCPClient::addChar] Subtitle Off" << std::endl;
@@ -368,7 +370,7 @@ void TCPClient::addChar(char ch, char* response)
 		charCount--;
 		if (charCount<=0) // End of line?
 		{
-      std::cerr << "Reading a row: " << _pkt << std::endl;
+      std::cerr << "Reading a row: " << _rowAddress << _pkt << std::endl;
 			sprintf(response,"[TCPClient::addChar] MODEGETROW _rowAddress=%d _pkt=%s\n",_rowAddress,_pkt);
 			// std::cerr << response << std::endl;
 			// Generate the teletext packet
@@ -432,6 +434,7 @@ void TCPClient::Handler(int clntSocket)
 }
 
 /** Validate a page identity
+ *  @todo Page 999 is a signal to stop sending subtitles
  */
 bool TCPClient::Validate(char* dest, char* src)
 {
