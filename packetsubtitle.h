@@ -46,6 +46,12 @@ class PacketSubtitle : public PacketSource
      * @param page - Pointer to another page object
      */
     void SendSubtitle(TTXPage* page);
+    
+    /**
+     * @brief Used to block magazine 8 if subtitles are current
+     * @return true if the magazine is allowed to run
+     */
+    bool IsIdle();
 
   protected:
 

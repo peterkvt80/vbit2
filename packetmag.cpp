@@ -357,6 +357,11 @@ bool PacketMag::IsReady(bool force)
   // We can always send something unless
   // 1) We have just sent out a header and are waiting on a new field
   // 2) There are no pages
+  // 3// This is magazine 8 and there is a subtitle busy @todo Subtitles can be on any magazine
+  if (_magNumber==8 && !GetEvent(EVENT_SUBTITLE_IDLE))
+  {
+    return false;
+  }
   if ( ((GetEvent(EVENT_FIELD)) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
   {
     // If we send a header we want to wait for this to get set GetEvent(EVENT_FIELD)

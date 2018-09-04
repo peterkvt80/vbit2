@@ -964,19 +964,26 @@ void TTXPage::SetFastextLink(int link, int value)
 
 void TTXPage::DebugDump() const
 {
-    std::cerr << "PAGE DUMP\n";
-    std::cerr << "Desc:" << GetDescription() << std::endl;
-    std::cerr << "Load:" << Loaded() << std::endl;
-    std::cerr << "Page:" << std::hex << GetPageNumber() << std::dec << std::endl;
-    std::cerr << "File:" << GetSourcePage() << std::endl;
+  std::cerr << "PAGE DUMP" << std::endl;
+  std::cerr << "Desc:" << GetDescription() << std::endl;
+  std::cerr << "Load:" << Loaded() << std::endl;
+  std::cerr << "Page:" << std::hex << GetPageNumber() << std::dec << std::endl;
+  std::cerr << "File:" << GetSourcePage() << std::endl;
 
-    for (const TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
-        for (int i=0;i<25;i++)
+  for (const TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
+  {
+    for (int i=0;i<25;i++)
+    {
+      if (p->m_pLine[i]!=nullptr)
+      {
+        if (!p->m_pLine[i]->IsBlank())
         {
-            std::cerr << "Line " << i << ": ";
-            if (p->m_pLine[i]!=nullptr)
-                std::cerr << " text=" << p->m_pLine[i]->GetLine() << std::endl;
+          std::cerr << "Line " << i << ": ";
+          std::cerr << " text=" << p->m_pLine[i]->GetLine() << std::endl;
         }
+      }
+    }
+  }
 }
 
 /** This is similar to the copy constructor

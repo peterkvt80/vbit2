@@ -1,3 +1,4 @@
+/* @todo This is hard wired for 888. Need to honour Newfor mag and page settings */
 #include "packetsubtitle.h"
 
 using namespace vbit;
@@ -21,9 +22,10 @@ PacketSubtitle::~PacketSubtitle()
 Packet* PacketSubtitle::GetPacket(Packet* p)
 {
   // std::cerr << "[PacketSubtitle::GetPacket] State=" << _state << std::endl;
-  // @todo Put these values into the configuration or better still, decoded from the Newfor feed instead of being hard wired
+  // @todo These values should be decoded from the Newfor feed instead of being hard wired
 	uint8_t mag=8 & 0x07; // 0 is mag 8!
 	uint8_t page=0x88;    // These are in hex
+ 
 
 	_mtx.lock();						// lock the critical section
 	switch (_state)
@@ -95,7 +97,10 @@ bool PacketSubtitle::IsReady(bool force)
 			ClearEvent(EVENT_SUBTITLE);
 			_state=SUBTITLE_STATE_HEADER;
 			result=true;
+      ClearEvent(EVENT_SUBTITLE_IDLE);
 		}
+    else
+        SetEvent(EVENT_SUBTITLE_IDLE);
 	  break;
   case SUBTITLE_STATE_HEADER:
 		if (GetEvent(EVENT_FIELD))
@@ -171,8 +176,7 @@ void PacketSubtitle::SendSubtitle(TTXPage* page)
 	_page[_swap].SavePage("j:\\dev\\vbit2\\subtitleTemp.tti"); // Debug. Send the page representation to a local file
 #else
 	_page[_swap].SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
-	_page[_swap].SavePage("tempSubtitles.tti"); // Debug. Send the page representation to a file
-
+	_page[_swap].SavePage("/dev/shm/tempSubtitles.tti"); // Debug. Send the page representation to a file
 	_page[_swap].DebugDump();
 #endif // WIN32
 */
@@ -185,4 +189,9 @@ void PacketSubtitle::SendSubtitle(TTXPage* page)
   _C8Flag=true; // New subtitle sets C8 flag
 
 	_mtx.unlock();					// unlock the critical section
+}
+
+bool PacketSubtitle::IsIdle()
+{
+  return _state==SUBTITLE_STATE_IDLE; // Used to block magazine 8 while subtitles are going out
 }
