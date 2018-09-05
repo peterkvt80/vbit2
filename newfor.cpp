@@ -11,17 +11,6 @@
 
 #include "newfor.h"
 
-// @todo These will be converted to member variables
-// bufferpacket packetCache[1]; // Incoming rows are cached here, and transferred to subtitleBuffer when OnAir
-
-// Packet Subtitles are stored here
-
-// uint8_t subtitleCache [SUBTITLEPACKETCOUNT][PACKETSIZE];	/// Storage for 8 packets, 45 bytes per packet. (for packetCache)
-
-static uint8_t _page;	/// Page number (in hex). This is set by Page Init
-static uint8_t _rowcount; /// Number of rows in this subtitle
-// static char packet[PACKETSIZE];
-
 using namespace vbit;
 
 // This is not so pretty. @todo Factor this out of TCPClient
@@ -31,25 +20,15 @@ vbi_unham8			(unsigned int		c)
 	return _vbi_hamm8_inv[(uint8_t) c];
 }
 
-
 Newfor::Newfor(PacketSubtitle* subtitle) :
-  _subtitle(subtitle)
+  subtitle_(subtitle)
 {
-		ttxpage.SetSubCode(0);
+		ttxpage_.SetSubCode(0);
 }
 
 Newfor::~Newfor()
 {
 }
-
-/** initNu4
- * @detail Initialise the buffers used by Newfor
- */
-//void InitNu4()
-//{
-//	bufferInit(packetCache   ,(char*)subtitleCache ,SUBTITLEPACKETCOUNT);
-//}
-
 
 /**
  * @detail Expect four characters
@@ -63,8 +42,7 @@ int Newfor::SoftelPageInit(char* cmd)
 {
   int page=0;
   int n;
-
-
+  
   // Useless leading 0
   n=vbi_unham8(cmd[1]);
   if (n<0) return 0x900; // @todo This is an error.
@@ -80,8 +58,7 @@ int Newfor::SoftelPageInit(char* cmd)
   n=vbi_unham8(cmd[4]);
   if (n<0 || n>0x0f) return 0x903;
   page+=n;
-  _page=page;
-	ttxpage.SetPageNumber(page*0x100);
+	ttxpage_.SetPageNumber(page*0x100);
   return page;
 }
 
@@ -90,19 +67,18 @@ void Newfor::SubtitleOnair(char* response)
   // std::cerr << "[Newfor::SubtitleOnair] page=" << std::hex << ttxpage.GetPageNumber() << std::dec << std::endl;
 	strcpy(response,"*"); // If there is no response then there will be ab *
 	// Send the page to the subtitle object in the service thread, then clear the lines.
-  _subtitle->SendSubtitle(&ttxpage);
+  subtitle_->SendSubtitle(&ttxpage_);
 
 	for (int i=0;i<24;i++) // Some broadcasters sent the subs out more than once. We don't.
 	{
-			ttxpage.SetRow(i,"                                        ");
+    ttxpage_.SetRow(i,"                                        ");
 	}
-
 }
 
 void Newfor::SubtitleOffair()
 {
 	//std::cerr << "[Newfor;:SubtitleOffair]" << std::endl;
-  _subtitle->SendSubtitle(&ttxpage);	// OnAir will already have cleared out these lines so just send the page again
+  subtitle_->SendSubtitle(&ttxpage_);	// OnAir will already have cleared out these lines so just send the page again
 }
 
 /**
@@ -113,8 +89,10 @@ int Newfor::GetRowCount(char* cmd)
 {
   int n=vbi_unham8(cmd[1]);
   if (n>7)
-	n=0;
-  _rowcount=n;
+  {
+    n=0;
+  }
+  rowcount_=n;
   return n;
 }
 
@@ -130,6 +108,9 @@ void Newfor::saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd)
 	(void)mag; // temporary silence error about unused parameter
 	// What @todo about the mag? This needs to be decoded and passed on
 	// std::cerr << "[Newfor::saveSubtitleRow] cmd=" << cmd << std::endl;
-	if (cmd[0]==0) cmd[0]='?'; // @todo Temporary measure to defeat null strings (this will inevitably multiply problems!)
-	ttxpage.SetRow(row, cmd);
+	if (cmd[0]==0)
+  {
+    cmd[0]='?'; // @todo Temporary measure to defeat null strings (this will inevitably multiply problems!)
+  }
+	ttxpage_.SetRow(row, cmd);
 }

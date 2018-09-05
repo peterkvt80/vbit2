@@ -75,9 +75,8 @@ enum Event
   EVENT_NUMBER_ITEMS,
   EVENT_SPECIAL_PAGES,
   EVENT_PACKET_29,
-  EVENT_SUBTITLE_IDLE
-}  ;
-
+  EVENT_SUBTITLE_IDLE // @todo Needs to be more subtle. Only need to lock out mag 8 during page transmission, not including the clear down.
+};
 
 class PacketSource
 {
