@@ -72,10 +72,10 @@ enum Event
   EVENT_P830_FORMAT_2_LABEL_3,
   EVENT_SUBTITLE,
   EVENT_DATABROADCAST,
-  EVENT_NUMBER_ITEMS,
   EVENT_SPECIAL_PAGES,
   EVENT_PACKET_29,
-  EVENT_SUBTITLE_IDLE // @todo Needs to be more subtle. Only need to lock out mag 8 during page transmission, not including the clear down.
+  EVENT_SUBTITLE_BUSY, // Set when subtitles are going out
+  EVENT_NUMBER_ITEMS
 };
 
 class PacketSource

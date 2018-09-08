@@ -65,7 +65,7 @@ class Newfor
 
   private:
 		// member variables
-		TTXPage ttxpage_;
+		TTXPage ttxpage_;  // Subtitles to transmit.
     uint8_t rowcount_; /// Number of rows in this subtitle
     PacketSubtitle* subtitle_;
     

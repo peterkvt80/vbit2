@@ -48,7 +48,7 @@ public:
 	/** Part of Newfor subtitles implementation
 	 * \return The packet source handling the subtitles
 	 */
-  vbit::PacketSubtitle* GetSubtitle(){return _subtitle;};
+  vbit::PacketSubtitle* GetSubtitle(){return subtitle_;};
 
 private:
   // Member variables that define the service
@@ -63,7 +63,7 @@ private:
     
     time_t _then;
 
-	vbit::PacketSubtitle* _subtitle; // Newfor needs to know which packet source is doing subtitles
+	vbit::PacketSubtitle* subtitle_; // Newfor needs to know which packet source is doing subtitles
 
 	// Member functions
 	void _register(vbit::PacketSource *src); /// Register packet sources

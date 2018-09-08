@@ -355,12 +355,21 @@ bool PacketMag::IsReady(bool force)
 {
   bool result=false;
   // We can always send something unless
+  
   // 1) We have just sent out a header and are waiting on a new field
   // 2) There are no pages
   // 3// This is magazine 8 and there is a subtitle busy @todo Subtitles can be on any magazine
-  if (_magNumber==8 && !GetEvent(EVENT_SUBTITLE_IDLE))
+  //std::string blah;
+  //if ()
+  //{
+  //}
+  if (_magNumber==0 && GetEvent(EVENT_SUBTITLE_BUSY))
   {
-    return false;
+    std::cerr << "busy: " << (GetEvent(EVENT_SUBTITLE_BUSY)?" true":" false") << std::endl;
+    _state=PACKETSTATE_HEADER;    // Abandon any pending page.
+    ClearEvent(EVENT_FIELD);      // Suspend all packets until the next field
+    std::cerr << "B"; // Indicate blocking
+    return result;
   }
   if ( ((GetEvent(EVENT_FIELD)) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
   {
@@ -372,14 +381,12 @@ bool PacketMag::IsReady(bool force)
       result=true;
     }
   }
-  /*
   std::cerr << "[PacketMag::IsReady] exits."
     " mag=" << _magNumber <<
     " force=" << force <<
     " result=" << result <<
     " EVENT_FIELD=" << GetEvent(EVENT_FIELD) <<
     std::endl;
-    */
   return result;
 };
 

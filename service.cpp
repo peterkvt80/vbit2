@@ -27,7 +27,8 @@ Service::Service(Configure *configure, PageList *pageList) :
     _register(m); // use the PacketMags created in pageList rather than duplicating them
   }
   // Add packet sources for subtitles, databroadcast and packet 830
-  _register(_subtitle=new PacketSubtitle(_configure));
+  // _register(_subtitle=new PacketSubtitle(_configure));
+  subtitle_=new PacketSubtitle(_configure); // We could register this, but it will fight with mag 8
   _register(new Packet830(_configure));
   
   _linesPerField = _configure->GetLinesPerField();
@@ -63,7 +64,8 @@ int Service::run()
     time(&_then); // prepare timer
 
   std::cerr << "[Service::run] Loop starts" << std::endl;
-  std::cerr << "[Service::run] Lines per field: " << (int)_linesPerField << std::endl;
+  std::cerr << "[Service::run] Lines per field: " << (int)_linesPerField << std::endl;    
+  
 	while(1)
 	{
     //std::cerr << "[Service::run]iterates. VBI line=" << (int) _lineCounter << " (int) field=" << (int) _fieldCounter << std::endl;
@@ -77,18 +79,34 @@ int Service::run()
     uint8_t sourceCount=0;
     uint8_t listSize=_Sources.size();
 
-	// Send ONLY one packet per loop
-	_updateEvents();
+    // Send ONLY one packet per loop
+    _updateEvents();
+    
+    if (subtitle_->IsIdle())
+    {
+      // Warn all sources that there is a subtitle, and not to transmit if it is on their magazine
+      for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
+      {
+        (*iterator)->ClearEvent(EVENT_SUBTITLE_BUSY);
+      }          }
+    else
+    {
+      for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
+      {
+        (*iterator)->SetEvent(EVENT_SUBTITLE_BUSY);
+      }      
+    }
+   
 
 		// Special case for subtitles. Subtitles always go if there is one waiting
-		if (_subtitle->IsReady())
+		if (subtitle_->IsReady())
 		{
       std::cerr << "Subtitle packet tx" << std::endl;
-			if (_subtitle->GetPacket(pkt) != nullptr){
+			if (subtitle_->GetPacket(pkt) != nullptr){
 				std::cout.write(pkt->tx(reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
 			} else {
 				std::cout.write(filler->tx(), 42);
-			}
+			}     
 		}
 	  else
 		{
@@ -176,6 +194,7 @@ void Service::_updateEvents()
     {
       (*iterator)->SetEvent(EVENT_FIELD);
     }
+    subtitle_->SetEvent(EVENT_FIELD); // And subtitles. because we handle them separately
     
     if (_fieldCounter%10==0 && _fieldCounter<50) // Packet 830 happens every 200ms.
     {

@@ -22,8 +22,9 @@ vbi_unham8			(unsigned int		c)
 
 Newfor::Newfor(PacketSubtitle* subtitle) :
   subtitle_(subtitle)
+  
 {
-		ttxpage_.SetSubCode(0);
+  std::cerr << "[newfor] constructor A" << std::endl;
 }
 
 Newfor::~Newfor()
@@ -65,20 +66,30 @@ int Newfor::SoftelPageInit(char* cmd)
 void Newfor::SubtitleOnair(char* response)
 {
   // std::cerr << "[Newfor::SubtitleOnair] page=" << std::hex << ttxpage.GetPageNumber() << std::dec << std::endl;
-	strcpy(response,"*"); // If there is no response then there will be ab *
 	// Send the page to the subtitle object in the service thread, then clear the lines.
-  subtitle_->SendSubtitle(&ttxpage_);
-
-	for (int i=0;i<24;i++) // Some broadcasters sent the subs out more than once. We don't.
+  static TTXPage page;
+	for (int i=0;i<24;i++)
 	{
-    ttxpage_.SetRow(i,"                                        ");
+    auto x=ttxpage_.GetRow(i)->GetLine();
+    page.SetRow(i,x);
 	}
+  page.SetPageNumber(ttxpage_.GetPageNumber());
+  subtitle_->SendSubtitle(&page);
+	strcpy(response,"*"); // Not really needed
 }
 
 void Newfor::SubtitleOffair()
 {
 	//std::cerr << "[Newfor;:SubtitleOffair]" << std::endl;
-  subtitle_->SendSubtitle(&ttxpage_);	// OnAir will already have cleared out these lines so just send the page again
+  // Clear the page
+  static TTXPage page;
+	for (int i=0;i<24;i++)
+	{
+    ttxpage_.SetRow(i,"Q                     Q                 ");
+    page.SetRow(i,"Q                     Q                 ");
+	}
+  page.SetPageNumber(ttxpage_.GetPageNumber());
+  subtitle_->SendSubtitle(&page);	// OnAir will already have cleared out these lines so just send the page again
 }
 
 /**

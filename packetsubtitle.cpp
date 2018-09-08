@@ -12,6 +12,7 @@ PacketSubtitle::PacketSubtitle(ttx::Configure *configure) :
 	_C8Flag(true)
 {
   //ctor
+  std::cerr << "PacketSubtitle constructed" << std::endl;
 }
 
 PacketSubtitle::~PacketSubtitle()
@@ -34,10 +35,11 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 		std::cerr << "[PacketSubtitle::GetPacket] can not happen" << std::endl;
 	  break;
   case SUBTITLE_STATE_HEADER:
-		std::cerr << "[PacketSubtitle::GetPacket] Header. repeat count=" << (int)_repeatCount << std::endl;
+		// std::cerr << "[PacketSubtitle::GetPacket] Header. repeat count=" << (int)_repeatCount << std::endl;
 		// Construct the header packet and then wait for a field
 		{
-		  uint16_t status=PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C6_SUBTITLE; // Erase page + Subtitle
+		  //uint8_t status=PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C6_SUBTITLE; // Erase page + Subtitle // @todo Clear these flags to see a bug. There is a page cleardown bug we could fix
+		  uint8_t status=0; // Erase page + Subtitle // @todo Use this one instead to see a bug
       // The first transmission should have the Update Indicator set. Repeat transmissions do not.
       if (_C8Flag)
       {
@@ -47,7 +49,7 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
       p->Header(mag, page, 0, status); // Create the header
 		}
 		p->HeaderText("XENOXXX INDUSTRIES         CLOCK");	// Only Jason will see this if he decodes a tape.
-		ClearEvent(EVENT_FIELD);
+    ClearEvent(EVENT_FIELD);      // Suspend all packets until the next field
 		_state=SUBTITLE_STATE_TEXT_ROW;
 		_rowCount=1;	// Set up iterator for page rows
 	  break;
@@ -55,13 +57,9 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 		// 1) Copy the next non-null row to p
     if (_rowCount<24)
     {
-//      TTXPage* pg=_page[_swap];
-      //TTXLine* ln=pg->GetRow(_rowCount);
-      //str:string st=ln->GetLine();
 			std::cerr << "[PacketSubtitle::GetPacket] Sending row=" << (int) _rowCount << " string=#" << _page[_swap].GetRow(_rowCount)->GetLine() << "#" << std::endl;
       p->SetRow(mag,_rowCount,_page[_swap].GetRow(_rowCount)->GetLine(),CODING_7BIT_TEXT);
 			_rowCount++;
-			//p->Parity(5); // Don't do parity here! Packet::tx does it.
     }
     else // Out of rows? Terminate
     {
@@ -97,10 +95,7 @@ bool PacketSubtitle::IsReady(bool force)
 			ClearEvent(EVENT_SUBTITLE);
 			_state=SUBTITLE_STATE_HEADER;
 			result=true;
-      ClearEvent(EVENT_SUBTITLE_IDLE);
 		}
-    else
-        SetEvent(EVENT_SUBTITLE_IDLE);
 	  break;
   case SUBTITLE_STATE_HEADER:
 		if (GetEvent(EVENT_FIELD))
@@ -114,24 +109,6 @@ bool PacketSubtitle::IsReady(bool force)
 		{
 			if (!_page[_swap].GetRow(_rowCount)->IsBlank())
 			{
-				// std::cerr << "[PacketSubtitle::IsReady] found non blank row=" << (int) _rowCount << std::endl;
-				// std::cerr << "[PacketSubtitle::IsReady] row=" << _page[_swap].GetRow(_rowCount)->GetLine() << std::endl;
-				/**
-				for (int i=0;i<40;i++)
-				{
-					std::cerr << std::setfill('0') << std::setw(2) << std::hex << " " << (int) _page[_swap].GetRow(_rowCount)->GetCharAt(i);
-				}
-				std::cerr << std::endl;
-
-				for (int i=0;i<40;i++)
-				{
-					char ch=_page[_swap].GetRow(_rowCount)->GetCharAt(i);
-					if (ch<' ') ch='*';
-					if (ch>'~') ch='*';
-					std::cerr << " " << ch << "  ";
-				}
-				std::cerr << std::endl;
-				*/
 				break;
 			}
 		}
@@ -142,9 +119,9 @@ bool PacketSubtitle::IsReady(bool force)
 		}
 		else
 		{
+      _state=SUBTITLE_STATE_IDLE; // Subtitle is done so state is idle
 		  if (_repeatCount==0)
       {
-        _state=SUBTITLE_STATE_IDLE; // Subtitle is done so state is idle
         result=false; // No more repeats
       }
       else
@@ -166,7 +143,7 @@ bool PacketSubtitle::IsReady(bool force)
 void PacketSubtitle::SendSubtitle(TTXPage* page)
 {
 	_mtx.lock();				// lock the critical section
-	std::cerr << "[PacketSubtitle::SendSubtitle] Got page: " << std::endl;
+	// std::cerr << "[PacketSubtitle::SendSubtitle] Got page: " << std::endl;
 
 	_swap=(_swap+1)%2;	// swap the double buffering
 	_page[_swap].Copy(page); // deep copy page
@@ -181,7 +158,7 @@ void PacketSubtitle::SendSubtitle(TTXPage* page)
 #endif // WIN32
 */
 
-	std::cerr << "[PacketSubtitle::SendSubtitle] End of page: " << std::endl;
+	// std::cerr << "[PacketSubtitle::SendSubtitle] End of page: " << std::endl;
 	SetEvent(EVENT_SUBTITLE);
 
   _repeatCount=_configure->GetSubtitleRepeats(); // 	// transmission repeat counter

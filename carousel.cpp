@@ -31,7 +31,7 @@ void Carousel::deletePage(TTXPageStream* p)
 
 TTXPageStream* Carousel::nextCarousel()
 {
-    TTXPageStream* p;
+    TTXPageStream* p=nullptr;
     // std::cerr << "[nextCarousel] list size = " << _carouselList.size() << std::endl;
     if (_carouselList.size()==0) return NULL;
 
