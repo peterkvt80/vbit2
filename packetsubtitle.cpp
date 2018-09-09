@@ -38,8 +38,8 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
 		// std::cerr << "[PacketSubtitle::GetPacket] Header. repeat count=" << (int)_repeatCount << std::endl;
 		// Construct the header packet and then wait for a field
 		{
-		  //uint8_t status=PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C6_SUBTITLE; // Erase page + Subtitle // @todo Clear these flags to see a bug. There is a page cleardown bug we could fix
-		  uint8_t status=0; // Erase page + Subtitle // @todo Use this one instead to see a bug
+		  uint8_t status=PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C6_SUBTITLE; // Erase page + Subtitle // @todo Clear these flags to see a bug. There is a page cleardown bug we could fix
+		  // uint8_t status=0; // Erase page + Subtitle // @todo Use this one instead to see a bug
       // The first transmission should have the Update Indicator set. Repeat transmissions do not.
       if (_C8Flag)
       {

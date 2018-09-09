@@ -28,7 +28,7 @@ Service::Service(Configure *configure, PageList *pageList) :
   }
   // Add packet sources for subtitles, databroadcast and packet 830
   // _register(_subtitle=new PacketSubtitle(_configure));
-  subtitle_=new PacketSubtitle(_configure); // We could register this, but it will fight with mag 8
+  subtitle_=new PacketSubtitle(_configure); // We don't register this, it conflicts with mag 8
   _register(new Packet830(_configure));
   
   _linesPerField = _configure->GetLinesPerField();

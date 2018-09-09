@@ -28,12 +28,13 @@
 bool TTXPage::pageChanged=false;
 
 TTXPage::TTXPage() :
-    m_PageNumber(FIRSTPAGE),
-    m_SubPage(nullptr),
-    m_sourcepage("none"),   //ctor
-		m_subcode(0),
-    m_Loaded(false),
-    _Selected(false)
+  m_cycletimeseconds(8),
+  m_PageNumber(FIRSTPAGE),
+  m_SubPage(nullptr),
+  m_sourcepage("none"),   //ctor
+  m_subcode(0),
+  m_Loaded(false),
+  _Selected(false)
 {
     m_Init();
 }
@@ -133,7 +134,8 @@ TTXPage::~TTXPage()
         // std::cerr << "Deleting line " << i << std::endl;
         if (m_pLine[i]!=nullptr)
         {
-            delete m_pLine[i];
+            // delete m_pLine[i]; // This causes segmentation. Needs fixing @todo
+            std::cerr << "[TTXPage] MEMORY LEAK" << std::endl;
             m_pLine[i]=nullptr;
         }
     }
@@ -935,6 +937,10 @@ int TTXPage::GetLanguage()
 
 void TTXPage::SetPageNumber(int page)
 {
+    if ((page>=0x100) && (page<0x8ff))
+    {
+      page<<=8;
+    }
     if ((page<0x10000) || (page>0x8ff99))
     {
         std::cerr << "[TTXPage::SetPageNumber] Page number is out of range: " << std::hex << page << std::endl;

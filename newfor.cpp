@@ -85,8 +85,9 @@ void Newfor::SubtitleOffair()
   static TTXPage page;
 	for (int i=0;i<24;i++)
 	{
-    ttxpage_.SetRow(i,"Q                     Q                 ");
-    page.SetRow(i,"Q                     Q                 ");
+    // If this line isn't included, we get a segmentation fault. ???????????
+    ttxpage_.SetRow(i,"Q                     Q                 "); // wtf?
+    page.SetRow(i,"                                        ");
 	}
   page.SetPageNumber(ttxpage_.GetPageNumber());
   subtitle_->SendSubtitle(&page);	// OnAir will already have cleared out these lines so just send the page again

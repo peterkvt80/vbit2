@@ -365,7 +365,6 @@ bool PacketMag::IsReady(bool force)
   //}
   if (_magNumber==0 && GetEvent(EVENT_SUBTITLE_BUSY))
   {
-    std::cerr << "busy: " << (GetEvent(EVENT_SUBTITLE_BUSY)?" true":" false") << std::endl;
     _state=PACKETSTATE_HEADER;    // Abandon any pending page.
     ClearEvent(EVENT_FIELD);      // Suspend all packets until the next field
     std::cerr << "B"; // Indicate blocking
@@ -381,12 +380,14 @@ bool PacketMag::IsReady(bool force)
       result=true;
     }
   }
+  /*
   std::cerr << "[PacketMag::IsReady] exits."
     " mag=" << _magNumber <<
     " force=" << force <<
     " result=" << result <<
     " EVENT_FIELD=" << GetEvent(EVENT_FIELD) <<
     std::endl;
+    */
   return result;
 };
 
