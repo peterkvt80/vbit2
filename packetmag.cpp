@@ -18,7 +18,8 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _lastTxt(nullptr),
     _nextPacket29DC(0),
     _magRegion(0),
-    _specialPagesFlipFlop(false)
+    _specialPagesFlipFlop(false),
+    _waitingForField(0)
 {
   //ctor
   for (int i=0;i<MAXPACKET29TYPES;i++)
@@ -102,7 +103,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                     if (_page->GetPageFunction() == MIP)
                     {
                         // Magazine Inventory Page
-                        ClearEvent(EVENT_FIELD); // enforce 20ms page erasure interval
+                        _waitingForField = 2; // enforce 20ms page erasure interval
                     }
                     
                     if (_page->IsCarousel())
@@ -125,11 +126,10 @@ Packet* PacketMag::GetPacket(Packet* p)
                     /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number */
                 } else {
                     // got to the end of the special pages
-                    ClearEvent(EVENT_SPECIAL_PAGES);
                     return nullptr;
                 }
             }
-            else if (GetEvent(EVENT_FIELD))
+            else
             {
                 _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
                 if (_page) // Carousel?
@@ -145,7 +145,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                     // couldn't get a page to send so sent a time filling header
                     p->Header(_magNumber,0xFF,0x3F7F,0x8010);
                     p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
-                    ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
+                    _waitingForField = 2; // enforce 20ms page erasure interval
                     return p;
                 }
                 
@@ -170,11 +170,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                   _status|=PAGESTATUS_C8_UPDATE;
                 }
             }
-            else
-            {
-                // there is nothing we can transmit
-                return nullptr;
-            }
             
             // Assemble the header. (we can simplify this code or leave it for the optimiser)
             thisPageNum=_page->GetPageNumber();
@@ -186,7 +181,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 return nullptr;
             }
             
-            ClearEvent(EVENT_FIELD); // This will suspend all packets until the next field.
+            _waitingForField = 2; // enforce 20ms page erasure interval
             
             // clear a flag we use to prevent duplicated X/28/0 packets
             _hasX28Region = false;
@@ -353,29 +348,36 @@ Packet* PacketMag::GetPacket(Packet* p)
  */
 bool PacketMag::IsReady(bool force)
 {
-  bool result=false;
-  // We can always send something unless
-  // 1) We have just sent out a header and are waiting on a new field
-  // 2) There are no pages
-  if ( ((GetEvent(EVENT_FIELD)) || (_state==PACKETSTATE_HEADER)) && (_pageSet->size()>0))
-  {
-    // If we send a header we want to wait for this to get set GetEvent(EVENT_FIELD)
+    bool result=false;
+    // We can always send something unless
+    // 1) We have just sent out a header and are waiting on a new field
+    // 2) There are no pages
+    if (GetEvent(EVENT_FIELD))
+    {
+        ClearEvent(EVENT_FIELD);
+        if (_waitingForField > 0)
+        {
+            _waitingForField--;
+        }
+    }
+    
+    if (_waitingForField == 0)
+    {
     _priorityCount--;
     if (_priorityCount==0 || force)
-    {
-      _priorityCount=_priority;
-      result=true;
+        {
+          _priorityCount=_priority;
+          result=true;
+        }
     }
-  }
-  /*
-  std::cerr << "[PacketMag::IsReady] exits."
-    " mag=" << _magNumber <<
-    " force=" << force <<
-    " result=" << result <<
-    " EVENT_FIELD=" << GetEvent(EVENT_FIELD) <<
-    std::endl;
-    */
-  return result;
+    
+    if (_pageSet->size()>0){
+        return result;
+    }
+    else
+    {
+        return false;
+    }
 };
 
 void PacketMag::SetPacket29(TTXLine *lines[MAXPACKET29TYPES]){
