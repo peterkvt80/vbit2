@@ -144,7 +144,7 @@ void FileMonitor::run()
                                 else
                                 {
                                     // no change
-                                    std::cerr << "[FileMonitor::run] page remains special " << std::hex << q->GetPageNumber() << std::endl;
+                                    //std::cerr << "[FileMonitor::run] page remains special " << std::hex << q->GetPageNumber() << std::endl;
                                 }
                             }
                             else if (q->GetCarouselFlag())
@@ -174,7 +174,7 @@ void FileMonitor::run()
                                 else
                                 {
                                     // no change
-                                    std::cerr << "[FileMonitor::run] page remains a carousel " << std::hex << q->GetPageNumber() << std::endl;
+                                    //std::cerr << "[FileMonitor::run] page remains a carousel " << std::hex << q->GetPageNumber() << std::endl;
                                 }
                             }
                             else
@@ -204,7 +204,7 @@ void FileMonitor::run()
                                 else
                                 {
                                     // no change
-                                    std::cerr << "[FileMonitor::run] page remains normal " << std::hex << q->GetPageNumber() << std::endl;
+                                    //std::cerr << "[FileMonitor::run] page remains normal " << std::hex << q->GetPageNumber() << std::endl;
                                 }
                             }
                             
