@@ -1,4 +1,9 @@
 # vbit2
+
+An installation guide and more can be found in the [wiki](https://github.com/peterkvt80/vbit2/wiki).
+
+## About VBIT
+
 Teletext streaming. This takes a set up teletext files and generates a transmission stream on stdout.
 The transmission stream can be fed into raspi-teletext or any other application that needs a teletext packet stream.
 This is intended to replace vbit-pi-stream. It handles carousels better and uses ram to buffer pages rather than keeping them on file.
