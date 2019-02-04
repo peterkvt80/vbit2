@@ -56,6 +56,8 @@ TTXPage::TTXPage(std::string filename) :
     m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
     // Try all the possible formats.
 
+    m_Loaded |= m_LoadVTXv4(filename);
+
     if (!m_Loaded)
         if (m_LoadTTI(filename))
 				{
@@ -240,6 +242,63 @@ bool TTXPage::m_LoadVTX(std::string filename)
     filein.close(); // Not sure that we need to close it
     p->Setm_SubPage(nullptr);
     TTXPage::pageChanged=false;
+    return true;
+}
+
+bool TTXPage::m_LoadVTXv4(std::string filename)
+{
+    // vtxv4 files as produced by dvbtext; see also: https://github.com/girst/ttxd -> src/dvbtext-src/
+    char buf[100];
+    int pageno, subpageno = 0;
+    TTXPage* p = this;
+    std::ifstream filein(filename.c_str(), std::ios::binary | std::ios::in);
+
+    // read .vtx-header, must start with "VTXV4" (12 bytes)
+    filein.read(buf,12);
+    if (buf[0]!='V' || buf[1]!='T' || buf[2]!='X' || buf[3]!='V' || buf[4]!='4')
+    {
+        filein.close();
+        return false;
+    }
+    pageno = buf[6]*256 + buf[7];
+    p->SetPageNumber(pageno*0x100+subpageno);
+
+    // VTXv4 format does not encode subpage-numbers. we can only infer them from the filename, which is usually (e.g. dvbtext) "PPP_SS.vtx".
+    sscanf(basename(filename.c_str()), "%d_%d.", &pageno, &subpageno);
+    if (subpageno > 1){
+        //XXX: cannot handle this currently due to how Setm_SubPage works
+        return false;
+    }
+    p->Setm_SubPage(nullptr);
+
+    // read teletext header (8 bytes)
+    filein.read(buf,8);
+    // national character replacements: (see spec clause 15.2)
+    int nat_rep = buf[7] & (1<<5 | 1<<3 | 1<<1);
+    if (nat_rep == 0x02) p->SetPageStatus(p->GetPageStatus() | 0x200); /* German */
+
+    // read status bar (32 bytes)
+    filein.read(buf,32);
+    char buf2[41];
+    for (int i = 0; i < 40; i++)
+        buf2[i] = i<8?' ': buf[i+8]&0x7f;
+    buf2[40] = 0;
+    std::string s(buf2, 40);
+    p->SetRow(0, s);
+
+    // read page content (23*40 bytes)
+    for (int i=1;i<24;i++)
+    {
+        filein.read(buf,40);
+        for (int i=0; i<40; i++)
+            buf[i] &= 0x7f; //remove parity bit
+        buf[40]=0;
+        std::string s(buf, 40);
+        p->SetRow(i,s);
+    }
+
+    filein.close();
+    TTXPage::pageChanged = false;
     return true;
 }
 
