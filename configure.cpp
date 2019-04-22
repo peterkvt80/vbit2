@@ -28,7 +28,7 @@ Configure::Configure(int argc, char** argv) :
     std::cerr << "[Configure::Configure] Started" << std::endl;
     strncpy(_configFile,CONFIGFILE,MAXPATH-1);
 #ifdef _WIN32
-    strncpy(_pageDir,"j:\\temp\\teletext",MAXPATH-1); // Hard wired for Peter's PC
+    strncpy(_pageDir,"./pages",MAXPATH-1); // a relative path as a sensible default
 #else
     strcpy(_pageDir,"/home/pi/teletext");
 #endif
