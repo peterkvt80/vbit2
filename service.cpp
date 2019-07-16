@@ -15,15 +15,14 @@ Service::Service(Configure *configure, PageList *pageList) :
 	_lineCounter(0),
 	_fieldCounter(50) // roll over immediately
 {
-  // @todo Put priority into config and add commands to allow updates.
-  uint8_t priority[8]={9,3,3,6,3,3,5,6};	// 1=High priority,9=low. Note: priority[0] is mag 8
+  // @todo Add commands to allow updates to priority.
 
   vbit::PacketMag **magList=_pageList->GetMagazines();
   // Register all the packet sources
   for (uint8_t mag=0;mag<8;mag++)
   {
     vbit::PacketMag* m=magList[mag];
-    m->SetPriority(priority[mag]); // set the mags to the desired priorities
+    m->SetPriority(_configure->GetMagazinePriority(mag)); // set the mags to the desired priorities
     _register(m); // use the PacketMags created in pageList rather than duplicating them
   }
   // Add packet sources for subtitles, databroadcast and packet 830

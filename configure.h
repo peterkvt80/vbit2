@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <stdint.h>
 #include <cstring>
 #include <sys/stat.h>
@@ -47,6 +48,7 @@ public:
 	bool GetCommandPortEnabled(){return _commandPortEnabled;}
     uint8_t GetLinesPerField(){return _linesPerField;}
     bool GetReverseFlag(){return _reverseBits;}
+    int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
 
 private:
 	int DirExists(char *path);
@@ -62,6 +64,7 @@ private:
     uint8_t _linesPerField;
 	// settings for generation of packet 8/30
 	bool _multiplexedSignalFlag; 	// false indicates teletext is multiplexed with video, true means full frame teletext.
+    int _magazinePriority[8];
 	uint8_t _initialMag;
 	uint8_t _initialPage;
 	uint16_t _initialSubcode;
