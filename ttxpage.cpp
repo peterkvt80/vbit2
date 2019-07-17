@@ -80,7 +80,8 @@ TTXPage::TTXPage(std::string filename) :
 
 bool TTXPage::Changed()
 {
-  bool changed=false;
+  bool changed=_fileChanged; // begin with file change state
+  _fileChanged=false; // clear the flag
   for (uint8_t row=1;row<=MAXROW;row++)
   {
 		TTXLine* line=GetRow(row);

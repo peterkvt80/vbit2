@@ -225,6 +225,8 @@ class TTXPage
          *  This is NOT the same as pageChanged.
          */
         bool Changed();
+        
+        void SetFileChangedFlag(){_fileChanged=true;};
 
         void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
         bool Selected(){return _Selected;}; /// Return the selected state
@@ -286,6 +288,8 @@ class TTXPage
         bool m_LoadTTX(std::string filename);
 
         bool _Selected; /// True if this page has been selected.
+        
+        bool _fileChanged; // page was reloaded by the filemonitor
 
 };
 

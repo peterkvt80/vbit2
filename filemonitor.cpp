@@ -114,6 +114,7 @@ void FileMonitor::run()
                             // lock
                             q->LoadPage(name); // What if this fails? We can see the bool. What to do ?
                             q->IncrementUpdateCount();
+                            q->SetFileChangedFlag();
                             q->GetPageCount(); // renumber the subpages
                             int mag=(q->GetPageNumber() >> 16) & 0x7;
                             

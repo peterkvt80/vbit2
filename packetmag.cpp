@@ -168,6 +168,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 if (_page->Changed())
                 {
                   _status|=PAGESTATUS_C8_UPDATE;
+                  
+                  _status|=PAGESTATUS_C4_ERASEPAGE; // also set the erase flag
                 }
             }
             
