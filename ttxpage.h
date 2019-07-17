@@ -190,6 +190,9 @@ class TTXPage
          * \param value - The link page number. Note that out of range numbers less than 0x100 are permitted. Droidfax can use these to switch services.
          */
         void SetFastextLink(int link, int value);
+        
+        /** Get the array of 6 fastext links */
+        int* GetLinkSet(){return m_fastextlinks;};
 
         /** @brief Should check this before closing a page
          */

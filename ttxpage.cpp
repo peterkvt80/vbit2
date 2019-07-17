@@ -564,7 +564,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                             std::getline(filein, line, ',');
                         else
                             std::getline(filein, line); // Last parameter no comma
-                        SetFastextLink(fli,std::strtol(line.c_str(), &ptr, 16));
+                        p->SetFastextLink(fli,std::strtol(line.c_str(), &ptr, 16));
                     }
                     break;
                 case 10 : // "RD"; - not sure!

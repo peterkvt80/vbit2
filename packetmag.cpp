@@ -192,8 +192,12 @@ Packet* PacketMag::GetPacket(Packet* p)
             
             //p->Parity(13); // don't apply parity here it will screw up the template. parity for the header is done by tx() later
             assert(p!=NULL);
-            
-            links=_page->GetLinkSet();
+
+            if (_page->GetCarouselFlag()){
+                links=_page->GetCarouselPage()->GetLinkSet();
+            } else {
+                links=_page->GetLinkSet();
+            }
             if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF){ // only create if links were initialised
                 _state=PACKETSTATE_FASTEXT;
                 break;
@@ -326,7 +330,11 @@ Packet* PacketMag::GetPacket(Packet* p)
             //std::cerr << "TRACE-F " << std::endl;
             // std::cerr << "PACKETSTATE_FASTEXT enters" << std::endl;
             p->SetMRAG(_magNumber,27);
-            links=_page->GetLinkSet();
+            if (_page->GetCarouselFlag()){
+                links=_page->GetCarouselPage()->GetLinkSet();
+            } else {
+                links=_page->GetLinkSet();
+            }
             p->Fastext(links,_magNumber);
             _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
             _state=PACKETSTATE_PACKET27; // makes no attempt to prevent an FL row and an X/27/0 both being sent
