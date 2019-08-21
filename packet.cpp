@@ -324,7 +324,7 @@ char* Packet::tx(bool reverse)
 			// %%%V version number eg. 2.00
 			tmpptr=strstr((char*) _packet,"%%%V");
 			if (tmpptr) {
-				strncpy(tmpptr,"2.01",4); // @todo: Move this value to somewhere more obvious
+				strncpy(tmpptr,"v2.1",4); // TODO: get version number from elsewhere and change to support longer future version numbers
 			}
 			Parity(5); // redo the parity because substitutions will need processing
 		}
