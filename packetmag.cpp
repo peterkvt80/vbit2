@@ -126,6 +126,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                     /* rules for the subcode are really complicated. The S1 nibble should be the sub page number, S2 is a counter that increments when the page is updated, S3 and S4 hold the last row number */
                 } else {
                     // got to the end of the special pages
+                    ClearEvent(EVENT_SPECIAL_PAGES);
                     return nullptr;
                 }
             }
@@ -151,7 +152,13 @@ Packet* PacketMag::GetPacket(Packet* p)
                 
                 _thisRow=0;
                 
-                if (_page->GetCarouselFlag()){
+                if (_page->IsCarousel()){
+                    if (_page->Expired())
+                    {
+                        // cycle if timer has expired
+                        _page->StepNextSubpage();
+                        _page->SetTransitionTime(_page->GetCarouselPage()->GetCycleTime());
+                    }
                     thisSubcode=_page->GetCarouselPage()->GetSubCode();
                     _status=_page->GetCarouselPage()->GetPageStatus();
                     _region=_page->GetCarouselPage()->GetRegion();
@@ -195,7 +202,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             //p->Parity(13); // don't apply parity here it will screw up the template. parity for the header is done by tx() later
             assert(p!=NULL);
 
-            if (_page->GetCarouselFlag()){
+            if (_page->IsCarousel()){
                 links=_page->GetCarouselPage()->GetLinkSet();
             } else {
                 links=_page->GetLinkSet();
@@ -332,7 +339,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             //std::cerr << "TRACE-F " << std::endl;
             // std::cerr << "PACKETSTATE_FASTEXT enters" << std::endl;
             p->SetMRAG(_magNumber,27);
-            if (_page->GetCarouselFlag()){
+            if (_page->IsCarousel()){
                 links=_page->GetCarouselPage()->GetLinkSet();
             } else {
                 links=_page->GetLinkSet();

@@ -118,96 +118,30 @@ void FileMonitor::run()
                             q->GetPageCount(); // renumber the subpages
                             int mag=(q->GetPageNumber() >> 16) & 0x7;
                             
-                            if (q->GetSpecialFlag())
+                            if ((!(q->GetSpecialFlag())) && (q->Special()))
                             {
-                                // Page was 'special'
-                                q->SetSpecialFlag(q->Special());
-                                q->SetCarouselFlag(q->IsCarousel());
-                                if (!(q->Special()))
-                                {
-                                    // Page is longer 'special'
-                                    // TODO: remove from SpecialPages list
-                                    _pageList->GetMagazines()[mag]->GetSpecialPages()->deletePage(q);
-                                    
-                                    if (q->IsCarousel())
-                                    {
-                                        // Page is a 'carousel', add to Carousel list
-                                        _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                                        std::cerr << "[FileMonitor::run] page was special, is now a carousel " << std::hex << q->GetPageNumber() << std::endl;
-                                    }
-                                    else
-                                    {
-                                        // Page is 'normal', add to NormalPages list
-                                        _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                                        std::cerr << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << std::endl;
-                                        _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages(); // TODO: add pages in correct place in list
-                                    }
-                                }
-                                else
-                                {
-                                    // no change
-                                    //std::cerr << "[FileMonitor::run] page remains special " << std::hex << q->GetPageNumber() << std::endl;
-                                }
+                                // page was not 'special' but now is, add to SpecialPages list
+                                q->SetSpecialFlag(true);
+                                _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
+                                std::cerr << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber() << std::endl;
+                                // page will be removed from NormalPages list by the service thread
+                                // page will be removed from Carousel list by the service thread
                             }
-                            else if (q->GetCarouselFlag())
+                            else if ((q->GetSpecialFlag()) && (!(q->Special())))
                             {
-                                // Page was 'carousel'
-                                q->SetSpecialFlag(q->Special());
-                                q->SetCarouselFlag(q->IsCarousel());
-                                if (!(q->IsCarousel()) || q->Special())
-                                {
-                                    // Page is no longer a 'carousel'
-                                    // TODO: remove from Carousel list
-                                    _pageList->GetMagazines()[mag]->GetCarousel()->deletePage(q);
-                                    
-                                    if (q->Special())
-                                    {
-                                        // Page is 'special', add to SpecialPages list
-                                        _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                                        std::cerr << "[FileMonitor::run] page was carousel, is now special " << std::hex << q->GetPageNumber() << std::endl;
-                                    }
-                                    else
-                                    {
-                                        // Page is 'normal', add to NormalPages list
-                                        _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                                        std::cerr << "[FileMonitor::run] page was carousel, is now normal " << std::hex << q->GetPageNumber() << std::endl;
-                                        _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages(); // TODO: add pages in correct place in list
-                                    }
-                                }
-                                else
-                                {
-                                    // no change
-                                    //std::cerr << "[FileMonitor::run] page remains a carousel " << std::hex << q->GetPageNumber() << std::endl;
-                                }
+                                // page was 'special' but now isn't, add to NormalPages list
+                                 _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
+                                std::cerr << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << std::endl;
+                                _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages(); // TODO: add pages in correct place in list
                             }
-                            else
+                            
+                            if ((!(q->Special())) && (!(q->GetCarouselFlag())) && q->IsCarousel())
                             {
-                                // Page was 'normal'
-                                q->SetSpecialFlag(q->Special());
-                                q->SetCarouselFlag(q->IsCarousel());
-                                if (q->Special() || q->IsCarousel())
-                                {
-                                    // Page is no longer 'normal'
-                                    // page will be removed from NormalPages list by the service thread
-                                    
-                                    if (q->Special())
-                                    {
-                                        // Page is 'special', add to SpecialPages list
-                                        _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                                        std::cerr << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber() << std::endl;
-                                    }
-                                    else if (q->IsCarousel())
-                                    {
-                                        // Page is a 'carousel', add to Carousel list
-                                        _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                                        std::cerr << "[FileMonitor::run] page was normal, is now a carousel " << std::hex << q->GetPageNumber() << std::endl;
-                                    }
-                                }
-                                else
-                                {
-                                    // no change
-                                    //std::cerr << "[FileMonitor::run] page remains normal " << std::hex << q->GetPageNumber() << std::endl;
-                                }
+                                // 'normal' page was not 'carousel' but now is, add to Carousel list
+                                q->SetCarouselFlag(true);
+                                q->StepNextSubpage(); // ensure we're pointing at a subpage
+                                _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
+                                std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber() << std::endl;
                             }
                             
                             if (_pageList->CheckForPacket29(q))
@@ -237,23 +171,29 @@ void FileMonitor::run()
                             if (q->Special())
                             {
                                 // Page is 'special'
-                                q->SetSpecialFlag(q->Special());
+                                q->SetSpecialFlag(true);
+                                q->SetCarouselFlag(false);
                                 _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
                                 //std::cerr << "[FileMonitor::run] new page is special " << std::hex << q->GetPageNumber() << std::endl;
-                            }
-                            else if (q->IsCarousel())
-                            {
-                                // Page is a 'carousel'
-                                q->SetCarouselFlag(q->IsCarousel());
-                                _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                                //std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << q->GetPageNumber() << std::endl;
                             }
                             else
                             {
                                 // Page is 'normal'
+                                q->SetSpecialFlag(false);
                                 _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                                 //std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
                                 _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages();
+                                
+                                if (q->IsCarousel())
+                                {
+                                    // Page is also a 'carousel'
+                                    q->SetCarouselFlag(true);
+                                    q->StepNextSubpage(); // ensure we're pointing at a subpage
+                                    _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
+                                    //std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << q->GetPageNumber() << std::endl;
+                                }
+                                else
+                                    q->SetCarouselFlag(false);
                             }
                             
                             if (_pageList->CheckForPacket29(q))

@@ -50,9 +50,9 @@ loop:
             goto loop; // jump back to try for the next page
         }
         
-        if (_page->GetSpecialFlag() || _page->GetSpecialFlag())
+        if (_page->Special())
         {
-            std::cerr << "[NormalPages::NextPage] " << _page->GetSourcePage() << " became Special" << std::endl;
+            std::cerr << "[NormalPages::NextPage] page became Special"  << std::hex << _page->GetPageNumber() << std::endl;
             _iter = _NormalPagesList.erase(_iter);
             _page = *_iter;
             goto loop; // jump back to try for the next page

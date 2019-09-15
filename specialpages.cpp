@@ -65,6 +65,14 @@ TTXPageStream* SpecialPages::NextPage()
             ResetIter();
             return nullptr;
         }
+        else if (!(_page->Special()))
+        {
+            std::cerr << "[SpecialPages::NextPage()] no longer special " << std::hex << _page->GetPageNumber() << std::endl;
+            _specialPagesList.remove(_page);
+            _page->SetSpecialFlag(false);
+            ResetIter();
+            return nullptr;
+        }
     }
     
     return _page;

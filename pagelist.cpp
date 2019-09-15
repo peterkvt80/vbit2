@@ -407,22 +407,28 @@ void PageList::PopulatePageTypeLists()
     {
         TTXPageStream* ptr;
         ptr=&(*p);
-        if (ptr->Special() && !(ptr->GetSpecialFlag()))
+        if (ptr->Special())
         {
             // Page is 'special'
             ptr->SetSpecialFlag(true);
+            ptr->SetCarouselFlag(false);
             _mag[mag]->GetSpecialPages()->addPage(ptr);
-        }
-        else if (ptr->IsCarousel() && !(ptr->GetCarouselFlag()))
-        {
-            // Page is a 'carousel'
-            ptr->SetCarouselFlag(ptr->IsCarousel());
-            _mag[mag]->GetCarousel()->addPage(ptr);
         }
         else
         {
             // Page is 'normal'
+            ptr->SetSpecialFlag(false);
             _mag[mag]->GetNormalPages()->addPage(ptr);
+            
+            if (ptr->IsCarousel())
+            {
+                // Page is also 'carousel'
+                ptr->SetCarouselFlag(true);
+                _mag[mag]->GetCarousel()->addPage(ptr);
+                ptr->StepNextSubpage();
+            }
+            else
+                ptr->SetCarouselFlag(false);
         }
     }
     
