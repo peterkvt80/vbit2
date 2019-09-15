@@ -411,6 +411,7 @@ void PageList::PopulatePageTypeLists()
         {
             // Page is 'special'
             ptr->SetSpecialFlag(true);
+            ptr->SetNormalFlag(false);
             ptr->SetCarouselFlag(false);
             _mag[mag]->GetSpecialPages()->addPage(ptr);
         }
@@ -418,6 +419,7 @@ void PageList::PopulatePageTypeLists()
         {
             // Page is 'normal'
             ptr->SetSpecialFlag(false);
+            ptr->SetNormalFlag(true);
             _mag[mag]->GetNormalPages()->addPage(ptr);
             
             if (ptr->IsCarousel())

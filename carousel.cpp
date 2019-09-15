@@ -39,19 +39,19 @@ TTXPageStream* Carousel::nextCarousel()
     for (std::list<TTXPageStream*>::iterator it=_carouselList.begin();it!=_carouselList.end();++it)
     {
         p=*it;
-        if (p->GetStatusFlag()==TTXPageStream::MARKED)
+        if (p->GetStatusFlag()==TTXPageStream::MARKED && p->GetCarouselFlag()) // only remove it once
         {
             std::cerr << "[Carousel::nextCarousel] Deleted " << p->GetSourcePage() << std::endl;
-            p->SetState(TTXPageStream::GONE);
-            _carouselList.remove(p);
-            return nullptr;
+            p->SetCarouselFlag(false);
+            if (!(p->GetNormalFlag() || p->GetSpecialFlag()))
+                p->SetState(TTXPageStream::GONE); // if we are last mark it gone
+            _carouselList.erase(it--);
         }
         else if ((!(p->IsCarousel())) || (p->Special()))
         {
             std::cerr << "[Carousel::nextCarousel] no longer a carousel " << std::hex << p->GetPageNumber() << std::endl;
-            _carouselList.remove(p);
             p->SetCarouselFlag(false);
-            return nullptr;
+            _carouselList.erase(it--);
         }
         else
         {

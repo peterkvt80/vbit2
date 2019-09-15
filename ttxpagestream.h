@@ -49,6 +49,9 @@ class TTXPageStream : public TTXPage
     bool GetSpecialFlag() { return _isSpecial; }
     void SetSpecialFlag(bool val) { _isSpecial = val; }
     
+    bool GetNormalFlag() { return _isNormal; }
+    void SetNormalFlag(bool val) { _isNormal = val; }
+    
     int GetUpdateCount() {return _updateCount;}
     void IncrementUpdateCount();
 
@@ -129,7 +132,6 @@ class TTXPageStream : public TTXPage
 
   private:
     // Carousel control
-    bool _isCarousel; //!< Member variable "_isCarousel" If
     // TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
 
     time_t _transitionTime; // Records when the next carousel transition is due
@@ -142,7 +144,9 @@ class TTXPageStream : public TTXPage
 
     bool _Selected;   /// Marked as selected by the inserter P command
 
+    bool _isCarousel;
     bool _isSpecial;
+    bool _isNormal;
 
     int _updateCount; // update counter for special pages.
 

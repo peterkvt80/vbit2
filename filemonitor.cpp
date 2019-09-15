@@ -131,6 +131,7 @@ void FileMonitor::run()
                             {
                                 // page was 'special' but now isn't, add to NormalPages list
                                  _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
+                                 q->SetNormalFlag(true);
                                 std::cerr << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << std::endl;
                                 _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages(); // TODO: add pages in correct place in list
                             }
@@ -172,6 +173,7 @@ void FileMonitor::run()
                             {
                                 // Page is 'special'
                                 q->SetSpecialFlag(true);
+                                q->SetNormalFlag(false);
                                 q->SetCarouselFlag(false);
                                 _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
                                 //std::cerr << "[FileMonitor::run] new page is special " << std::hex << q->GetPageNumber() << std::endl;
@@ -180,6 +182,7 @@ void FileMonitor::run()
                             {
                                 // Page is 'normal'
                                 q->SetSpecialFlag(false);
+                                q->SetNormalFlag(true);
                                 _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                                 //std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
                                 _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages();

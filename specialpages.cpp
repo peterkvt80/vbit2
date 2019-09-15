@@ -45,7 +45,8 @@ TTXPageStream* SpecialPages::NextPage()
         ++_iter;
         _page = *_iter;
     }
-    
+
+loop:
     if (_iter == _specialPagesList.end())
     {
         _page = nullptr;
@@ -57,21 +58,24 @@ TTXPageStream* SpecialPages::NextPage()
     
     if (_page)
     {
-        if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+        if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetSpecialFlag()) // only remove it once
         {
             std::cerr << "[SpecialPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
             _page->SetState(TTXPageStream::GONE);
-            _specialPagesList.remove(_page);
-            ResetIter();
-            return nullptr;
+            _iter = _specialPagesList.erase(_iter);
+            _page->SetSpecialFlag(false);
+            if (!(_page->GetNormalFlag() || _page->GetCarouselFlag()))
+                _page->SetState(TTXPageStream::GONE); // if we are last mark it gone
+            _page = *_iter;
+            goto loop;
         }
         else if (!(_page->Special()))
         {
             std::cerr << "[SpecialPages::NextPage()] no longer special " << std::hex << _page->GetPageNumber() << std::endl;
-            _specialPagesList.remove(_page);
+            _iter = _specialPagesList.erase(_iter);
             _page->SetSpecialFlag(false);
-            ResetIter();
-            return nullptr;
+            _page = *_iter;
+            goto loop;
         }
     }
     

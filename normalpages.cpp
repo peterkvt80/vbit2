@@ -39,13 +39,15 @@ loop:
     
     if (_page)
     {
-        /* remove pointers from this list if the pages are marked for deletion, or have become 'Special' pages, then loop back to get the next page instead */
+        /* remove pointers from this list if the pages are marked for deletion */
         
-        if (_page->GetStatusFlag()==TTXPageStream::MARKED)
+        if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetNormalFlag()) // only remove it once
         {
             std::cerr << "[NormalPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
-            _page->SetState(TTXPageStream::GONE);
             _iter = _NormalPagesList.erase(_iter);
+            _page->SetNormalFlag(false);
+            if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag()))
+                _page->SetState(TTXPageStream::GONE); // if we are last mark it gone
             _page = *_iter;
             goto loop; // jump back to try for the next page
         }
@@ -54,6 +56,7 @@ loop:
         {
             std::cerr << "[NormalPages::NextPage] page became Special"  << std::hex << _page->GetPageNumber() << std::endl;
             _iter = _NormalPagesList.erase(_iter);
+            _page->SetNormalFlag(false);
             _page = *_iter;
             goto loop; // jump back to try for the next page
         }
