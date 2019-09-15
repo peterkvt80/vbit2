@@ -18,12 +18,6 @@ void NormalPages::addPage(TTXPageStream* p)
     _NormalPagesList.push_front(p);
 }
 
-void NormalPages::deletePage(TTXPageStream* p)
-{
-    _NormalPagesList.remove(p);
-    ResetIter();
-}
-
 TTXPageStream* NormalPages::NextPage()
 {
     if (_page == nullptr)
@@ -36,7 +30,8 @@ TTXPageStream* NormalPages::NextPage()
         ++_iter;
         _page = *_iter;
     }
-    
+
+loop:
     if (_iter == _NormalPagesList.end())
     {
         _page = nullptr;
@@ -44,13 +39,23 @@ TTXPageStream* NormalPages::NextPage()
     
     if (_page)
     {
+        /* remove pointers from this list if the pages are marked for deletion, or have become 'Special' pages, then loop back to get the next page instead */
+        
         if (_page->GetStatusFlag()==TTXPageStream::MARKED)
         {
             std::cerr << "[NormalPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
             _page->SetState(TTXPageStream::GONE);
-            _NormalPagesList.remove(_page);
-            ResetIter();
-            return nullptr;
+            _iter = _NormalPagesList.erase(_iter);
+            _page = *_iter;
+            goto loop; // jump back to try for the next page
+        }
+        
+        if (_page->GetSpecialFlag() || _page->GetSpecialFlag())
+        {
+            std::cerr << "[NormalPages::NextPage] " << _page->GetSourcePage() << " became Special" << std::endl;
+            _iter = _NormalPagesList.erase(_iter);
+            _page = *_iter;
+            goto loop; // jump back to try for the next page
         }
     }
     
@@ -62,3 +67,19 @@ void NormalPages::ResetIter()
     _iter=_NormalPagesList.begin();
     _page=nullptr;
 }
+
+template <typename TTXPageStream>
+struct pageLessThan
+{
+    bool operator()(const TTXPageStream *a, const TTXPageStream *b) const{
+        return a->GetPageNumber() < b->GetPageNumber();
+    }
+};
+
+void NormalPages::sortPages()
+{
+    // sort the page list by page number
+    _NormalPagesList.sort(pageLessThan<TTXPageStream>());
+}
+
+

@@ -23,8 +23,8 @@ class NormalPages
         void ResetIter();
 
         void addPage(TTXPageStream* p);
-
-        void deletePage(TTXPageStream* p);
+        
+        void sortPages();
 
 
     protected:

@@ -140,6 +140,7 @@ void FileMonitor::run()
                                         // Page is 'normal', add to NormalPages list
                                         _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                                         std::cerr << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << std::endl;
+                                        _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages(); // TODO: add pages in correct place in list
                                     }
                                 }
                                 else
@@ -170,6 +171,7 @@ void FileMonitor::run()
                                         // Page is 'normal', add to NormalPages list
                                         _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                                         std::cerr << "[FileMonitor::run] page was carousel, is now normal " << std::hex << q->GetPageNumber() << std::endl;
+                                        _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages(); // TODO: add pages in correct place in list
                                     }
                                 }
                                 else
@@ -186,8 +188,7 @@ void FileMonitor::run()
                                 if (q->Special() || q->IsCarousel())
                                 {
                                     // Page is no longer 'normal'
-                                    // TODO: remove from NormalPages list
-                                    _pageList->GetMagazines()[mag]->GetNormalPages()->deletePage(q);
+                                    // page will be removed from NormalPages list by the service thread
                                     
                                     if (q->Special())
                                     {
@@ -252,6 +253,7 @@ void FileMonitor::run()
                                 // Page is 'normal'
                                 _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                                 //std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
+                                _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages();
                             }
                             
                             if (_pageList->CheckForPacket29(q))

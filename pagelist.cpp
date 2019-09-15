@@ -425,18 +425,7 @@ void PageList::PopulatePageTypeLists()
             _mag[mag]->GetNormalPages()->addPage(ptr);
         }
     }
+    
+    _mag[mag]->GetNormalPages()->sortPages(); // sort the NormalPages lists by page number
   }
 }
-
-/* Want this to happen in the Service thread.
-      // Not the best idea, to check for deletes here
-      if (_fileToDelete==ptr->GetSourcePage()) // This works but isn't great. Probably not too efficient
-      {
-        std::cerr << "[PageList::Locate]ready to delete " << ptr->GetSourcePage() << std::endl;
-        _fileToDelete="null"; // Signal that delete has been done.
-        //@todo Delete the page object, remove it from pagelist, fixup mag, skip to the next page
-        _pageList[mag].remove(*(p++)); // Also post-increment the iterator OR WE CRASH!
-        // We can do this safely because this thread is in the Service thread and won't clash WRONG!
-      }
-
-*/
