@@ -158,9 +158,14 @@ Packet* PacketMag::GetPacket(Packet* p)
                         // cycle if timer has expired
                         _page->StepNextSubpage();
                         _page->SetTransitionTime(_page->GetCarouselPage()->GetCycleTime());
+                        _status=_page->GetCarouselPage()->GetPageStatus();
+                    } 
+                    else
+                    {
+                        // clear any ERASE bit if page hasn't cycled to minimise flicker
+                        _status=_page->GetCarouselPage()->GetPageStatus() & ~(PAGESTATUS_C4_ERASEPAGE);
                     }
                     thisSubcode=_page->GetCarouselPage()->GetSubCode();
-                    _status=_page->GetCarouselPage()->GetPageStatus();
                     _region=_page->GetCarouselPage()->GetRegion();
                 }
                 else
