@@ -19,13 +19,8 @@ class NormalPages
         virtual ~NormalPages();
 
         TTXPageStream* NextPage();
-        
-        void ResetIter();
 
         void addPage(TTXPageStream* p);
-        
-        void sortPages();
-
 
     protected:
 
@@ -33,6 +28,15 @@ class NormalPages
         std::list<TTXPageStream*> _NormalPagesList;
         std::list<TTXPageStream*>::iterator _iter;
         TTXPageStream* _page;
+        bool _needSorting;
+        
+        template <typename TTXPageStream>
+        struct pageLessThan
+        {
+            bool operator()(const TTXPageStream *a, const TTXPageStream *b) const{
+                return a->GetPageNumber() < b->GetPageNumber();
+            }
+        };
 };
 
 }

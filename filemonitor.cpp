@@ -133,7 +133,6 @@ void FileMonitor::run()
                                  _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                                  q->SetNormalFlag(true);
                                 std::cerr << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << std::endl;
-                                _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages(); // TODO: add pages in correct place in list
                             }
                             
                             if ((!(q->Special())) && (!(q->GetCarouselFlag())) && q->IsCarousel())
@@ -185,7 +184,6 @@ void FileMonitor::run()
                                 q->SetNormalFlag(true);
                                 _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                                 //std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
-                                _pageList->GetMagazines()[mag]->GetNormalPages()->sortPages();
                                 
                                 if (q->IsCarousel())
                                 {

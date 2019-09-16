@@ -5,7 +5,9 @@ using namespace vbit;
 
 NormalPages::NormalPages()
 {
-    ResetIter();
+    _iter=_NormalPagesList.begin();
+    _page=nullptr;
+    _needSorting = false;
 }
 
 NormalPages::~NormalPages()
@@ -16,13 +18,20 @@ NormalPages::~NormalPages()
 void NormalPages::addPage(TTXPageStream* p)
 {
     _NormalPagesList.push_front(p);
+    _needSorting = true; // set flag to indicate that list should be sorted before next cycle
 }
 
 TTXPageStream* NormalPages::NextPage()
 {
     if (_page == nullptr)
     {
-        ++_iter;
+        if (_needSorting)
+        {
+            // sort the page list by page number. Only check this at the start of each cycle
+            _NormalPagesList.sort(pageLessThan<TTXPageStream>());
+            _needSorting = false; // clear flag
+        }
+        _iter=_NormalPagesList.begin();
         _page = *_iter;
     }
     else
@@ -64,25 +73,3 @@ loop:
     
     return _page;
 }
-
-void NormalPages::ResetIter()
-{
-    _iter=_NormalPagesList.begin();
-    _page=nullptr;
-}
-
-template <typename TTXPageStream>
-struct pageLessThan
-{
-    bool operator()(const TTXPageStream *a, const TTXPageStream *b) const{
-        return a->GetPageNumber() < b->GetPageNumber();
-    }
-};
-
-void NormalPages::sortPages()
-{
-    // sort the page list by page number
-    _NormalPagesList.sort(pageLessThan<TTXPageStream>());
-}
-
-

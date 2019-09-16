@@ -433,7 +433,5 @@ void PageList::PopulatePageTypeLists()
                 ptr->SetCarouselFlag(false);
         }
     }
-    
-    _mag[mag]->GetNormalPages()->sortPages(); // sort the NormalPages lists by page number
   }
 }
