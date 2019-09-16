@@ -861,26 +861,26 @@ int TTXPage::GetPageCount()
         else
         {
             // Pages intended for display with sub-pages should have sub-pages coded sequentially from Mxx-0001 to
-            // Mxx-0009 and then Mxx-0010 to Mxx-0019 and similarly using the decimal values of sub-code nibbles S2
-            // and S1 to Mxx-0079.
+            // Mxx-0009 and then Mxx-0010 to Mxx-0019 and similarly using the decimal values of sub-code nibbles, from subcode 0001 up to 0079 as per ETS-300-706 Annex A.1
+            // Pagees intended for display shouldn't have more than 79 subpages, however we should handle it sensibly if they do, therefore above 0079 the numbers jump to 01nn to 09nn, then 1nnn to 3nnn.
 
             // Increment the subcode is a baroque way
-            code[3]++;
-            if (code[3]>9)
+            code[3]++; // increment units
+            if (code[3]>9) // if units > 9
             {
-                code[3]=0;
-                code[2]++;
-                if (code[2]>9)
+                code[3]=0; // units = 0
+                code[2]++; // increment tens
+                if (code[2]>7) // if tens > 7
                 {
-                    code[2]=0;
-                    code[1]++;
-                    if (code[1]>9)
+                    code[2]=0; // tens = 0
+                    code[1]++; // increment 'hundreds'
+                    if (code[1]>9) // if 'hundreds' > 9
                     {
-                        code[1]=0;
-                        code[0]++;
-                        if (code[0]>9)
+                        code[1]=0; // 'hundreds' = 0
+                        code[0]++; // increment 'thousands'
+                        if (code[0]>3) // if 'thousands' > 3
                         {
-                            code[0]=0;
+                            code[0]=0; // overflow subcode
                             code[1]=0;
                             code[2]=0;
                             code[3]=0;
