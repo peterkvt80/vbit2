@@ -1,5 +1,5 @@
 #include "packet.h"
-
+#include "version.h"
 
 using namespace vbit;
 
@@ -324,7 +324,7 @@ char* Packet::tx(bool reverse)
 			// %%%V version number eg. 2.00
 			tmpptr=strstr((char*) _packet,"%%%V");
 			if (tmpptr) {
-				strncpy(tmpptr,"v2.1",4); // TODO: get version number from elsewhere and change to support longer future version numbers
+                strncpy(tmpptr,VBIT2_VERSION,4);
 			}
 			Parity(5); // redo the parity because substitutions will need processing
 		}

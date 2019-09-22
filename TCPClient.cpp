@@ -1,8 +1,8 @@
 #include <stdio.h>      /* for printf() and fprintf() */
 #include <string.h>
 
-
 #include "TCPClient.h"
+#include "version.h"
 
 using namespace vbit;
 using namespace ttx;
@@ -235,8 +235,7 @@ void TCPClient::command(char* cmd, char* response)
 		strcpy(result,"T not implemented\n\r");
 		break;
 	case 'Y' :
-		strcpy(result,"VBIT620 Text Generator V2.1.0   "); // 32 character limit
-        // TODO: get version number from elsewhere
+        snprintf(result,33,"VBIT620 Text Generator %s",VBIT2_VERSION);
 		break;
 	case 0x0e:
 		strcpy(result,"This of course does not work. No CR in Softel \n\r");

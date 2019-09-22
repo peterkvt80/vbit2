@@ -1,28 +1,30 @@
 #include "ttxpagestream.h"
 
 TTXPageStream::TTXPageStream() :
-    _isCarousel(false),
     _transitionTime(0),
-        _CarouselPage(NULL),
-        _fileStatus(NEW),
-        _isSpecial(false),
-        _updateCount(0)
+    _CarouselPage(NULL),
+    _fileStatus(NEW),
+    _isCarousel(false),
+    _isSpecial(false),
+    _isNormal(false),
+    _updateCount(0)
 {
     //ctor
 }
 
 TTXPageStream::TTXPageStream(std::string filename) :
     TTXPage(filename),
-    _isCarousel(false),
     _transitionTime(0),
-        _CarouselPage(NULL),
-        _fileStatus(NEW),
-        _isSpecial(false),
-        _updateCount(0)
+    _CarouselPage(NULL),
+    _fileStatus(NEW),
+    _isCarousel(false),
+    _isSpecial(false),
+    _isNormal(false),
+    _updateCount(0)
 {
-  struct stat attrib;               // create a file attribute structure
-  stat(filename.c_str(), &attrib);  // get the attributes of the file
-	_modifiedTime=attrib.st_mtime;
+    struct stat attrib;               // create a file attribute structure
+    stat(filename.c_str(), &attrib);  // get the attributes of the file
+    _modifiedTime=attrib.st_mtime;
 }
 
 TTXPageStream::~TTXPageStream()
