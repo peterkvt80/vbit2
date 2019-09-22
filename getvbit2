@@ -14,6 +14,9 @@ echo "Installing vbit2"
 #install vbit2
 git clone https://github.com/peterkvt80/vbit2.git ~/vbit2
 cd ~/vbit2
+git fetch --tags
+latestTag=`curl --silent "https://api.github.com/repos/peterkvt80/vbit2/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")'`
+git checkout $latestTag # switch to latest 
 make
 
 echo "Installing raspi-teletext"
