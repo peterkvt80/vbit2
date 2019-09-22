@@ -280,13 +280,15 @@ char* Packet::tx(bool reverse)
 			for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
 			// ======= TEMPERATURE ========
 			char strtemp[]="                    ";
-			#ifdef RASPBIAN
 			tmpptr=strstr((char*)_packet,"%%%T");
 			if (tmpptr) {
+				#ifdef RASPBIAN
 				get_temp(strtemp);
 				strncpy(tmpptr,strtemp,4);
+				#else
+				strncpy(tmpptr,"err ",4);
+				#endif
 			}
-			#endif
 			// ======= WORLD TIME ========
 			// Special case for world time. Put %t<+|-><hh> to get local time HH:MM offset by +/- half hours
 			for (;;)
@@ -304,15 +306,16 @@ char* Packet::tx(bool reverse)
 					break;
 			}
 			// ======= NETWORK ========
-			#ifndef WIN32
 			// Special case for network address. Put %%%%%%%%%%%%%%n to get network address in form xxx.yyy.zzz.aaa with trailing spaces (15 characters total)
 			tmpptr=strstr((char*)_packet,"%%%%%%%%%%%%%%n");
 			if (tmpptr) {
-				// strncpy(tmpptr,"not yet working",15);
+				#ifndef WIN32
 				get_net(strtemp);
 				strncpy(tmpptr,strtemp,15);
+				#else
+				strncpy(tmpptr,"not implemented",15);
+				#endif
 			}
-			#endif
 			// ======= TIME AND DATE ========
 			// Special case for system time. Put %%%%%%%%%%%%timedate to get time and date
 			tmpptr=strstr((char*) _packet,"%%%%%%%%%%%%timedate");
@@ -322,9 +325,9 @@ char* Packet::tx(bool reverse)
 			}
 			// ======= VERSION ========
 			// %%%V version number eg. 2.00
-			tmpptr=strstr((char*) _packet,"%%%V");
+			tmpptr=strstr((char*) _packet,"%%%%%V");
 			if (tmpptr) {
-                strncpy(tmpptr,VBIT2_VERSION,4);
+                strncpy(tmpptr,VBIT2_VERSION,6);
 			}
 			Parity(5); // redo the parity because substitutions will need processing
 		}
