@@ -87,8 +87,7 @@ std::string TTXLine::validate(std::string const& val)
         {
             ch=0x80; // Black text.
         }
-        if (!(ch=='\n' || ch=='\r'))
-            str[j++]=ch; // ignore line feeds
+        str[j++]=ch;
     }
     str.resize(40,' '); // make sure line is exactly 40 chars long
     // std::cout << "Validating done " << std::endl;
