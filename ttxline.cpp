@@ -69,7 +69,7 @@ std::string TTXLine::validate(std::string const& val)
 {
     char ch;
     int j=0;
-    std::string str="                                        ";
+    std::string str="                                                                                ";
     // std::cout << "Validating length= " << val.length() << std::endl;
     for (unsigned int i=0;i<val.length() && i<80;i++)
     {
