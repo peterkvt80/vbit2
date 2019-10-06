@@ -69,8 +69,7 @@ std::string TTXLine::validate(std::string const& val)
 {
     char ch;
     int j=0;
-    std::string str="                                       ";
-    str.resize(80);
+    std::string str="                                        ";
     // std::cout << "Validating length= " << val.length() << std::endl;
     for (unsigned int i=0;i<val.length() && i<80;i++)
     {
@@ -88,12 +87,10 @@ std::string TTXLine::validate(std::string const& val)
         {
             ch=0x80; // Black text.
         }
-        str[j++]=ch;
+        if (!(ch=='\n' || ch=='\r'))
+            str[j++]=ch; // ignore line feeds
     }
-    // short line? Remove the text terminator.
-    if (str[j-1]=='\n') j--;
-    if (str[j-1]=='\r') j--;
-    str.resize(j);
+    str.resize(40,' '); // make sure line is exactly 40 chars long
     // std::cout << "Validating done " << std::endl;
     return str;
 }
