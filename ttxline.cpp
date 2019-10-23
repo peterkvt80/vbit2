@@ -78,10 +78,9 @@ std::string TTXLine::validate(std::string const& val)
         if (ch==0x1b) // escape?
         {
             i++;
-            ch=val[i] & 0x3f;
+            ch=(val[i] & 0x3f)|0x80;
         }
-        else
-        if (ch<0x20)
+        else if (ch<0x20)
         {
             ch=0x20; // turn all other controls to space character
         }
