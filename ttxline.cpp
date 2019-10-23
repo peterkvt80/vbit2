@@ -69,27 +69,25 @@ std::string TTXLine::validate(std::string const& val)
 {
     char ch;
     int j=0;
-    std::string str="                                                                                ";
+    std::string str="                                        ";
     // std::cout << "Validating length= " << val.length() << std::endl;
-    for (unsigned int i=0;i<val.length() && i<80;i++)
+    for (unsigned int i=0;i<val.length() && j<40;i++)
     {
         ch=val[i] & 0x7f;   // Convert to 7 bits
+        
         if (ch==0x1b) // escape?
         {
             i++;
             ch=val[i] & 0x3f;
         }
-        // std::cout << val[i] << std::endl;
-
-        // If we use null terminated strings anywhere it will go wrong.
-        // add the parity bit to nulls now so that they make it through the string handling
-        if (ch==0x00) // null?
+        else
+        if (ch<0x20)
         {
-            ch=0x80; // Black text.
+            ch=0x20; // turn all other controls to space character
         }
+        
         str[j++]=ch;
     }
-    str.resize(40,' '); // make sure line is exactly 40 chars long
     // std::cout << "Validating done " << std::endl;
     return str;
 }
