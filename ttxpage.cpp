@@ -113,7 +113,7 @@ void TTXPage::m_Init()
     m_description="Description goes here";
     m_cycletimeseconds=8;
     m_cycletimetype='T';
-    m_pagestatus=0x8000;
+    m_pagestatus=0; /* default to not sending page to ignore malformed/blank tti files */
     m_lastpacket=0;
     m_pagecoding=CODING_7BIT_TEXT;
     m_pagefunction=LOP;
