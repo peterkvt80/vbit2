@@ -77,12 +77,16 @@ void FileMonitor::run()
         // Load the filenames into a list
         while ((dirp = readdir(dp)) != NULL)
         {
-            // Select only pages that might be teletext. tti or ttix at the moment.
+            // Select only pages that might be teletext. .tti, .ttix or .vtx at the moment.
             // strcasestr doesn't seem to be in my Windows compiler.
             #ifdef _WIN32
             char* p=strstr(dirp->d_name,".tti");
+	    if (!p)
+                p=strstr(dirp->d_name,".vtx");
             #else
             char* p=strcasestr(dirp->d_name,".tti");
+	    if (!p)
+                p=strcasestr(dirp->d_name,".vtx");
             #endif
             // std::cerr << path << "/" << dirp->d_name << std::endl;
             if (p)

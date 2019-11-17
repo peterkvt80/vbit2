@@ -269,6 +269,13 @@ class TTXPage
         std::string m_FormatPageNumber(TTXPage* p); /// \return the page number ready to write to file
         int findPageNumber(char* buf);
         bool m_Loaded;
+
+        /** Load a VTXv$ page
+         * \param filename : The source file
+         * \return true if the page was loaded
+         */
+        bool m_LoadVTXv4(std::string filename);
+
         /** Load an EP1 page
          * \param filename : The source file
          * \return true if the page was loaded
