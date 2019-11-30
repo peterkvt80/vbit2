@@ -144,7 +144,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 
                 if (_page == nullptr){
                     // couldn't get a page to send so sent a time filling header
-                    p->Header(_magNumber,0xFF,0x3F7F,0x8010);
+                    p->Header(_magNumber,0xFF,0x0000,0x8010);
                     p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
                     _waitingForField = 2; // enforce 20ms page erasure interval
                     return p;
