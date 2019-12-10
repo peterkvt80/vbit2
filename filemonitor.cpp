@@ -62,156 +62,10 @@ void FileMonitor::run()
 
     while (true)
     {
-        DIR *dp;
-        struct dirent *dirp;
-
-        // Open the directory
-        if ( (dp = opendir(path.c_str())) == NULL)
-        {
-            std::cerr << "Error(" << errno << ") opening " << path << std::endl;
-            return;
-        }
-
         _pageList->ClearFlags(); // Assume that no files exist
-
-        // Load the filenames into a list
-        while ((dirp = readdir(dp)) != NULL)
-        {
-            // Select only pages that might be teletext. tti or ttix at the moment.
-            // strcasestr doesn't seem to be in my Windows compiler.
-            #ifdef _WIN32
-            char* p=strstr(dirp->d_name,".tti");
-            #else
-            char* p=strcasestr(dirp->d_name,".tti");
-            #endif
-            // std::cerr << path << "/" << dirp->d_name << std::endl;
-            if (p)
-            {
-                std::string name;
-                name=path;
-                name+="/";
-                name+=dirp->d_name;
-                // Find the modification time
-                struct stat attrib;         // create a file attribute structure
-                stat(name.c_str(), &attrib);     // get the attributes of the file
-
-                // struct tm* clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
-                // std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
-                // Now we want to process changes
-                // 1) Is it a new page? Then add it.
-                TTXPageStream* q=_pageList->Locate(name);
-                if (q) // File was found
-                {
-                    if (!(q->GetStatusFlag()==TTXPageStream::MARKED || q->GetStatusFlag()==TTXPageStream::GONE)) // file is not mid-deletion
-                    {
-                        //std::cerr << dirp->d_name << " was found" << std::endl;
-                        if (attrib.st_mtime!=q->GetModifiedTime()) // File exists. Has it changed?
-                        {
-                            //std::cerr << "[FileMonitor::run] File has been modified " << dirp->d_name << std::endl;
-                            // We just load the new page and update the modified time
-                            // This isn't good enough.
-                            // We need a mutex or semaphore to lock out this page while we do that
-                            // lock
-                            q->LoadPage(name); // What if this fails? We can see the bool. What to do ?
-                            q->IncrementUpdateCount();
-                            q->SetFileChangedFlag();
-                            q->GetPageCount(); // renumber the subpages
-                            int mag=(q->GetPageNumber() >> 16) & 0x7;
-                            
-                            if ((!(q->GetSpecialFlag())) && (q->Special()))
-                            {
-                                // page was not 'special' but now is, add to SpecialPages list
-                                q->SetSpecialFlag(true);
-                                _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                                std::cerr << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber() << std::endl;
-                                // page will be removed from NormalPages list by the service thread
-                                // page will be removed from Carousel list by the service thread
-                            }
-                            else if ((q->GetSpecialFlag()) && (!(q->Special())))
-                            {
-                                // page was 'special' but now isn't, add to NormalPages list
-                                 _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                                 q->SetNormalFlag(true);
-                                std::cerr << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << std::endl;
-                            }
-                            
-                            if ((!(q->Special())) && (!(q->GetCarouselFlag())) && q->IsCarousel())
-                            {
-                                // 'normal' page was not 'carousel' but now is, add to Carousel list
-                                q->SetCarouselFlag(true);
-                                q->StepNextSubpage(); // ensure we're pointing at a subpage
-                                _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                                std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber() << std::endl;
-                            }
-                            
-                            if (_pageList->CheckForPacket29(q))
-                            {
-                                std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
-                                _pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
-                            }
-                            
-                            q->SetModifiedTime(attrib.st_mtime);
-                            // unlock
-                        }
-                        q->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
-                    }
-                }
-                else
-                {
-                    std::cerr << "[FileMonitor::run] Adding a new page " << dirp->d_name << std::endl;
-                    // A new file. Create the page object and add it to the page list.
-                    
-                    if ((q=new TTXPageStream(name)))
-                    {
-                        _pageList->AddPage(q);
-                        if((q=_pageList->Locate(name))) // get pointer to copy in list
-                        {
-                            q->GetPageCount(); // renumber the subpages
-                            int mag=(q->GetPageNumber() >> 16) & 0x7;
-                            if (q->Special())
-                            {
-                                // Page is 'special'
-                                q->SetSpecialFlag(true);
-                                q->SetNormalFlag(false);
-                                q->SetCarouselFlag(false);
-                                _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                                //std::cerr << "[FileMonitor::run] new page is special " << std::hex << q->GetPageNumber() << std::endl;
-                            }
-                            else
-                            {
-                                // Page is 'normal'
-                                q->SetSpecialFlag(false);
-                                q->SetNormalFlag(true);
-                                _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                                //std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
-                                
-                                if (q->IsCarousel())
-                                {
-                                    // Page is also a 'carousel'
-                                    q->SetCarouselFlag(true);
-                                    q->StepNextSubpage(); // ensure we're pointing at a subpage
-                                    _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                                    //std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << q->GetPageNumber() << std::endl;
-                                }
-                                else
-                                    q->SetCarouselFlag(false);
-                            }
-                            
-                            if (_pageList->CheckForPacket29(q))
-                            {
-                                std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
-                                _pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
-                            }
-                        }
-                        else
-                            std::cerr << "[FileMonitor::run] Failed to add" << dirp->d_name << std::endl; // should never happen
-                    }
-                    else
-                        std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;
-                }
-            }
-        }
-        closedir(dp);
+        
+        readDirectory(path);
+        
         // std::cerr << "[FileMonitor::run] Finished scan" << std::endl;
 
         // Delete pages that no longer exist (this blocks the thread until the pages are removed)
@@ -228,3 +82,168 @@ void FileMonitor::run()
         nanosleep(&rec,nullptr);
     }
 } // run
+
+int FileMonitor::readDirectory(std::string path){
+    struct dirent *dirp;
+    struct stat attrib;
+    
+    DIR *dp;
+
+    // Open the directory
+    if ( (dp = opendir(path.c_str())) == NULL)
+    {
+        std::cerr << "Error(" << errno << ") opening " << path << std::endl;
+        return errno;
+    }
+    
+    // Load the filenames into a list
+    while ((dirp = readdir(dp)) != NULL)
+    {
+        std::string name;
+        name=path;
+        name+="/";
+        name+=dirp->d_name;
+        if (stat(name.c_str(), &attrib) == -1) // get the attributes of the file
+            continue; // skip file on failure
+        
+        if (attrib.st_mode & S_IFDIR)
+        {
+            // directory entry is another directory
+            if (dirp->d_name[0] != '.') // ignore anything beginning with .
+            {
+                if (readDirectory(name)) // recurse into directory
+                {
+                    std::cerr << "Error(" << errno << ") recursing into " << name << std::endl;
+                }
+            }
+            continue;
+        }
+        
+        #ifdef _WIN32
+        char* p=strstr(dirp->d_name,".tti");
+        #else
+        char* p=strcasestr(dirp->d_name,".tti");
+        #endif
+        
+        if (p)
+        {
+            // struct tm* clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
+            // std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
+            // Now we want to process changes
+            // 1) Is it a new page? Then add it.
+            TTXPageStream* q=_pageList->Locate(name);
+            if (q) // File was found
+            {
+                if (!(q->GetStatusFlag()==TTXPageStream::MARKED || q->GetStatusFlag()==TTXPageStream::GONE)) // file is not mid-deletion
+                {
+                    //std::cerr << dirp->d_name << " was found" << std::endl;
+                    if (attrib.st_mtime!=q->GetModifiedTime()) // File exists. Has it changed?
+                    {
+                        //std::cerr << "[FileMonitor::run] File has been modified " << dirp->d_name << std::endl;
+                        // We just load the new page and update the modified time
+                        // This isn't good enough.
+                        // We need a mutex or semaphore to lock out this page while we do that
+                        // lock
+                        q->LoadPage(name); // What if this fails? We can see the bool. What to do ?
+                        q->IncrementUpdateCount();
+                        q->SetFileChangedFlag();
+                        q->GetPageCount(); // renumber the subpages
+                        int mag=(q->GetPageNumber() >> 16) & 0x7;
+                        
+                        if ((!(q->GetSpecialFlag())) && (q->Special()))
+                        {
+                            // page was not 'special' but now is, add to SpecialPages list
+                            q->SetSpecialFlag(true);
+                            _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
+                            std::cerr << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber() << std::endl;
+                            // page will be removed from NormalPages list by the service thread
+                            // page will be removed from Carousel list by the service thread
+                        }
+                        else if ((q->GetSpecialFlag()) && (!(q->Special())))
+                        {
+                            // page was 'special' but now isn't, add to NormalPages list
+                             _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
+                             q->SetNormalFlag(true);
+                            std::cerr << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << std::endl;
+                        }
+                        
+                        if ((!(q->Special())) && (!(q->GetCarouselFlag())) && q->IsCarousel())
+                        {
+                            // 'normal' page was not 'carousel' but now is, add to Carousel list
+                            q->SetCarouselFlag(true);
+                            q->StepNextSubpage(); // ensure we're pointing at a subpage
+                            _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
+                            std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber() << std::endl;
+                        }
+                        
+                        if (_pageList->CheckForPacket29(q))
+                        {
+                            std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
+                            _pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
+                        }
+                        
+                        q->SetModifiedTime(attrib.st_mtime);
+                        // unlock
+                    }
+                    q->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
+                }
+            }
+            else
+            {
+                std::cerr << "[FileMonitor::run] Adding a new page " << dirp->d_name << std::endl;
+                // A new file. Create the page object and add it to the page list.
+                
+                if ((q=new TTXPageStream(name)))
+                {
+                    _pageList->AddPage(q);
+                    if((q=_pageList->Locate(name))) // get pointer to copy in list
+                    {
+                        q->GetPageCount(); // renumber the subpages
+                        int mag=(q->GetPageNumber() >> 16) & 0x7;
+                        if (q->Special())
+                        {
+                            // Page is 'special'
+                            q->SetSpecialFlag(true);
+                            q->SetNormalFlag(false);
+                            q->SetCarouselFlag(false);
+                            _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
+                            //std::cerr << "[FileMonitor::run] new page is special " << std::hex << q->GetPageNumber() << std::endl;
+                        }
+                        else
+                        {
+                            // Page is 'normal'
+                            q->SetSpecialFlag(false);
+                            q->SetNormalFlag(true);
+                            _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
+                            //std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
+                            
+                            if (q->IsCarousel())
+                            {
+                                // Page is also a 'carousel'
+                                q->SetCarouselFlag(true);
+                                q->StepNextSubpage(); // ensure we're pointing at a subpage
+                                _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
+                                //std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << q->GetPageNumber() << std::endl;
+                            }
+                            else
+                                q->SetCarouselFlag(false);
+                        }
+                        
+                        if (_pageList->CheckForPacket29(q))
+                        {
+                            std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
+                            _pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
+                        }
+                    }
+                    else
+                        std::cerr << "[FileMonitor::run] Failed to add" << dirp->d_name << std::endl; // should never happen
+                }
+                else
+                    std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;
+            }
+        }
+    }
+    closedir(dp);
+    
+    return 0;
+}

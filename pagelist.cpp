@@ -33,36 +33,9 @@ PageList::~PageList()
 int PageList::LoadPageList(std::string filepath)
 {
     // std::cerr << "[PageList::LoadPageList] Loading pages from " << filepath << std::endl;
-    // Open the directory
-    DIR *dp;
-    TTXPageStream* q;
-    struct dirent *dirp;
-    if ((dp = opendir(filepath.c_str())) == NULL)
-    {
-        std::cerr << "Error(" << errno << ") opening " << filepath << std::endl;
+    if (ReadDirectory(filepath))
         return errno;
-    }
-    // Load the filenames into a list
-    while ((dirp = readdir(dp)) != NULL)
-    {
-        //p=new TTXPageStream(filepath+"/"+dirp->d_name);
-        if (std::string(dirp->d_name).find(".tti") != std::string::npos)	// Is the file type .tti or ttix?
-        {
-            q=new TTXPageStream(filepath+"/"+dirp->d_name);
-            // If the page loaded, then push it into the appropriate magazine
-            if (q->Loaded())
-            {
-            q->GetPageCount(); // Use for the side effect of renumbering the subcodes
-
-            int mag=(q->GetPageNumber() >> 16) & 0x7;
-            _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
-            
-            if (CheckForPacket29(q))
-                std::cerr << "[PageList::LoadPageList] found packet 29" << std::endl;
-            }
-        }
-    }
-    closedir(dp);
+    
     // std::cerr << "[PageList::LoadPageList]FINISHED LOADING PAGES" << std::endl;
 
     // How many files did we accept?
@@ -90,6 +63,67 @@ int PageList::LoadPageList(std::string filepath)
         }
     }
 
+    return 0;
+}
+
+int PageList::ReadDirectory(std::string filepath)
+{
+    DIR *dp;
+    TTXPageStream* q;
+    struct dirent *dirp;
+    struct stat attrib;
+    
+    // Open the directory
+    if ((dp = opendir(filepath.c_str())) == NULL)
+    {
+        std::cerr << "Error(" << errno << ") opening " << filepath << std::endl;
+        return errno;
+    }
+    
+    // Load the filenames into a list
+    while ((dirp = readdir(dp)) != NULL)
+    {
+        std::string name;
+        name=filepath;
+        name+="/";
+        name+=dirp->d_name;
+        
+        if (stat(name.c_str(), &attrib) == -1) // get the attributes of the file
+            continue; // skip file on failure
+        
+        if (attrib.st_mode & S_IFDIR)
+        {
+            // directory entry is another directory
+            if (dirp->d_name[0] != '.') // ignore anything beginning with .
+            {
+                std::cerr << "[PageList::LoadPageList] recursing into " << name << std::endl;
+                if (ReadDirectory(name)) // recurse into directory
+                {
+                    std::cerr << "Error(" << errno << ") recursing into " << filepath << std::endl;
+                }
+            }
+            continue;
+        }
+        
+        //p=new TTXPageStream(filepath+"/"+dirp->d_name);
+        if (std::string(dirp->d_name).find(".tti") != std::string::npos)	// Is the file type .tti or ttix?
+        {
+            q=new TTXPageStream(filepath+"/"+dirp->d_name);
+            // If the page loaded, then push it into the appropriate magazine
+            if (q->Loaded())
+            {
+            q->GetPageCount(); // Use for the side effect of renumbering the subcodes
+
+            int mag=(q->GetPageNumber() >> 16) & 0x7;
+            _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
+            
+            if (CheckForPacket29(q))
+                std::cerr << "[PageList::LoadPageList] found packet 29" << std::endl;
+            }
+        }
+    }
+    closedir(dp);
+    
     return 0;
 }
 

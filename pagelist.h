@@ -97,6 +97,8 @@ private:
 	std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
 	vbit::PacketMag* _mag[8];
     
+    int ReadDirectory(std::string filepath);
+    
     /** Get pages of each type into their respective lists
    */
     void PopulatePageTypeLists();

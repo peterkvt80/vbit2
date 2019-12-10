@@ -38,7 +38,7 @@ class FileMonitor
   private:
     ttx::Configure* _configure; /// Member reference to the configuration settings
     ttx::PageList* _pageList;
-
+    int readDirectory(std::string path);
 };
 
 }
