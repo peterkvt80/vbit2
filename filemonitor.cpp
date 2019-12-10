@@ -119,13 +119,7 @@ int FileMonitor::readDirectory(std::string path){
             continue;
         }
         
-        #ifdef _WIN32
-        char* p=strstr(dirp->d_name,".tti");
-        #else
-        char* p=strcasestr(dirp->d_name,".tti");
-        #endif
-        
-        if (p)
+        if (std::string(dirp->d_name).find(".tti") != std::string::npos)
         {
             // struct tm* clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
             // std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
