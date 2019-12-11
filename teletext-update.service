@@ -1,0 +1,6 @@
+[Unit]
+Description=Automatically check active teletext service for updates
+
+[Service]
+Type=oneshot
+ExecStart=%h/vbit2/teletext-update.sh

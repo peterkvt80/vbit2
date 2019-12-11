@@ -1,0 +1,9 @@
+[Unit]
+Description=Run update-teletext.service every 5 minutes
+
+[Timer]
+OnUnitActiveSec=5min
+OnBootSec=10s
+
+[Install]
+WantedBy=timers.target
