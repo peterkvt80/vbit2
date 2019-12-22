@@ -252,7 +252,6 @@ select_service(){
       ;;
   esac
 
-  display_message "" "${SERVICES[$selection]} selected"
   SELECTED=${SERVICES[$selection]}
   write_config
   if systemctl --user is-active vbit2 >/dev/null 2>&1; then
@@ -260,6 +259,7 @@ select_service(){
     systemctl --user restart vbit2
   fi
   systemctl --user start teletext-update.service &
+  display_message "" "${SERVICES[$selection]} selected"
   return
 }
 
