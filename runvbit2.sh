@@ -10,7 +10,7 @@ else
   exit 1
 fi
 
-if [ -z $SELECTED ]; then
+if [ -z "$SELECTED" ]; then
   echo no service selected, please run select_service.sh
   exit 1
 fi
@@ -33,7 +33,7 @@ trap 'sudo $HOME/raspi-teletext/tvctl off; kill -- -$$' EXIT
 sudo $HOME/raspi-teletext/tvctl on
 
 # find first uncommented lines_per_field in config file
-lpf=`grep -m 1 ^lines_per_field $PAGESDIRECTORY/vbit.conf | cut -f2- -d= | tr -d '\r'`
+lpf=`grep -m 1 ^lines_per_field "$PAGESDIRECTORY/vbit.conf" | cut -f2- -d= | tr -d '\r'`
 num=0 # default to 16 lines
 if [ ! -z "$lpf" ]; then
   if [ "$lpf" -ge 1 ] && [ "$lpf" -le 15 ]; then
@@ -45,4 +45,4 @@ if [ ! -z "$lpf" ]; then
 fi
 MASK=`printf "0x%04x" $num`
 
-$HOME/raspi-teletext/teletext -m $MASK - < <( $HOME/vbit2/vbit2 --dir $PAGESDIRECTORY )
+$HOME/raspi-teletext/teletext -m $MASK - < <( $HOME/vbit2/vbit2 --dir "$PAGESDIRECTORY" )

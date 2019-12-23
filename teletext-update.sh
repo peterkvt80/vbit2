@@ -12,13 +12,13 @@ main(){
     exit 1
   fi
 
-  if [ -z $SELECTED ]; then
+  if [ -z "$SELECTED" ]; then
     echo no service selected, please run select_service.sh
     exit 1
   fi
 
   SERVICES=()
-  get_services $SELECTED
+  get_services "$SELECTED"
 
   for i in ${!SERVICES[@]}; do
     IFS=',' read -r -a SERVICEARRAY <<< "${SERVICES[i]}"

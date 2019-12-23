@@ -1,8 +1,8 @@
 #!/bin/bash
 SERVICEDATA=(\
-  "Teefax,svn,http://teastop.plus.com/svn/teletext/,teefax," \
-  "Ceefax,svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/national,ceefax," \
-  "Ceefax (Yorks+Lincs),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/Yorks%26Lincs,ceefax/regional,Ceefax" \
-  "Ceefax (EastMidlands),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/EastMidlands,ceefax/regional,Ceefax" \
-  "Chunkytext,git,https://zxnet.co.uk/git/cf.git,chunkytext," \
+  "Teefax,svn,http://teastop.plus.com/svn/teletext/,Teefax," \
+  "Ceefax,svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/national,Ceefax," \
+  "Ceefax (Yorks+Lincs),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/Yorks&Lincs,Ceefax/regional,Ceefax" \
+  "Ceefax (EastMidlands),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/EastMidlands,Ceefax/regional,Ceefax" \
+  "Chunkytext,git,https://zxnet.co.uk/git/cf.git,Chunkytext," \
 )

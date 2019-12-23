@@ -1,9 +1,10 @@
 #!/bin/bash
 
-KNOWN=$HOME/vbit2/known_services
-SERVICESDIR=$HOME/.teletext-services
-CONFIG=$SERVICESDIR/config
+KNOWN="$HOME/vbit2/known_services"
+SERVICESDIR="$HOME/.teletext-services"
+CONFIG="$SERVICESDIR/config"
 
+DIALOG_OK=0
 DIALOG_CANCEL=1
 DIALOG_ESC=255
 
@@ -54,7 +55,7 @@ install_service(){
 
     SERVICES+=("${SERVICE[0]}")
     PROTOCOLS+=("${SERVICE[1]}")
-    URLS+=("${SERVICE[2]}")
+    URLS+=($(printf "%s\n" "${SERVICE[2]}" | sed 's/ /%20/g'))
     DIRPATH+=("${SERVICE[3]}")
   done
 
@@ -85,70 +86,223 @@ install_service(){
   esac
 
   if [ "$selection" = "C" ]; then
-    display_message "Error" "Not implemented yet"
-    return
+    custom_menu
+    if [ $? -ne 0 ]; then
+      return 1
+    fi
+  else
+    INSSERVICE="${SERVICES[$selection]}"
+    INSDIR="$SERVICESDIR/${DIRPATH[$selection]}"
+    INSPROTOCOL="${PROTOCOLS[$selection]}"
+    INSDEPEND="${DEPENDS[$selection]}"
+    INSURL="${URLS[$selection]}"
   fi
 
-  if [ -d "$SERVICESDIR/${DIRPATH[$selection]}" ] && [ ! "${PROTOCOLS[$selection]}" = "dir" ] }; then
+  if [ -d "INSDIR" ] && [ ! "$INSPROTOCOL" = "dir" ] }; then
     display_message "Installing service failed" "Directory already exists"
     return
   fi
 
-  case ${PROTOCOLS[$selection]} in
+  case $INSPROTOCOL in
     "svn")
       clear
-      svn checkout ${URLS[$selection]} $SERVICESDIR/${DIRPATH[$selection]}
+      svn checkout $INSURL $INSDIR
       err=$?
       if test $err -ne 0; then
         display_message "error" "svn checkout failed with error $err"
-        exit
+        return
       fi
       clear
-      INSTALLED+=("${SERVICES[$selection]},$SERVICESDIR/${DIRPATH[$selection]},${DEPENDS[$selection]},svn")
-      if [[ $SELECTED == "" ]]; then SELECTED="${SERVICES[$selection]}"; fi
+      INSTALLED+=("$INSSERVICE,$INSDIR,$INSDEPEND,svn")
+
+      if [[ $SELECTED == "" ]]; then SELECTED="$INSSERVICE"; fi
       write_config
       ;;
     "git")
       clear
-      git clone --depth 1 ${URLS[$selection]} $SERVICESDIR/${DIRPATH[$selection]}
+      git clone --depth 1 $INSURL $INSDIR
       err=$?
       if test $err -ne 0; then
         display_message "error" "git clone failed with error $err"
-        exit
+        return
       fi
       clear
-      INSTALLED+=("${SERVICES[$selection]},$SERVICESDIR/${DIRPATH[$selection]},${DEPENDS[$selection]},git")
-      if [[ $SELECTED == "" ]]; then SELECTED="${SERVICES[$selection]}"; fi
+      INSTALLED+=("$INSSERVICE,$INSDIR,$INSDEPEND,git")
+      if [[ $SELECTED == "" ]]; then SELECTED="$INSSERVICE"; fi
       write_config
       ;;
   esac
 }
 
+custom_menu(){
+  while true; do
+    exec 3>&1
+    selection=$(dialog \
+      --backtitle "$PROGTITLE" \
+      --title "Custom service" \
+      --menu "Select type" 0 0 3 \
+      "S" "svn repo" \
+      "G" "git repo" \
+      "D" "directory" \
+      2>&1 1>&3)
+    exit_status=$?
+    exec 3>&-
+
+    case $exit_status in
+      $DIALOG_CANCEL)
+        return 1
+        ;;
+      $DIALOG_ESC)
+        return 1
+        ;;
+    esac
+
+    case $selection in
+      "G")
+        custom_input_url
+        if [ $? -eq 0 ]; then
+          INSPROTOCOL="git"
+          return 0
+        fi
+        ;;
+      "S")
+        custom_input_url
+        if [ $? -eq 0 ]; then
+          INSPROTOCOL="svn"
+          return 0
+        fi
+        ;;
+      "D")
+        display_message "Error" "Not implemented yet"
+        return 1
+        ;;
+    esac
+  done
+}
+
+custom_input_url(){
+  urlstring=""
+  while true; do
+    exec 3>&1
+    urlstring=$(dialog \
+      --backtitle "$PROGTITLE" \
+      --cancel-button "Back" \
+      --title "Custom service" \
+      --inputbox "Enter URL" 0 0 "$urlstring" \
+      2>&1 1>&3)
+    exit_status=$?
+    exec 3>&-
+
+    case $exit_status in
+      $DIALOG_CANCEL)
+        return 1
+        ;;
+      $DIALOG_ESC)
+        return 1
+        ;;
+    esac
+
+    if [[ -z "$urlstring" ]]; then
+      continue
+    fi
+
+    urlstring=$( printf "%s\n" "$urlstring" | sed 's/ /%20/g' ) # urlencode spaces
+
+    custom_input_service
+
+    if [ $? -eq 0 ]; then
+      INSURL="$urlstring"
+      return 0
+    fi
+  done
+}
+
+custom_input_service(){
+  servicestring=""
+  while true; do
+    exec 3>&1
+    servicestring=$(dialog \
+      --backtitle "$PROGTITLE" \
+      --cancel-button "Back" \
+      --title "Custom service" \
+      --inputbox "Enter name for service" 0 0 "$servicestring" \
+      2>&1 1>&3)
+    exit_status=$?
+    exec 3>&-
+
+    case $exit_status in
+      $DIALOG_CANCEL)
+        return 1
+        ;;
+      $DIALOG_ESC)
+        return 1
+        ;;
+    esac
+
+    if [[ -z "$servicestring" ]]; then
+      continue
+    fi
+
+    if [[ "$servicestring" =~ [\\/.,\"@\`\$] ]]; then
+      display_message "error" "The following characters may not be used: \\/.,\"@\`\$"
+      continue
+    fi
+
+    if [[ " ${SERVICES[@]} " =~ " $servicestring " ]] || [[ " ${INSTALLEDSERVICES[@]} " =~ " $servicestring " ]]; then
+      # Name is taken by a known service or installed service
+      display_message "error" "Service name is already used"
+    else
+      dialog --backtitle "$PROGTITLE" \
+      --title "Custom service" \
+      --yes-label "Main" \
+      --no-label "Ancillary" \
+      --yesno "Is this a main or ancillary service?" 0 0
+
+      case $? in
+        $DIALOG_OK)
+          # main service
+          INSSERVICE="$servicestring"
+          INSDEPEND=""
+          INSDIR="$SERVICESDIR/$servicestring"
+          return 0
+          ;;
+        $DIALOG_CANCEL)
+          # ancillary
+          display_message "Error" "Not implemented yet"
+          ;;
+        $DIALOG_ESC)
+          return 1
+          ;;
+      esac
+    fi
+  done
+}
+
 import_config(){
-    if test -f "$KNOWN"; then
-      source $KNOWN
-    else
-      echo $KNOWN missing
-      exit
-    fi
+  if test -f "$KNOWN"; then
+    source $KNOWN
+  else
+    echo $KNOWN missing
+    exit
+  fi
 
-    IFS=$'\n' SERVICEDATA=($(sort -t , -k 1,1 <<<"${SERVICEDATA[*]}"))
+  IFS=$'\n' SERVICEDATA=($(sort -t , -k 1,1 <<<"${SERVICEDATA[*]}"))
 
-    if test -f "$CONFIG"; then
-      source $CONFIG
-    else
-      SELECTED=""
-    fi
+  if test -f "$CONFIG"; then
+    source $CONFIG
+  else
+    SELECTED=""
+  fi
 
-    IFS=$'\n' INSTALLED=($(sort -t , -k 1,1 <<<"${INSTALLED[*]}"))
+  IFS=$'\n' INSTALLED=($(sort -t , -k 1,1 <<<"${INSTALLED[*]}"))
 
-    INSTALLEDSERVICES=()
-    INSTALLEDDIRS=()
-    for i in ${!INSTALLED[@]}; do
-      IFS=',' read -r -a INSTALLEDARRAY <<< "${INSTALLED[i]}"
-      INSTALLEDSERVICES+=("${INSTALLEDARRAY[0]}")
-      INSTALLEDDIRS+=("${INSTALLEDARRAY[1]}")
-    done
+  INSTALLEDSERVICES=()
+  INSTALLEDDIRS=()
+  for i in ${!INSTALLED[@]}; do
+    IFS=',' read -r -a INSTALLEDARRAY <<< "${INSTALLED[i]}"
+    INSTALLEDSERVICES+=("${INSTALLEDARRAY[0]}")
+    INSTALLEDDIRS+=("${INSTALLEDARRAY[1]}")
+  done
 }
 
 uninstall_service(){
@@ -194,7 +348,8 @@ uninstall_service(){
       # remove unless type is dir for custom services
       rm -rf "${SERVICEARRAY[1]}"
     fi
-    sed -i "/^  \"${SERVICEARRAY[0]},/d" $CONFIG
+    escaped=$(sed 's/[^^]/[&]/g; s/\^/\\^/g' <<<"${SERVICEARRAY[0]}")
+    sed -i "/^  \"$escaped,/d" "$CONFIG"
   done
 }
 
@@ -221,7 +376,7 @@ select_service(){
   for i in ${!INSTALLEDSERVICES[@]}; do
     IFS=',' read -r -a ins <<< "${INSTALLED[i]}"
     # only add non ancillary services
-    if [[ ${ins[2]} == "" ]]; then
+    if [[ "${ins[2]}" == "" ]]; then
       SERVICES+=("${ins[0]}")
     fi
   done
@@ -252,7 +407,7 @@ select_service(){
       ;;
   esac
 
-  SELECTED=${SERVICES[$selection]}
+  SELECTED="${SERVICES[$selection]}"
   write_config
   if systemctl --user is-active vbit2 >/dev/null 2>&1; then
     # service is running so restart it
@@ -389,22 +544,21 @@ main_menu(){
 }
 
 write_config(){
-  if [ ! -d $SERVICESDIR ]; then
-    mkdir -p $SERVICESDIR
+  if [ ! -d "$SERVICESDIR" ]; then
+    mkdir -p "$SERVICESDIR"
   fi
 
   if [ ! -f "$SERVICESDIR/IMPORTANT" ]; then
     printf "IMPORTANT:\nThese directories were created by vbit-config.\nIf a service is uninstalled the directory will be deleted." > "$SERVICESDIR/IMPORTANT"
   fi
 
-  printf "#!/bin/bash\n# This file was created automatically by vbit-config.\nINSTALLED=(\n" > $CONFIG
+  printf "#!/bin/bash\n# This file was created automatically by vbit-config.\nINSTALLED=(\n" > "$CONFIG"
   for i in ${!INSTALLED[@]}; do
-    printf "  \"${INSTALLED[i]}\"\n" >> $CONFIG
+    printf "%s\n" "  \"${INSTALLED[i]}\"" >> "$CONFIG"
   done
-  printf ")\n\n" >> $CONFIG
-  printf "SELECTED=\"$SELECTED\"\n" >> $CONFIG
+  printf ")\n\n" >> "$CONFIG"
+  printf "%s\n" "SELECTED=\"$SELECTED\"" >> "$CONFIG"
 }
-
 
 clear
 main_menu
