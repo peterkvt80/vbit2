@@ -31,7 +31,6 @@ migrate(){
   if [ -f $HOME/vbit2.sh ]; then FOUND+=("$HOME/vbit2.sh"); fi
   if [ -f $HOME/updatePages.sh ]; then FOUND+=("$HOME/updatePages.sh"); fi
   if [ -d $HOME/raspi-teletext-master ]; then FOUND+=("$HOME/raspi-teletext-master"); fi
-  if [ -d $HOME/teletext ]; then FOUND+=("$HOME/teletext"); fi
   if [ -d $HOME/Pages ]; then FOUND+=("$HOME/Pages"); fi
   if [ -f /etc/systemd/system/vbit2.service ]; then FOUND+=("/etc/systemd/system/vbit2.service"); fi
   if [ ! ${#FOUND[@]} -eq 0 ]; then
@@ -41,7 +40,7 @@ migrate(){
     read -p "(y)es (n)o" -n 1 -s
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-      printf "leaving start scripts and teletext directory unchanged.\n"
+      printf "leaving start scripts unchanged.\n"
     else
       # Here Be Dragons!
       # remove any updatePages.sh cron job
@@ -52,6 +51,11 @@ migrate(){
       sudo rm -rf ${FOUND[@]}
       # run the new installer
       ./getvbit2
+
+      if [ -d $HOME/teletext ]; then
+        printf 'The directory %s is no longer required.\n' "$HOME/teletext"
+      fi
+
     fi
   fi
 }
