@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# install git and subversion packages
+# install required packages
 sudo apt update
 sudo apt -y install git subversion dialog
 
@@ -17,11 +17,8 @@ git clone https://github.com/peterkvt80/vbit2.git $HOME/vbit2
 cd $HOME/vbit2
 
 # switch to the latest release branch and compile it
-#latestTag=`curl --silent "https://api.github.com/repos/peterkvt80/vbit2/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")'`
-#git checkout $latestTag
-
-# switch to newscripts while testing
-git checkout newscripts
+latestTag=`curl --silent "https://api.github.com/repos/peterkvt80/vbit2/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")'`
+git checkout $latestTag
 make
 
 # install systemd user script

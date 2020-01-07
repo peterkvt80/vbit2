@@ -36,7 +36,7 @@ migrate(){
   if [ ! ${#FOUND[@]} -eq 0 ]; then
     printf 'The following files were found which relate to an old version of vbit2:' | fold -s -w `tput cols`
     printf '\n%s' "${FOUND[@]}" | fold -s -w `tput cols`
-    printf '\n\nIt is recommended to upgrade to the new system which includes the interactive vbit-config utility.\nDo you wish to attempt to reinstall vbit2 automatically?\n\033[1mCaution: this will remove the files and directories listed above losing any local changes you have made to your Teefax system.\033[0m\n' | fold -s -w `tput cols`
+    printf '\n\nIt is recommended to upgrade to the new system which includes the interactive vbit-config utility.\nDo you wish to attempt to reinstall vbit2 automatically?\n\033[1mCaution: this will remove the files and directories listed above losing any local changes you have made.\033[0m\n' | fold -s -w `tput cols`
     read -p "(y)es (n)o" -n 1 -s
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then

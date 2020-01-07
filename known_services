@@ -2,7 +2,12 @@
 SERVICEDATA=(\
   "Teefax,svn,http://teastop.plus.com/svn/teletext/,Teefax," \
   "Ceefax,svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/national,Ceefax," \
-  "Ceefax (Yorks+Lincs),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/Yorks&Lincs,Ceefax/regional,Ceefax" \
-  "Ceefax (EastMidlands),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/EastMidlands,Ceefax/regional,Ceefax" \
+  "Ceefax (East),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/East,Ceefax/regional,Ceefax" \
+  "Ceefax (East Midlands),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/EastMidlands,Ceefax/regional,Ceefax" \
+  "Ceefax (Northern Ireland),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/NorthernIreland,Ceefax/regional,Ceefax" \
+  "Ceefax (South West),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/SouthWest,Ceefax/regional,Ceefax" \
+  "Ceefax (West),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/West,Ceefax/regional,Ceefax" \
+  "Ceefax (Worldwide),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/Worldwide,Ceefax/regional,Ceefax" \
+  "Ceefax (Yorks and Lincs),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/Yorks&Lincs,Ceefax/regional,Ceefax" \
   "Chunkytext,git,https://zxnet.co.uk/git/cf.git,Chunkytext," \
 )
