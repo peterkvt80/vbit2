@@ -55,9 +55,7 @@ std::thread FileMonitor::run()
 
 void FileMonitor::run()
 {
-    // @todo This thread will clash. They need proper protection.
-
-    std::string path=_configure->GetPageDirectory() ; //
+    std::string path=_configure->GetPageDirectory() ;
     std::cerr << "[FileMonitor::run] Monitoring " << path << std::endl;
 
     while (true)

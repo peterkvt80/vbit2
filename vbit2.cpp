@@ -71,8 +71,6 @@ int main(int argc, char** argv)
 	monitorThread.join();
 	serviceThread.join();
 
-	std::cout << "VBIT2 ended. Press any key to continue" << std::endl;
-    system("pause"); // @todo Only apply this line in debug
- // return 0;
+	return 0;
 }
 

@@ -80,7 +80,6 @@ Packet::~Packet()
 
 void Packet::Set_packet(char *val)
 {
-    //std::cerr << "[Packet::Set_packet] todo. Implement copy" << std::endl;
     strncpy(&_packet[5],val,40);
 }
 
@@ -150,7 +149,7 @@ bool Packet::get_offset_time(char* str)
 
 	strftime(strTime, 21, "%H:%M", &tmGMT);
 	stringToBytes(str,strTime,5);
-	return true; // @todo
+	return true;
 }
 
 /* Ideally we would set _packet[0] for other hardware, or _packet[3] for Alistair Buxton raspi-teletext/
@@ -159,178 +158,176 @@ bool Packet::get_offset_time(char* str)
  */
 char* Packet::tx(bool reverse)
 {
-	// Get local time
-	time_t rawtime;
-	struct tm * timeinfo;
-	time(&rawtime);
-	timeinfo=localtime(&rawtime);
+    // Get local time
+    time_t rawtime;
+    struct tm * timeinfo;
+    time(&rawtime);
+    timeinfo=localtime(&rawtime);
 
-    // @TODO: parity
-		if (_isHeader) // We can do header substitutions
-		{
-			// mpp page number. Use %%#
-			char*	ptr2=strstr(_packet,"%%#");
-			if (ptr2)
-			{
-				if (_mag==0)
-					ptr2[0]='8';
-				else
-					ptr2[0]=_mag+'0';
-				//std::cerr << "[Packet::tx]page=" << _page << std::endl;
-				ptr2[1]=_page/0x10+'0';
-				if (ptr2[1]>'9')
-					ptr2[1]=ptr2[1]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
-				//std::cerr << "[Packet::tx]ptr[1]=" << ptr2[1] << std::endl;
+    if (_isHeader) // We can do header substitutions
+    {
+        // mpp page number. Use %%#
+        char*	ptr2=strstr(_packet,"%%#");
+        if (ptr2)
+        {
+            if (_mag==0)
+                ptr2[0]='8';
+            else
+                ptr2[0]=_mag+'0';
+            //std::cerr << "[Packet::tx]page=" << _page << std::endl;
+            ptr2[1]=_page/0x10+'0';
+            if (ptr2[1]>'9')
+                ptr2[1]=ptr2[1]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
+            //std::cerr << "[Packet::tx]ptr[1]=" << ptr2[1] << std::endl;
 
-				ptr2[2]=_page%0x10+'0';
-				if (ptr2[2]>'9')
-					ptr2[2]=ptr2[2]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
-				//std::cerr << "[Packet::tx]ptr[2]=" << ptr2[2] << std::endl;
-			}
+            ptr2[2]=_page%0x10+'0';
+            if (ptr2[2]>'9')
+                ptr2[2]=ptr2[2]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
+            //std::cerr << "[Packet::tx]ptr[2]=" << ptr2[2] << std::endl;
+        }
 
-			char tmpstr[11];
-			ptr2=strstr(_packet,"%%a");	// Tue
-			if (ptr2)
-			{
-				strftime(tmpstr,10,"%a",timeinfo);
-				ptr2[0]=tmpstr[0];
-				ptr2[1]=tmpstr[1];
-				ptr2[2]=tmpstr[2];
-			}
+        char tmpstr[11];
+        ptr2=strstr(_packet,"%%a");	// Tue
+        if (ptr2)
+        {
+            strftime(tmpstr,10,"%a",timeinfo);
+            ptr2[0]=tmpstr[0];
+            ptr2[1]=tmpstr[1];
+            ptr2[2]=tmpstr[2];
+        }
 
-			ptr2=strstr(_packet,"%%b"); // Jan
-			if (ptr2)
-			{
-				strftime(tmpstr,10,"%b",timeinfo);
-				ptr2[0]=tmpstr[0];
-				ptr2[1]=tmpstr[1];
-				ptr2[2]=tmpstr[2];
-			}
+        ptr2=strstr(_packet,"%%b"); // Jan
+        if (ptr2)
+        {
+            strftime(tmpstr,10,"%b",timeinfo);
+            ptr2[0]=tmpstr[0];
+            ptr2[1]=tmpstr[1];
+            ptr2[2]=tmpstr[2];
+        }
 
-			ptr2=strstr(_packet,"%d");	// day of month with leading zero
-			if (ptr2)
-			{
-				strftime(tmpstr,10,"%d",timeinfo);
-				ptr2[0]=tmpstr[0];
-				ptr2[1]=tmpstr[1];
-			}
+        ptr2=strstr(_packet,"%d");	// day of month with leading zero
+        if (ptr2)
+        {
+            strftime(tmpstr,10,"%d",timeinfo);
+            ptr2[0]=tmpstr[0];
+            ptr2[1]=tmpstr[1];
+        }
 
-			ptr2=strstr(_packet,"%e");	// day of month with no leading zero
-			if (ptr2)
-			{
-				#ifndef WIN32
-				strftime(tmpstr,10,"%e",timeinfo);
-				ptr2[0]=tmpstr[0];
-				#else
-				strftime(tmpstr,10,"%d",timeinfo);
-				if (tmpstr[0] == '0')
-					ptr2[0]=' ';
-				else
-					ptr2[0]=tmpstr[0];
-				#endif
-				ptr2[1]=tmpstr[1];
-			}
+        ptr2=strstr(_packet,"%e");	// day of month with no leading zero
+        if (ptr2)
+        {
+            #ifndef WIN32
+            strftime(tmpstr,10,"%e",timeinfo);
+            ptr2[0]=tmpstr[0];
+            #else
+            strftime(tmpstr,10,"%d",timeinfo);
+            if (tmpstr[0] == '0')
+                ptr2[0]=' ';
+            else
+                ptr2[0]=tmpstr[0];
+            #endif
+            ptr2[1]=tmpstr[1];
+        }
 
-			ptr2=strstr(_packet,"%m");	// month number with leading 0
-			if (ptr2)
-			{
-				strftime(tmpstr,10,"%m",timeinfo);
-				ptr2[0]=tmpstr[0];
-				ptr2[1]=tmpstr[1];
-			}
+        ptr2=strstr(_packet,"%m");	// month number with leading 0
+        if (ptr2)
+        {
+            strftime(tmpstr,10,"%m",timeinfo);
+            ptr2[0]=tmpstr[0];
+            ptr2[1]=tmpstr[1];
+        }
 
-			ptr2=strstr(_packet,"%y");	// year. 2 digits
-			if (ptr2)
-			{
-				strftime(tmpstr,10,"%y",timeinfo);
-				ptr2[0]=tmpstr[0];
-				ptr2[1]=tmpstr[1];
-			}
+        ptr2=strstr(_packet,"%y");	// year. 2 digits
+        if (ptr2)
+        {
+            strftime(tmpstr,10,"%y",timeinfo);
+            ptr2[0]=tmpstr[0];
+            ptr2[1]=tmpstr[1];
+        }
 
-			ptr2=strstr(_packet,"%H");	// hour.
-			if (ptr2)
-			{
-				strftime(tmpstr,10,"%H",timeinfo);
-				ptr2[0]=tmpstr[0];
-				ptr2[1]=tmpstr[1];
-			}
+        ptr2=strstr(_packet,"%H");	// hour.
+        if (ptr2)
+        {
+            strftime(tmpstr,10,"%H",timeinfo);
+            ptr2[0]=tmpstr[0];
+            ptr2[1]=tmpstr[1];
+        }
 
-			ptr2=strstr(_packet,"%M");	// minutes.
-			if (ptr2)
-			{
-				strftime(tmpstr,10,"%M",timeinfo);
-				ptr2[0]=tmpstr[0];
-				ptr2[1]=tmpstr[1];
-			}
+        ptr2=strstr(_packet,"%M");	// minutes.
+        if (ptr2)
+        {
+            strftime(tmpstr,10,"%M",timeinfo);
+            ptr2[0]=tmpstr[0];
+            ptr2[1]=tmpstr[1];
+        }
 
-			ptr2=strstr(_packet,"%S");	// seconds.
-			if (ptr2)
-			{
-				strftime(tmpstr,10,"%S",timeinfo);
-				ptr2[0]=tmpstr[0];
-				ptr2[1]=tmpstr[1];
-			}
+        ptr2=strstr(_packet,"%S");	// seconds.
+        if (ptr2)
+        {
+            strftime(tmpstr,10,"%S",timeinfo);
+            ptr2[0]=tmpstr[0];
+            ptr2[1]=tmpstr[1];
+        }
 
-			Parity(13); // apply parity to the text of the header
-
-		}
-		else if (_coding == CODING_7BIT_TEXT) // Other text rows
-		{
-			char *tmpptr;
-			for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
-			// ======= TEMPERATURE ========
-			char strtemp[]="                    ";
-			tmpptr=strstr((char*)_packet,"%%%T");
-			if (tmpptr) {
-				#ifdef RASPBIAN
-				get_temp(strtemp);
-				stringToBytes(tmpptr,strtemp,4);
-				#else
-				stringToBytes(tmpptr,(char *)"err",4);
-				#endif
-			}
-			// ======= WORLD TIME ========
-			// Special case for world time. Put %t<+|-><hh> to get local time HH:MM offset by +/- half hours
-			for (;;)
-			{
-				tmpptr=strstr((char*) _packet,"%t+");
-				if (!tmpptr) {
-					tmpptr=strstr((char*) _packet,"%t-");
-				}
-				if (tmpptr) {
-					//std::cout << "[test 1]" << _packet << std::endl;
-					get_offset_time(tmpptr);
-					//exit(4);
-				}
-				else
-					break;
-			}
-			// ======= NETWORK ========
-			// Special case for network address. Put %%%%%%%%%%%%%%n to get network address in form xxx.yyy.zzz.aaa with trailing spaces (15 characters total)
-			tmpptr=strstr((char*)_packet,"%%%%%%%%%%%%%%n");
-			if (tmpptr) {
-				#ifndef WIN32
-				get_net(strtemp);
-				stringToBytes(tmpptr,strtemp,15);
-				#else
-				stringToBytes(tmpptr,(char *)"not implemented",15);
-				#endif
-			}
-			// ======= TIME AND DATE ========
-			// Special case for system time. Put %%%%%%%%%%%%timedate to get time and date
-			tmpptr=strstr((char*) _packet,"%%%%%%%%%%%%timedate");
-			if (tmpptr) {
-				get_time(strtemp);
-				stringToBytes(tmpptr,strtemp,20);
-			}
-			// ======= VERSION ========
-			// %%%V version number eg. 2.00
-			tmpptr=strstr((char*) _packet,"%%%%%V");
-			if (tmpptr) {
-				stringToBytes(tmpptr,(char *)VBIT2_VERSION,6);
-			}
-			Parity(5); // redo the parity because substitutions will need processing
-		}
+        Parity(13); // apply parity to the text of the header
+    }
+    else if (_coding == CODING_7BIT_TEXT) // Other text rows
+    {
+        char *tmpptr;
+        for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
+        // ======= TEMPERATURE ========
+        char strtemp[]="                    ";
+        tmpptr=strstr((char*)_packet,"%%%T");
+        if (tmpptr) {
+            #ifdef RASPBIAN
+            get_temp(strtemp);
+            stringToBytes(tmpptr,strtemp,4);
+            #else
+            stringToBytes(tmpptr,(char *)"err",4);
+            #endif
+        }
+        // ======= WORLD TIME ========
+        // Special case for world time. Put %t<+|-><hh> to get local time HH:MM offset by +/- half hours
+        for (;;)
+        {
+            tmpptr=strstr((char*) _packet,"%t+");
+            if (!tmpptr) {
+                tmpptr=strstr((char*) _packet,"%t-");
+            }
+            if (tmpptr) {
+                //std::cout << "[test 1]" << _packet << std::endl;
+                get_offset_time(tmpptr); // TODO: something with return value
+                //exit(4);
+            }
+            else
+                break;
+        }
+        // ======= NETWORK ========
+        // Special case for network address. Put %%%%%%%%%%%%%%n to get network address in form xxx.yyy.zzz.aaa with trailing spaces (15 characters total)
+        tmpptr=strstr((char*)_packet,"%%%%%%%%%%%%%%n");
+        if (tmpptr) {
+            #ifndef WIN32
+            get_net(strtemp);
+            stringToBytes(tmpptr,strtemp,15);
+            #else
+            stringToBytes(tmpptr,(char *)"not implemented",15);
+            #endif
+        }
+        // ======= TIME AND DATE ========
+        // Special case for system time. Put %%%%%%%%%%%%timedate to get time and date
+        tmpptr=strstr((char*) _packet,"%%%%%%%%%%%%timedate");
+        if (tmpptr) {
+            get_time(strtemp);
+            stringToBytes(tmpptr,strtemp,20);
+        }
+        // ======= VERSION ========
+        // %%%V version number eg. 2.00
+        tmpptr=strstr((char*) _packet,"%%%%%V");
+        if (tmpptr) {
+            stringToBytes(tmpptr,(char *)VBIT2_VERSION,6);
+        }
+        Parity(5); // redo the parity because substitutions will need processing
+    }
 
     if (reverse)
     {
@@ -384,13 +381,13 @@ void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode,
 	// cbit|=0x08; // TEMPORARY!
  	_packet[10]=HamTab[(subcode&0x03) | cbit]; // S4 C6, C5
 	cbit=0;
-	if (control & 0x0004)  cbit=0x01;	// C7 Suppress Header TODO: Check if these should be reverse order
+	if (control & 0x0004)  cbit=0x01;	// C7 Suppress Header
 	if (control & 0x0008) cbit|=0x02;	// C8 Update
 	if (control & 0x0010) cbit|=0x04;	// C9 Interrupted sequence
 	if (control & 0x0020) cbit|=0x08;	// C10 Inhibit display
 
 	_packet[11]=HamTab[cbit]; // C7 to C10
-	cbit=(control & 0x0380) >> 6;	// Shift the language bits C12,C13,C14. TODO: Check if C12/C14 need swapping. CHECKED OK.
+	cbit=(control & 0x0380) >> 6;	// Shift the language bits C12,C13,C14.
 	// if (control & 0x0040) cbit|=0x01;	// C11 serial/parallel *** We only work in parallel mode, Serial would mean a different packet ordering.
 	_packet[12]=HamTab[cbit]; // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
 

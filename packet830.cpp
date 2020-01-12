@@ -37,7 +37,6 @@ Packet* Packet830::GetPacket(Packet* p)
 
 	uint8_t muxed = _configure->GetMultiplexedSignalFlag();
 
-	// @todo initial page
 	uint8_t m = _configure->GetInitialMag();
 	uint8_t pn = _configure->GetInitialPage();
 	uint16_t sc = _configure->GetInitialSubcode();
@@ -50,7 +49,6 @@ Packet* Packet830::GetPacket(Packet* p)
 
 	memcpy(&val[20],_configure->GetServiceStatusString().data(),20); // copy status display from std::string into packet data
 	
-	// @todo Find which event happened and send the relevant packet
 	if (GetEvent(EVENT_P830_FORMAT_1))
 	{
 		ClearEvent(EVENT_P830_FORMAT_1);

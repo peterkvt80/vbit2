@@ -74,16 +74,15 @@ Configure::Configure(int argc, char** argv) :
         exit(EXIT_FAILURE);
     }
 
-    /// @ scan for overriding the configuration file
+    // TODO: allow overriding config file from command line
     std::cerr << "[Configure::Configure] Pages directory is " << _pageDir << std::endl;
     std::cerr << "[Configure::Configure] Config file is " << _configFile << std::endl;
-    /// @todo load the configuration file.
+    
     std::string path;
     path = _pageDir;
     path += "/";
     path += _configFile;
     LoadConfigFile(path);
-    /// @todo scan the command line for other overrides.
 }
 
 Configure::~Configure()
@@ -108,7 +107,6 @@ int Configure::LoadConfigFile(std::string filename)
         TTXLine* header = new TTXLine();
         while (std::getline(filein >> std::ws, line)){
             if (line.front() != ';'){ // ignore comments
-                /// todo: parsing!
                 std::size_t delim = line.find("=", 0);
                 int error = 0;
 
@@ -252,7 +250,6 @@ int Configure::LoadConfigFile(std::string filename)
                                 }
                                 break;
                             case 11: // "magazine_priority"
-                                // TODO: implement parsing from config
                                 std::stringstream ss(value);
                                 std::string temps;
                                 int tmp[8];

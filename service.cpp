@@ -15,8 +15,6 @@ Service::Service(Configure *configure, PageList *pageList) :
 	_lineCounter(0),
 	_fieldCounter(50) // roll over immediately
 {
-  // @todo Add commands to allow updates to priority.
-
   vbit::PacketMag **magList=_pageList->GetMagazines();
   // Register all the packet sources
   for (uint8_t mag=0;mag<8;mag++)
@@ -50,7 +48,7 @@ int Service::run()
 
   vbit::Packet* pkt=new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
 
-  static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // @todo Again, we should have a pre-prepared quiet packet to avoid eating the heap
+  static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // A pre-prepared quiet packet to avoid eating the heap
   
     bool reverse = _configure->GetReverseFlag();
     if (reverse)

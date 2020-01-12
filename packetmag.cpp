@@ -5,7 +5,6 @@
 
 using namespace vbit;
 
-// @todo Initialise the magazine data
 PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, uint8_t priority) :
     _pageSet(pageSet),
     _configure(configure),
@@ -40,7 +39,6 @@ PacketMag::~PacketMag()
   delete _specialPages;
 }
 
-// @todo Invent a packet sequencer similar to mag.cpp which this will replace
 Packet* PacketMag::GetPacket(Packet* p)
 {
     // std::cerr << "[PacketMag::GetPacket] mag=" << _magNumber << " state=" << _state << std::endl;

@@ -155,7 +155,6 @@ bool PageList::CheckForPacket29(TTXPageStream* page)
 		TTXLine* tempLine = page->GetTxRow(29);
 		while (tempLine != nullptr)
 		{
-			// TODO: when the page is deleted the packets will remain.
 			//std::cerr << "page includes packet 29" << std::endl;
 			switch (tempLine->GetCharAt(0))
 			{
@@ -184,7 +183,6 @@ bool PageList::CheckForPacket29(TTXPageStream* page)
 TTXPageStream* PageList::Locate(std::string filename)
 {
   // This is called from the FileMonitor thread
-  // std::cerr << "[PageList::Locate] *** TODO *** " << filename << std::endl;
   for (int mag=0;mag<8;mag++)
   {
     //for (auto p : _pageList[mag])
@@ -406,13 +404,13 @@ void PageList::DeleteOldPages()
       if (ptr->GetStatusFlag()==TTXPageStream::GONE)
       {
         if (((ptr->GetPageNumber() >> 8) & 0xFF) == 0xFF)
-		{
-			// page mFF - make sure packet 29 is removed
-			_magPacket29[mag][0] = nullptr;
-			_magPacket29[mag][1] = nullptr;
-			_magPacket29[mag][2] = nullptr;
-			_mag[mag]->SetPacket29(_magPacket29[mag]);
-		}
+        {
+            // page mFF - make sure packet 29 is removed
+            _magPacket29[mag][0] = nullptr;
+            _magPacket29[mag][1] = nullptr;
+            _magPacket29[mag][2] = nullptr;
+            _mag[mag]->SetPacket29(_magPacket29[mag]);
+        }
         
         //std::cerr << "[PageList::DeleteOldPages] Deleted " << ptr->GetSourcePage() << std::endl;
         // page has been removed from lists
