@@ -131,40 +131,42 @@ class Packet
 				void Dump();
 
     protected:
-private:
-	char _packet[46]; // 45 byte packet with room for a null terminator
-	bool _isHeader; //<! True if the packet is a header
-	uint8_t _mag;//<! The magazine number this packet belongs to 0..7 where 0 is maazine 8
-	uint32_t _page;//<! The page number this packet belongs to 00 to ff
-	uint8_t _row; //<! Row number 0 to 31
-	PageCoding _coding; // packet coding
+    
+    private:
+        char _packet[46]; // 45 byte packet with room for a null terminator
+        bool _isHeader; //<! True if the packet is a header
+        uint8_t _mag;//<! The magazine number this packet belongs to 0..7 where 0 is maazine 8
+        uint32_t _page;//<! The page number this packet belongs to 00 to ff
+        uint8_t _row; //<! Row number 0 to 31
+        PageCoding _coding; // packet coding
 
-	bool get_offset_time(char* str);
-	bool get_net(char* str);
-	bool get_time(char* str);
-	/** Hamming 24/18
-	 * The incoming triplet should be packed 18 bits of an int 32 representing D1..D18
-	 * The int is repacked with parity bits
-	 */
-	void SetTriplet(int ix, int triplet);
+        bool get_offset_time(char* str);
+        bool get_net(char* str);
+        bool get_time(char* str);
+        /** Hamming 24/18
+         * The incoming triplet should be packed 18 bits of an int 32 representing D1..D18
+         * The int is repacked with parity bits
+         */
+        void SetTriplet(int ix, int triplet);
 
-	/**
-	 * @ingroup Error
-	 * @param p A Hamming 24/18 protected 24 bit word will be stored here,
-	 *   last significant byte first, lsb first transmitted.
-	 * @param c Integer between 0 ... 1 << 18 - 1.
-	 *
-	 * Encodes an 18 bit word with Hamming 24/18 protection
-	 * as specified in ETS 300 706, Section 8.3.
-	 *
-	 * @since 0.2.27
-	 */
-	void vbi_ham24p(uint8_t *		p, unsigned int c);
-
-
-	#ifdef RASPBIAN
-	bool get_temp(char* str);
-#endif
+        /**
+         * @ingroup Error
+         * @param p A Hamming 24/18 protected 24 bit word will be stored here,
+         *   last significant byte first, lsb first transmitted.
+         * @param c Integer between 0 ... 1 << 18 - 1.
+         *
+         * Encodes an 18 bit word with Hamming 24/18 protection
+         * as specified in ETS 300 706, Section 8.3.
+         *
+         * @since 0.2.27
+         */
+        void vbi_ham24p(uint8_t *p, unsigned int c);
+        
+        void stringToBytes(char *ptr, char *cstr, unsigned int len);
+        
+        #ifdef RASPBIAN
+        bool get_temp(char* str);
+        #endif
 };
 
 }

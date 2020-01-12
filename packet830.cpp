@@ -48,8 +48,8 @@ Packet* Packet830::GetPacket(Packet* p)
 	val[5] = HamTab[(sc & 0xF00) >> 8];
 	val[6] = HamTab[((sc & 0xF000) >> 12) | ((m & 6) << 1)];
 
-	strncpy(&val[20],_configure->GetServiceStatusString().data(),20); // copy status display from std::string into packet data
-  
+	memcpy(&val[20],_configure->GetServiceStatusString().data(),20); // copy status display from std::string into packet data
+	
 	// @todo Find which event happened and send the relevant packet
 	if (GetEvent(EVENT_P830_FORMAT_1))
 	{

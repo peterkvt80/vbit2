@@ -149,7 +149,7 @@ bool Packet::get_offset_time(char* str)
 	gmtime_r(&rawtime, &tmGMT);
 
 	strftime(strTime, 21, "%H:%M", &tmGMT);
-	strncpy(str,strTime,5);
+	stringToBytes(str,strTime,5);
 	return true; // @todo
 }
 
@@ -284,9 +284,9 @@ char* Packet::tx(bool reverse)
 			if (tmpptr) {
 				#ifdef RASPBIAN
 				get_temp(strtemp);
-				strncpy(tmpptr,strtemp,4);
+				stringToBytes(tmpptr,strtemp,4);
 				#else
-				strncpy(tmpptr,"err ",4);
+				stringToBytes(tmpptr,(char *)"err",4);
 				#endif
 			}
 			// ======= WORLD TIME ========
@@ -311,9 +311,9 @@ char* Packet::tx(bool reverse)
 			if (tmpptr) {
 				#ifndef WIN32
 				get_net(strtemp);
-				strncpy(tmpptr,strtemp,15);
+				stringToBytes(tmpptr,strtemp,15);
 				#else
-				strncpy(tmpptr,"not implemented",15);
+				stringToBytes(tmpptr,(char *)"not implemented",15);
 				#endif
 			}
 			// ======= TIME AND DATE ========
@@ -321,13 +321,13 @@ char* Packet::tx(bool reverse)
 			tmpptr=strstr((char*) _packet,"%%%%%%%%%%%%timedate");
 			if (tmpptr) {
 				get_time(strtemp);
-				strncpy(tmpptr,strtemp,20);
+				stringToBytes(tmpptr,strtemp,20);
 			}
 			// ======= VERSION ========
 			// %%%V version number eg. 2.00
 			tmpptr=strstr((char*) _packet,"%%%%%V");
 			if (tmpptr) {
-                strncpy(tmpptr,VBIT2_VERSION,6);
+				stringToBytes(tmpptr,(char *)VBIT2_VERSION,6);
 			}
 			Parity(5); // redo the parity because substitutions will need processing
 		}
@@ -343,6 +343,17 @@ char* Packet::tx(bool reverse)
     return &_packet[3]; // For raspi-pi we skip clock run in and framing code
 }
 
+void Packet::stringToBytes(char *ptr, char *cstr, unsigned int len){
+    // writes a C string to a len bytes wide field at ptr
+    if (strlen(cstr) < len){
+        // string is shorter than length of field
+        memset(ptr, ' ', len); // pre-blank the field to spaces
+        memcpy(ptr, cstr, strlen(cstr)); // write the short string into field
+    } else {
+        // string is longer or equal to length of field
+        memcpy(ptr, cstr, len); // write whole (or truncated) string into field
+    }
+}
 
 /** A header has mag, row=0, page, flags, caption and time
  */

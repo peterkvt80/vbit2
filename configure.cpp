@@ -203,7 +203,7 @@ int Configure::LoadConfigFile(std::string filename)
                             case 5: // "full_field"
                                 break;
                             case 6: // "status_display"
-                                value.resize(20,' ');
+                                value.resize(20,' '); // string must be 20 characters
                                 _serviceStatusString.assign(value);
                                 break;
                             case 7: // "subtitle_repeats" - The number of times a subtitle transmission is repeated 0..9
