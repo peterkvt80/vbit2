@@ -482,16 +482,16 @@ options_menu(){
 main_menu(){
   while true; do
     import_config
-    OPTIONS=("I" "Install services")
+    OPTIONS=("I" "Install service")
 
     if [ ${#INSTALLEDSERVICES[@]} -gt 0 ]; then
-      OPTIONS+=("S" "Select service" "U" "Uninstall Services" "O" "Options")
+      OPTIONS+=("S" "Select service" "R" "Remove service" "O" "Options" "U" "Update VBIT2")
 
       if [[ `systemctl --user is-active vbit2.service` == "active" ]]; then
-        OPTIONS+=("V" "Stop vbit2")
+        OPTIONS+=("V" "Stop VBIT2")
         command="stop"
       else
-        OPTIONS+=("V" "Start vbit2")
+        OPTIONS+=("V" "Start VBIT2")
         command="start"
       fi
     fi
@@ -527,7 +527,7 @@ main_menu(){
         install_service
         continue
         ;;
-      "U")
+      "R")
         uninstall_service
         continue
         ;;
@@ -538,6 +538,11 @@ main_menu(){
       "V")
         systemctl --user $command vbit2.service
         continue
+        ;;
+      "U")
+        clear
+        $HOME/vbit2/update.sh
+        exit
         ;;
     esac
   done
