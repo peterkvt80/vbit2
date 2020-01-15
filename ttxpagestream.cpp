@@ -69,11 +69,6 @@ void TTXPageStream::StepNextSubpage()
 		_CarouselPage=this;
 }
 
-void TTXPageStream::printList()
-{
-  std::cerr << "DUMP TODO" << std::endl;
-}
-
 bool TTXPageStream::LoadPage(std::string filename)
 {
   bool Loaded=false;

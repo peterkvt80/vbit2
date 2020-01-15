@@ -4,8 +4,6 @@
 #include <iomanip>
 #include <string>
 
-#include "ttxcodes.h"
-
 /** TTXLine - a single line of teletext
  *  The line is always stored in 40 bytes in transmission ready format
  * (but with the parity bit set to 0).
@@ -32,11 +30,6 @@ class TTXLine
          */
         std::string GetLine();
 
-        /** True if the line is double height
-         * @todo This is not good enough. Need to know the state at a particular point on a line. Add a character position parameter.
-         */
-        bool IsDoubleHeight();
-
         /**
          * @brief Check if the line is blank so that we don't bother to write it to the file.
          * @return true is the line is blank
@@ -56,22 +49,6 @@ class TTXLine
          */
         char GetCharAt(int xLoc);
 
-
-        /** Return the line with control codes mapped for writing to a file
-         * \return The mapped line
-         */
-        std::string GetMappedline();
-        /** GetMappedLine7bit - returns a string with text file-safe mappings applied.
-         * Escape to 7 bit (required by Javascript Droidfax)
-         */
-        std::string GetMappedline7bit();
-
-        /** Determine if a location on the line is in alpha or graphics mode
-         * \param loc The column address to look at
-         * \return true if the character position at loc is in an alpha context
-         */
-        bool IsAlphaMode(int loc);
-
 				/** Adds line to a linked list
 				 *  This is used for enhanced packets which might require multiples of the same row
 				 */
@@ -88,7 +65,7 @@ class TTXLine
         std::string validate(std::string const& test);
 
         std::string m_textline;
-				TTXLine* _nextLine; // @todo probably not used. We can dump this
+				TTXLine* _nextLine;
 				// If SetLine or SetChar can set the changed flag.
 				// The changed flag is used to set the C8 flag and then is reset.
 				bool _changed;  /// If the line contents has changed. Set by SetLine or SetChar

@@ -93,10 +93,6 @@ class TTXPageStream : public TTXPage
     /** This is used by mag */
     TTXPage* GetCarouselPage(){return _CarouselPage;};
 
-    /** Output a list of pages in this magazine
-    */
-    void printList();
-
     /** Get the row from the page.
     * Carousels and main sequence pages are managed differently
     */

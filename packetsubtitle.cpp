@@ -166,17 +166,6 @@ void PacketSubtitle::SendSubtitle(TTXPage* page)
 	_swap=(_swap+1)%2;	// swap the double buffering
 	_page[_swap].Copy(page); // deep copy page
 
-/*
-#ifdef WIN32
-	_page[_swap].SavePage("j:\\dev\\vbit2\\subtitleTemp.tti"); // Debug. Send the page representation to a local file
-#else
-	_page[_swap].SavePage("/dev/stderr"); // Debug. Send the page representation to the error console
-	_page[_swap].SavePage("tempSubtitles.tti"); // Debug. Send the page representation to a file
-
-	_page[_swap].DebugDump();
-#endif // WIN32
-*/
-
 	std::cerr << "[PacketSubtitle::SendSubtitle] End of page: " << std::endl;
 	SetEvent(EVENT_SUBTITLE);
 

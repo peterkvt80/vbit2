@@ -13,7 +13,6 @@
 
 #include <assert.h>
 
-#include "ttxcodes.h"
 #include "ttxline.h"
 #include "hamm-tables.h"
 
@@ -50,17 +49,10 @@ class TTXPage
         /** Default destructor */
         virtual ~TTXPage();
 
-
         /** Copy constructor
          *  \param other Object to copy from
          */
         TTXPage(const TTXPage& other);
-
-        /** Assignment operator
-         *  \param other Object to assign from
-         *  \return A reference to this
-         */
-        // TTXPage& operator=(const TTXPage& other);
 
         /** Access m_SubPage which is the next page in a carousel
          * \return The current value of m_SubPage
@@ -125,18 +117,6 @@ class TTXPage
          * \return nowt
          */
          void SetRow(unsigned int rownumber, std::string line);
-
-        /** Save the whole page set
-         * \param filename : The destination file
-         * \return false if the save failed
-         */
-        bool SavePage(std::string filename);
-
-        /** Save the page set back to the original file
-         * \return false if the save failed
-         */
-        bool SavePageDefault();
-
 
         /** Set the subcode. Subcode is effectively the subpage nummber in a carousel
          * \param subcode : A subcode value from 0000 to 3F7F (maybe we should check this!)
@@ -231,25 +211,17 @@ class TTXPage
         void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
         bool Selected(){return _Selected;}; /// Return the selected state
 
-
-
-
     protected:
-        /** Load a TTI page (MRG Systems)
-         * \param filename : The source file
-         * \return true if the page was loaded
-         */
         bool m_LoadTTI(std::string filename);
 
         int m_cycletimeseconds;     // CT
         int m_fastextlinks[6];      // FL
-        int m_PageNumber;  					// PN
+        int m_PageNumber;           // PN
     private:
         // Private variables
         // Private objects
-        TTXPage* m_SubPage; //!< Member variable "m_SubPage"
-        /// @ todo: What about multiple enhancement packets. More than one is allowed.
-        TTXLine* m_pLine[MAXROW+1];   // OL. 26 and 27 can be set manually. Keep whatever people put in there.
+        TTXPage* m_SubPage;
+        TTXLine* m_pLine[MAXROW+1];
 
         std::string m_destination;  // DS
         std::string m_sourcepage;   // SP
@@ -263,30 +235,8 @@ class TTXPage
         PageFunction m_pagefunction;
         // Private functions
         void m_Init();
-        void m_OutputLines(std::ofstream& ttxfile, TTXPage* p); /// Send ttx lines to an output stream
-        int instance;
 
-        std::string m_FormatPageNumber(TTXPage* p); /// \return the page number ready to write to file
-        int findPageNumber(char* buf);
         bool m_Loaded;
-        /** Load an EP1 page
-         * \param filename : The source file
-         * \return true if the page was loaded
-         */
-        bool m_LoadEP1(std::string filename);
-
-        /** Load a VTX page
-         * \param filename : The source file
-         * \return true if the page was loaded
-         */
-        bool m_LoadVTX(std::string filename);
-
-        /** Load a TTX page (Cebra)
-         * \param filename : The source file
-         * \return true if the page was loaded
-         */
-        bool m_LoadTTX(std::string filename);
-
         bool _Selected; /// True if this page has been selected.
         
         bool _fileChanged; // page was reloaded by the filemonitor
