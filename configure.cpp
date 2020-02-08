@@ -46,6 +46,8 @@ Configure::Configure(int argc, char** argv) :
 
     _rowAdaptive = false;
     _linesPerField = 16; // default to 16 lines per field
+    
+    _magazineSerial = false;
 
     _multiplexedSignalFlag = false; // using this would require changing all the line counting and a way to send full field through raspi-teletext - something for the distant future when everything else is done...
     
@@ -268,7 +270,7 @@ int Configure::LoadConfigFile(std::string filename)
 
     std::vector<std::string>::iterator iter;
     // these are all the valid strings for config lines
-    std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats","enable_command_port","command_port","lines_per_field","magazine_priority" };
+    std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats","enable_command_port","command_port","lines_per_field","magazine_priority","magazine_serial" };
 
     if (filein.is_open())
     {
@@ -533,6 +535,18 @@ int Configure::LoadConfigFile(std::string filename)
                                 }
                                 for (i=0; i<8; i++)
                                     _magazinePriority[i] = tmp[i];
+                                break;
+                            }
+                            case 12: // magazine_serial
+                            {
+                                if (!value.compare("true")){
+                                    _magazineSerial = true;
+                                    std::cerr << "[Configure::LoadConfigFile] Magazine Serial mode enabled. This is not implemented yet" << std::endl;
+                                } else if (!value.compare("false")){
+                                    _magazineSerial = false;
+                                } else {
+                                    error = 1;
+                                }
                                 break;
                             }
                         }

@@ -317,7 +317,7 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     
     cbit=(control & 0x0380) >> 6;                           // Shift the language bits C12,C13,C14.
     
-    // if (control & 0x0040) cbit|=0x01;                    // C11 serial/parallel *** We only work in parallel mode, Serial would mean a different packet ordering.
+    if (control & 0x0040) cbit|=0x01;                       // C11 serial/parallel
     _packet[12]=Hamming8EncodeTable[cbit];                  // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
 
     _isHeader=true; // Because it must be a header

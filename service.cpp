@@ -89,56 +89,16 @@ int Service::run()
                 _packetOutput(filler);
             }
         }
-        else if (_subtitle->IsReady()) // Special case for subtitles. Subtitles always go if there is one waiting
+        else if (_configure->GetMagazineSerial()) // magazine serial service
         {
-            if (_subtitle->GetPacket(pkt) != nullptr)
-            {
-                _packetOutput(pkt);
-            }
-            else
-            {
-                _packetOutput(filler);
-            }
+            /* rather than using the magazine priority, one magazine at a time should be marked as active. Once it reaches the end of its page list the service can move onto the next magazine. Special pages should go out once per cycle, ideally in page number sequence which would mean rewriting PacketMag::GetPacket again */
+            _packetOutput(filler);
         }
         else
         {
-            // scan the rest of the available sources
-            do
+            if (_subtitle->IsReady()) // Special case for subtitles. Subtitles always go if there is one waiting
             {
-                // Loop back to the first source
-                if (iterator==_Sources.end())
-                {
-                    iterator=_Sources.begin();
-                }
-
-                // If we have tried all sources with and without force, then break out with a filler to prevent a deadlock
-                if (sourceCount>listSize*2)
-                {
-                    p=nullptr;
-                    // If we get a lot of this maybe there is a problem?
-                    // std::cerr << "[Service::run] No packet available for this line" << std::endl;
-                    break;
-                }
-
-                // If we have gone around once and got nothing, then force sources to go if possible.
-                if (sourceCount>listSize)
-                {
-                    force=true;
-                }
-
-                // Get the packet source
-                p=(*iterator);
-                ++iterator;
-
-                sourceCount++; // Count how many sources we tried.
-            }
-            while (!p->IsReady(force));
-            
-            // Did we find a packet? Then send it otherwise put out a filler
-            if (p)
-            {
-                // GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
-                if (p->GetPacket(pkt) != nullptr)
+                if (_subtitle->GetPacket(pkt) != nullptr)
                 {
                     _packetOutput(pkt);
                 }
@@ -149,7 +109,55 @@ int Service::run()
             }
             else
             {
-                _packetOutput(filler);
+                // scan the rest of the available sources
+                do
+                {
+                    // Loop back to the first source
+                    if (iterator==_Sources.end())
+                    {
+                        iterator=_Sources.begin();
+                    }
+
+                    // If we have tried all sources with and without force, then break out with a filler to prevent a deadlock
+                    if (sourceCount>listSize*2)
+                    {
+                        p=nullptr;
+                        // If we get a lot of this maybe there is a problem?
+                        // std::cerr << "[Service::run] No packet available for this line" << std::endl;
+                        break;
+                    }
+
+                    // If we have gone around once and got nothing, then force sources to go if possible.
+                    if (sourceCount>listSize)
+                    {
+                        force=true;
+                    }
+
+                    // Get the packet source
+                    p=(*iterator);
+                    ++iterator;
+
+                    sourceCount++; // Count how many sources we tried.
+                }
+                while (!p->IsReady(force));
+                
+                // Did we find a packet? Then send it otherwise put out a filler
+                if (p)
+                {
+                    // GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
+                    if (p->GetPacket(pkt) != nullptr)
+                    {
+                        _packetOutput(pkt);
+                    }
+                    else
+                    {
+                        _packetOutput(filler);
+                    }
+                }
+                else
+                {
+                    _packetOutput(filler);
+                }
             }
         }
 
@@ -200,7 +208,8 @@ void Service::_updateEvents()
             {
                 for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
                 {
-                    (*iterator)->SetEvent(EVENT_SPECIAL_PAGES);
+                    if (!(_configure->GetMagazineSerial())) // set special pages event in parallel transmission
+                        (*iterator)->SetEvent(EVENT_SPECIAL_PAGES); // TODO: make special pages go out each cycle in serial mode
                     (*iterator)->SetEvent(EVENT_PACKET_29);
                 }
             }

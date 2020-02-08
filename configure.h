@@ -62,6 +62,7 @@ class Configure
         bool GetReverseFlag(){return _reverseBits;}
         int GetDebugLevel(){return _debugLevel;}
         int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
+        bool GetMagazineSerial(){return _magazineSerial;};
         
         OutputFormat GetOutputFormat(){return _OutputFormat;}
         uint16_t GetTSPID(){return _PID;}
@@ -81,6 +82,7 @@ class Configure
         
         bool _rowAdaptive;
         uint16_t _linesPerField;
+        bool _magazineSerial;
         
         // settings for generation of packet 8/30
         bool _multiplexedSignalFlag; // false indicates teletext is multiplexed with video, true means full frame teletext.
