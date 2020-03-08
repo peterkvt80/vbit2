@@ -59,18 +59,11 @@ void TTXLine::Setm_textline(std::string const& val, bool validateLine)
     m_textline = val;
 }
 
-/** Validate - given a string, it validates it to ensure that the
- *  string follows the required format. 7 bit transmission ready.
- * It de-escapes and/or remaps characters as detailed in the MRG tti format spec.
- * It also treats \r very carefully.
- * If the string ends in \r or \r\n then it is treated as a terminator and is discarded.
- */
 std::string TTXLine::validate(std::string const& val)
 {
     char ch;
     int j=0;
     std::string str="                                        ";
-    // std::cout << "Validating length= " << val.length() << std::endl;
     for (unsigned int i=0;i<val.length() && j<40;i++)
     {
         ch=val[i] & 0x7f;   // Convert to 7 bits
@@ -78,16 +71,16 @@ std::string TTXLine::validate(std::string const& val)
         if (ch==0x1b) // escape?
         {
             i++;
-            ch=(val[i] & 0x3f)|0x80;
+            ch=(val[i] & 0x3f);
         }
-        else if (ch<0x20)
+        
+        if (ch==0)
         {
-            ch=0x20; // turn all other controls to space character
+            ch=0x80; // set high bit to escape nulls in strings
         }
         
         str[j++]=ch;
     }
-    // std::cout << "Validating done " << std::endl;
     return str;
 }
 
