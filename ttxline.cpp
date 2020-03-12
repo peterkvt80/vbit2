@@ -66,19 +66,23 @@ std::string TTXLine::validate(std::string const& val)
     std::string str="                                        ";
     for (unsigned int i=0;i<val.length() && j<40;i++)
     {
-        ch=val[i] & 0x7f;   // Convert to 7 bits
-        
-        if (ch==0x1b) // escape?
+        ch = val[i] & 0x7f; // 7-bit
+
+        if (val[i] == 0x1b) // ascii escape
         {
             i++;
-            ch=(val[i] & 0x3f);
+            ch = val[i] & 0x3f;
         }
-        
-        if (ch==0)
+        else if ((uint8_t)val[i] < 0x20) // other ascii control code
         {
-            ch=0x80; // set high bit to escape nulls in strings
+            break;
         }
-        
+
+        if (ch < 0x20)
+        {
+            ch |= 0x80; // set high bit on control codes
+        }
+
         str[j++]=ch;
     }
     return str;

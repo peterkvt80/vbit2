@@ -248,19 +248,15 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     std::getline(filein, line); // Mask is intended for TED to protecting regions from editing.
                     break;
                 case 8 : // "OL" - Output line
-                    // OL,9,ƒA-Z INDEX     ‡199ƒNEWS HEADLINES  ‡101
                     std::getline(filein, line, ',');
                     lineNumber=atoi(line.c_str());
                     std::getline(filein, line);
                     if (lineNumber>MAXROW) break;
-                    // std::cerr << "reading " << lineNumber << " line=" << line << std::endl;
                     p->SetRow(lineNumber,line);
-                    // std::cerr << lineNumber << ": OL partly implemented. " << line << std::endl;
                     lines++;
                     break;
                 case 9 : // "FL"; - Fastext links
                     // FL,104,104,105,106,F,100
-                    // std::cerr << "FL not implemented\n";
                     for (int fli=0;fli<6;fli++)
                     {
                         if (fli<5)
