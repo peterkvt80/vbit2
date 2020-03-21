@@ -82,7 +82,9 @@ Configure::Configure(int argc, char** argv) :
     path = _pageDir;
     path += "/";
     path += _configFile;
-    LoadConfigFile(path);
+    LoadConfigFile(path); // load main config file (vbit.conf)
+    
+    LoadConfigFile(path+".override"); // allow overriding main config file for local configuration where main config is in version control
 }
 
 Configure::~Configure()
