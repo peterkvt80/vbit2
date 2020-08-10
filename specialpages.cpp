@@ -64,7 +64,7 @@ loop:
             _page->SetState(TTXPageStream::GONE);
             _iter = _specialPagesList.erase(_iter);
             _page->SetSpecialFlag(false);
-            if (!(_page->GetNormalFlag() || _page->GetCarouselFlag()))
+            if (!(_page->GetNormalFlag() || _page->GetCarouselFlag() || _page->GetUpdatedFlag()))
                 _page->SetState(TTXPageStream::GONE); // if we are last mark it gone
             _page = *_iter;
             goto loop;

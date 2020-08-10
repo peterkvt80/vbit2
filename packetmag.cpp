@@ -26,17 +26,19 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _packet29[i]=nullptr;
   }
   
-  _normalPages=new vbit::NormalPages();
   _carousel=new vbit::Carousel();
   _specialPages=new vbit::SpecialPages();
+  _normalPages=new vbit::NormalPages();
+  _updatedPages=new vbit::UpdatedPages();
 }
 
 PacketMag::~PacketMag()
 {
   //dtor
-  delete _normalPages;
   delete _carousel;
   delete _specialPages;
+  delete _normalPages;
+  delete _updatedPages;
 }
 
 Packet* PacketMag::GetPacket(Packet* p)
@@ -45,6 +47,7 @@ Packet* PacketMag::GetPacket(Packet* p)
     int thisPageNum;
     unsigned int thisSubcode;
     int* links=NULL;
+    bool updatedFlag=false;
 
     static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
 
@@ -130,14 +133,25 @@ Packet* PacketMag::GetPacket(Packet* p)
             }
             else
             {
-                _page=_carousel->nextCarousel(); // The next carousel page (if there is one)
-                if (_page) // Carousel?
+                _page=_updatedPages->NextPage(); // Get the next updated page (if there is one)
+                if (_page)
                 {
-                    //_outp("c");
+                    // updated page
+                    updatedFlag=true; // use our own flag because the pagestream's _isUpdated flag gets cleared by NextPage
                 }
-                else  // No carousel? Take the next normal page
+                else
                 {
-                    _page=_normalPages->NextPage();
+                    // no updated pages
+                    _page=_carousel->nextCarousel(); // Get the next carousel page (if there is one)
+                    if (_page)
+                    {
+                        // carousel with hard timings
+                    }
+                    else
+                    {
+                        // no urgent carousels
+                        _page=_normalPages->NextPage();  // Get the next normal page (if there is one)
+                    }
                 }
                 
                 if (_page == nullptr){
@@ -181,6 +195,11 @@ Packet* PacketMag::GetPacket(Packet* p)
                     
                     // Also set the erase flag in output. This will allow left over rows in adaptive transmission to be cleared without leaving the erase flag set causing flickering.
                     _status|=PAGESTATUS_C4_ERASEPAGE;
+                }
+                
+                if (updatedFlag){
+                    // page is updated set interrupted sequence flag and clear UpdatedFlag
+                    _status|=PAGESTATUS_C9_INTERRUPTED;
                 }
             }
             
@@ -384,8 +403,8 @@ bool PacketMag::IsReady(bool force)
     
     if (_waitingForField == 0)
     {
-    _priorityCount--;
-    if (_priorityCount==0 || force)
+        _priorityCount--;
+        if (_priorityCount==0 || force || (_updatedPages->waiting())) // force if there are updated pages waiting
         {
           _priorityCount=_priority;
           result=true;

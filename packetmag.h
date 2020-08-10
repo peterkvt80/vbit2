@@ -6,6 +6,7 @@
 #include "carousel.h"
 #include "specialpages.h"
 #include "normalpages.h"
+#include "updatedpages.h"
 #include "configure.h"
 
 #define MAXPACKET29TYPES 3
@@ -28,9 +29,10 @@ class PacketMag : public PacketSource
     */
     std::list<TTXPageStream>*  Get_pageSet() { return _pageSet; }
     
+    Carousel* GetCarousel() { return _carousel; }
     SpecialPages* GetSpecialPages() { return _specialPages; }
     NormalPages* GetNormalPages() { return _normalPages; }
-    Carousel* GetCarousel() { return _carousel; }
+    UpdatedPages* GetUpdatedPages() { return _updatedPages; }
     
     /** Get the next packet
      *  @return The next packet OR if IsReady() would return false then a filler packet
@@ -56,6 +58,7 @@ class PacketMag : public PacketSource
       Carousel* _carousel;
       SpecialPages* _specialPages;
       NormalPages* _normalPages;
+      UpdatedPages* _updatedPages;
       uint8_t _priorityCount; /// Controls transmission priority
       PacketState _state; /// State machine to sequence packet types
       uint8_t _thisRow; // The current line that we are outputting

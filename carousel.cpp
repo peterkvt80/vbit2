@@ -43,7 +43,7 @@ TTXPageStream* Carousel::nextCarousel()
         {
             std::cerr << "[Carousel::nextCarousel] Deleted " << p->GetSourcePage() << std::endl;
             p->SetCarouselFlag(false);
-            if (!(p->GetNormalFlag() || p->GetSpecialFlag()))
+            if (!(p->GetNormalFlag() || p->GetSpecialFlag() || _page->GetUpdatedFlag()))
                 p->SetState(TTXPageStream::GONE); // if we are last mark it gone
             _carouselList.erase(it--);
         }

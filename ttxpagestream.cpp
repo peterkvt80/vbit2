@@ -7,6 +7,7 @@ TTXPageStream::TTXPageStream() :
     _isCarousel(false),
     _isSpecial(false),
     _isNormal(false),
+    _isUpdated(false),
     _updateCount(0)
 {
     //ctor
@@ -20,6 +21,7 @@ TTXPageStream::TTXPageStream(std::string filename) :
     _isCarousel(false),
     _isSpecial(false),
     _isNormal(false),
+    _isUpdated(false),
     _updateCount(0)
 {
     struct stat attrib;               // create a file attribute structure

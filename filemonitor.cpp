@@ -168,6 +168,13 @@ int FileMonitor::readDirectory(std::string path){
                             std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber() << std::endl;
                         }
                         
+                        if (q->GetNormalFlag() && !(q->GetSpecialFlag()) && !(q->GetCarouselFlag()) && !(q->GetUpdatedFlag()))
+                        {
+                            // add normal, non carousel pages to updatedPages list
+                            _pageList->GetMagazines()[mag]->GetUpdatedPages()->addPage(q);
+                            q->SetUpdatedFlag(true);
+                        }
+                        
                         if (_pageList->CheckForPacket29(q))
                         {
                             std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
@@ -195,9 +202,10 @@ int FileMonitor::readDirectory(std::string path){
                         if (q->Special())
                         {
                             // Page is 'special'
+                            q->SetCarouselFlag(false);
                             q->SetSpecialFlag(true);
                             q->SetNormalFlag(false);
-                            q->SetCarouselFlag(false);
+                            q->SetUpdatedFlag(false);
                             _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
                             //std::cerr << "[FileMonitor::run] new page is special " << std::hex << q->GetPageNumber() << std::endl;
                         }
@@ -218,7 +226,12 @@ int FileMonitor::readDirectory(std::string path){
                                 //std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << q->GetPageNumber() << std::endl;
                             }
                             else
+                            {
                                 q->SetCarouselFlag(false);
+                                // add normal, non carousel pages to updatedPages list
+                                _pageList->GetMagazines()[mag]->GetUpdatedPages()->addPage(q);
+                                q->SetUpdatedFlag(true);
+                            }
                         }
                         
                         if (_pageList->CheckForPacket29(q))

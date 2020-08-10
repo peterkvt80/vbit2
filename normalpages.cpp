@@ -55,7 +55,7 @@ loop:
             std::cerr << "[NormalPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
             _iter = _NormalPagesList.erase(_iter);
             _page->SetNormalFlag(false);
-            if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag()))
+            if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetUpdatedFlag()))
                 _page->SetState(TTXPageStream::GONE); // if we are last mark it gone
             _page = *_iter;
             goto loop; // jump back to try for the next page

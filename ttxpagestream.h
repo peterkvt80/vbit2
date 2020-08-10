@@ -36,14 +36,7 @@ class TTXPageStream : public TTXPage
      */
     TTXPageStream(std::string filename);
 
-    /** Access _isCarousel
-     * \return The current value of _isCarousel
-     */
     bool GetCarouselFlag() { return _isCarousel; }
-
-    /** Set _isCarousel
-     * \param val New value to set
-     */
     void SetCarouselFlag(bool val) { _isCarousel = val; }
 
     bool GetSpecialFlag() { return _isSpecial; }
@@ -51,6 +44,9 @@ class TTXPageStream : public TTXPage
     
     bool GetNormalFlag() { return _isNormal; }
     void SetNormalFlag(bool val) { _isNormal = val; }
+    
+    bool GetUpdatedFlag() { return _isUpdated; }
+    void SetUpdatedFlag(bool val) { _isUpdated = val; }
     
     int GetUpdateCount() {return _updateCount;}
     void IncrementUpdateCount();
@@ -143,6 +139,7 @@ class TTXPageStream : public TTXPage
     bool _isCarousel;
     bool _isSpecial;
     bool _isNormal;
+    bool _isUpdated;
 
     int _updateCount; // update counter for special pages.
 
