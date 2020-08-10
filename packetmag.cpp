@@ -173,13 +173,14 @@ Packet* PacketMag::GetPacket(Packet* p)
                     _region=_page->GetRegion();
                 }
                 
-                // If the page has changed, then set the update bit.
-                // This is by request of Nate. It isn't a feature required in ETSI
-                if (_page->Changed())
-                {
-                  _status|=PAGESTATUS_C8_UPDATE;
-                  
-                  _status|=PAGESTATUS_C4_ERASEPAGE; // also set the erase flag
+                // Handle pages with update bit set in a useful way.
+                // This isn't defined by the specification.
+                if (_status & PAGESTATUS_C8_UPDATE){
+                    // Clear update bit in stored page so that update flag is only transmitted once
+                    _page->SetPageStatus(_status & ~PAGESTATUS_C8_UPDATE);
+                    
+                    // Also set the erase flag in output. This will allow left over rows in adaptive transmission to be cleared without leaving the erase flag set causing flickering.
+                    _status|=PAGESTATUS_C4_ERASEPAGE;
                 }
             }
             

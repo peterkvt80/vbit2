@@ -199,12 +199,6 @@ class TTXPage
          * Warning. Only deep copies the top page. Not for carousels (yet)
          */
         void Copy(TTXPage* src);
-
-        /** \brief Check if any line in the page has changed.
-         *  This can only be called once as it will clear the changed state.
-         *  This is NOT the same as pageChanged.
-         */
-        bool Changed();
         
         void SetFileChangedFlag(){_fileChanged=true;};
 

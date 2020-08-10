@@ -67,22 +67,6 @@ TTXPage::TTXPage(std::string filename) :
     // std::cerr << "Finished reading page. Loaded=" << m_Loaded << std::endl;
 }
 
-bool TTXPage::Changed()
-{
-  bool changed=_fileChanged; // begin with file change state
-  _fileChanged=false; // clear the flag
-  for (uint8_t row=1;row<=MAXROW;row++)
-  {
-		TTXLine* line=GetRow(row);
-    if (line!=nullptr && line->GetChanged())
-    {
-      changed=true;
-      // Could break here BUT the changed state in the other rows must be cleared
-    }
-  }
-  return changed;
-}
-
 void TTXPage::m_Init()
 {
     m_region=0;

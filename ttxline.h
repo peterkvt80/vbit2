@@ -58,8 +58,6 @@ class TTXLine
 
 				void Dump();
 
-				bool GetChanged(){bool temp=_changed;_changed=false;return temp;}; /// Get the changed status (and clear the flag)
-
     protected:
     private:
         std::string validate(std::string const& test);
@@ -67,8 +65,6 @@ class TTXLine
         std::string m_textline;
 				TTXLine* _nextLine;
 				// If SetLine or SetChar can set the changed flag.
-				// The changed flag is used to set the C8 flag and then is reset.
-				bool _changed;  /// If the line contents has changed. Set by SetLine or SetChar
 
 };
 
