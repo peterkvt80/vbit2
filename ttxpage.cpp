@@ -424,59 +424,73 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
 
 int TTXPage::GetPageCount()
 {
-	// See Annex A.1 rules
-	int count=0;
-	unsigned int subcode; // Start from 1.
-	int code[4];
-  // PageFunction func = GetPageFunction();
-	for (int i=0;i<4;i++) code[i]=0;
-	for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
-	{
+    int count=0;
+    unsigned int subcode;
+    int code[4];
+    if (this->m_SubPage == nullptr)
+    {
+        // A single page (no subpages).
+        
+        // Annex A.1 states that pages with no sub-pages should be coded Mxx-0000. This is the default when no subcode is specified in tti file.
+        // Annex E.2 states that the subcode may be used to transmit a BCD time code, e.g for an alarm clock. Where a non zero subcode is specified in the tti file keep it.
+        
         if (Special()){
             // "Special" pages (e.g. MOT, POP, GPOP, DRCS, GDRCS, MIP) should be coded sequentially in hexadecimal 0000-000F
-            subcode = count;
+            this->SetSubCode(0);
         }
-        else
+        
+        count = 1;
+    }
+    else
+    {
+        // Page has subpages. Renumber according to Annex A.1.
+        for (int i=0;i<4;i++) code[i]=0;
+        for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
         {
-            // Pages intended for display with sub-pages should have sub-pages coded sequentially from Mxx-0001 to
-            // Mxx-0009 and then Mxx-0010 to Mxx-0019 and similarly using the decimal values of sub-code nibbles, from subcode 0001 up to 0079 as per ETS-300-706 Annex A.1
-            // Pagees intended for display shouldn't have more than 79 subpages, however we should handle it sensibly if they do, therefore above 0079 the numbers jump to 01nn to 09nn, then 1nnn to 3nnn.
-
-            // Increment the subcode is a baroque way
-            code[3]++; // increment units
-            if (code[3]>9) // if units > 9
+            if (Special()){
+                // "Special" pages (e.g. MOT, POP, GPOP, DRCS, GDRCS, MIP) should be coded sequentially in hexadecimal 0000-000F
+                subcode = count;
+            }
+            else
             {
-                code[3]=0; // units = 0
-                code[2]++; // increment tens
-                if (code[2]>7) // if tens > 7
+                // Pages intended for display with sub-pages should have sub-pages coded sequentially from Mxx-0001 to
+                // Mxx-0009 and then Mxx-0010 to Mxx-0019 and similarly using the decimal values of sub-code nibbles, from subcode 0001 up to 0079 as per ETS-300-706 Annex A.1.
+                // Pages intended for display shouldn't have more than 79 subpages, however we should handle it sensibly if they do, therefore above 0079 the numbers jump to 01nn to 09nn, then 1nnn to 3nnn.
+
+                // Increment the subcode is a baroque way
+                code[3]++; // increment units
+                if (code[3]>9) // if units > 9
                 {
-                    code[2]=0; // tens = 0
-                    code[1]++; // increment 'hundreds'
-                    if (code[1]>9) // if 'hundreds' > 9
+                    code[3]=0; // units = 0
+                    code[2]++; // increment tens
+                    if (code[2]>7) // if tens > 7
                     {
-                        code[1]=0; // 'hundreds' = 0
-                        code[0]++; // increment 'thousands'
-                        if (code[0]>3) // if 'thousands' > 3
+                        code[2]=0; // tens = 0
+                        code[1]++; // increment 'hundreds'
+                        if (code[1]>9) // if 'hundreds' > 9
                         {
-                            code[0]=0; // overflow subcode
-                            code[1]=0;
-                            code[2]=0;
-                            code[3]=0;
+                            code[1]=0; // 'hundreds' = 0
+                            code[0]++; // increment 'thousands'
+                            if (code[0]>3) // if 'thousands' > 3
+                            {
+                                code[0]=0; // overflow subcode
+                                code[1]=0;
+                                code[2]=0;
+                                code[3]=0;
+                            }
                         }
                     }
                 }
+                subcode=(code[0]<<12) + (code[1]<<8) + (code[2]<<4) + code[3];
             }
-            subcode=(code[0]<<12) + (code[1]<<8) + (code[2]<<4) + code[3];
+            
+            if (p!=nullptr)
+                p->SetSubCode(subcode); // modify the subcode
+            count++;
         }
-		// std::cerr <<"Get page count happens here, subcode=" << subcode << " " << (int)p << std::endl;
-		if (p!=nullptr)
-			p->SetSubCode(subcode);   // Always redo the subcodes
-		count++;
-	}
-	// std::cerr << "GetPageCount returns " << count << std::endl;
-	if (count==1)
-		this->SetSubCode(0); // Pages with no sub-pages associated should be coded Mxx-0000
-	return count;
+    }
+    
+    return count;
 }
 
 void TTXPage::CopyMetaData(TTXPage* page)
