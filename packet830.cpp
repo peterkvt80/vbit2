@@ -21,10 +21,10 @@ Packet830::~Packet830()
 
 Packet* Packet830::GetPacket(Packet* p)
 {
-	time_t timeRaw;
+	time_t timeRaw = time(nullptr);
 	time_t timeLocal;
-	struct tm tmLocal;
-	struct tm tmGMT;
+	struct tm *tmLocal;
+	struct tm *tmGMT;
 	int offsetHalfHours, year, month, day, hour, minute, second;
 	uint32_t modifiedJulianDay;
 	
@@ -59,14 +59,13 @@ Packet* Packet830::GetPacket(Packet* p)
 		val[8] = _vbi_bit_reverse[nic & 0xFF];
 		
 		/* calculate number of seconds local time is offset from UTC */
-		time(&timeRaw);
-		localtime_r(&timeRaw, &tmLocal);
+        tmLocal = localtime(&timeRaw);
 		
 		/* convert tmLocal into a timestamp without correcting for timezones and summertime */
 		#ifdef WIN32
-		timeLocal = _mkgmtime(&tmLocal);
+		timeLocal = _mkgmtime(tmLocal);
 		#else
-		timeLocal = timegm(&tmLocal);
+		timeLocal = timegm(tmLocal);
 		#endif
 		
 		offsetHalfHours = difftime(timeLocal, timeRaw) / 1800;
@@ -76,13 +75,13 @@ Packet* Packet830::GetPacket(Packet* p)
 		val[9] = ((offsetHalfHours < 0) ? 0xC1 : 0x81) | ((abs(offsetHalfHours) & 0x1F) << 1);
 		
 		// get the time current UTC time into separate variables
-		gmtime_r(&timeRaw, &tmGMT);
-		year = tmGMT.tm_year + 1900;
-		month = tmGMT.tm_mon + 1;
-		day = tmGMT.tm_mday;
-		hour = tmGMT.tm_hour;
-		minute = tmGMT.tm_min;
-		second = tmGMT.tm_sec;
+		tmGMT = gmtime(&timeRaw);
+		year = tmGMT->tm_year + 1900;
+		month = tmGMT->tm_mon + 1;
+		day = tmGMT->tm_mday;
+		hour = tmGMT->tm_hour;
+		minute = tmGMT->tm_min;
+		second = tmGMT->tm_sec;
 		
 		modifiedJulianDay = calculateMJD(year, month, day);
 		// generate five decimal digits of modified julian date decimal digits and increment each one.

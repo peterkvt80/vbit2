@@ -128,28 +128,27 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
  */
 bool Packet::get_offset_time(char* str)
 {
-	char strTime[6];
-	time_t rawtime;
-	struct tm tmGMT;
-	time( &rawtime );
+    char strTime[6];
+    time_t rawtime = time(nullptr);
+    struct tm *tmGMT;
 
-	// What is our offset in seconds?
-	int offset=((str[3]-'0')*10+str[4]-'0')*30*60; // @todo We really ought to validate this
+    // What is our offset in seconds?
+    int offset=((str[3]-'0')*10+str[4]-'0')*30*60; // @todo We really ought to validate this
 
-	// Is it negative (west of us?)
-	if (str[2]=='-')
-		offset=-offset;
-	else
-		if (str[2]!='+') return false; // Must be + or -
+    // Is it negative (west of us?)
+    if (str[2]=='-')
+        offset=-offset;
+    else
+        if (str[2]!='+') return false; // Must be + or -
 
-	// Add the offset to the time value
-	rawtime+=offset;
+    // Add the offset to the time value
+    rawtime+=offset;
 
-	gmtime_r(&rawtime, &tmGMT);
+    tmGMT = gmtime(&rawtime);
 
-	strftime(strTime, 21, "%H:%M", &tmGMT);
-	stringToBytes(str,strTime,5);
-	return true;
+    strftime(strTime, 21, "%H:%M", tmGMT);
+    stringToBytes(str,strTime,5);
+    return true;
 }
 
 /* Ideally we would set _packet[0] for other hardware, or _packet[3] for Alistair Buxton raspi-teletext/
