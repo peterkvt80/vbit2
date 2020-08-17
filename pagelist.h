@@ -88,9 +88,7 @@ public:
    */
   TTXPageStream* FirstPage();
   
-  bool CheckForPacket29(TTXPageStream* page);
-  
-  TTXLine** GetPacket29(int mag){ return _magPacket29[mag];};
+  void CheckForPacket29(TTXPageStream* page);
 
 private:
 	Configure* _configure; // The configuration object
@@ -103,8 +101,6 @@ private:
    */
     void PopulatePageTypeLists();
 	
-	TTXLine* _magPacket29[8][MAXPACKET29TYPES];
-
 	// iterators through selected pages. (use the same iterator for D command and MD, L etc.)
 	uint8_t _iterMag;  /// Magazine number for the iterator
 	std::list<TTXPageStream>::iterator _iter;  /// pages in a magazine

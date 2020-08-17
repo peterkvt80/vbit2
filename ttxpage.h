@@ -204,10 +204,9 @@ class TTXPage
 
         void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
         bool Selected(){return _Selected;}; /// Return the selected state
-
+        
     protected:
         bool m_LoadTTI(std::string filename);
-
         int m_cycletimeseconds;     // CT
         int m_fastextlinks[6];      // FL
         int m_PageNumber;           // PN
@@ -216,7 +215,6 @@ class TTXPage
         // Private objects
         TTXPage* m_SubPage;
         TTXLine* m_pLine[MAXROW+1];
-
         std::string m_destination;  // DS
         std::string m_sourcepage;   // SP
         std::string m_description;  // DE
@@ -227,13 +225,12 @@ class TTXPage
         unsigned int m_lastpacket;
         PageCoding m_pagecoding;
         PageFunction m_pagefunction;
-        // Private functions
-        void m_Init();
-
         bool m_Loaded;
         bool _Selected; /// True if this page has been selected.
-        
         bool _fileChanged; // page was reloaded by the filemonitor
+        
+        // Private functions
+        void m_Init();
 
 };
 

@@ -175,11 +175,7 @@ int FileMonitor::readDirectory(std::string path){
                             q->SetUpdatedFlag(true);
                         }
                         
-                        if (_pageList->CheckForPacket29(q))
-                        {
-                            std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
-                            _pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
-                        }
+                        _pageList->CheckForPacket29(q);
                         
                         q->SetModifiedTime(attrib.st_mtime);
                         // unlock
@@ -234,11 +230,7 @@ int FileMonitor::readDirectory(std::string path){
                             }
                         }
                         
-                        if (_pageList->CheckForPacket29(q))
-                        {
-                            std::cerr << "[FileMonitor::run] found packet 29" << std::endl;
-                            _pageList->GetMagazines()[mag]->SetPacket29(_pageList->GetPacket29(mag));
-                        }
+                        _pageList->CheckForPacket29(q);
                     }
                     else
                         std::cerr << "[FileMonitor::run] Failed to add" << dirp->d_name << std::endl; // should never happen

@@ -12,10 +12,6 @@ PageList::PageList(Configure *configure) :
 	for (int i=0;i<8;i++)
 	{
 		_mag[i]=nullptr;
-		for (int j=0;j<MAXPACKET29TYPES;j++)
-		{
-			_magPacket29[i][j]=nullptr;
-		}
 	}
 	if (_configure==nullptr)
 	{
@@ -32,20 +28,16 @@ PageList::~PageList()
 
 int PageList::LoadPageList(std::string filepath)
 {
-    // std::cerr << "[PageList::LoadPageList] Loading pages from " << filepath << std::endl;
-    if (ReadDirectory(filepath))
-        return errno;
-    
-    // std::cerr << "[PageList::LoadPageList]FINISHED LOADING PAGES" << std::endl;
-
-    // How many files did we accept?
+    // Create PacketMags before loading
     for (int i=0;i<8;i++)
     {
         _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
-        _mag[i]->SetPacket29(_magPacket29[i]);
     }
-  
-  
+    
+    // Load files
+    if (ReadDirectory(filepath))
+        return errno;
+    
     PopulatePageTypeLists(); // add pages to the appropriate lists for their type
   
     // Just for testing
@@ -112,14 +104,15 @@ int PageList::ReadDirectory(std::string filepath)
             // If the page loaded, then push it into the appropriate magazine
             if (q->Loaded())
             {
-            q->GetPageCount(); // Use for the side effect of renumbering the subcodes
-
+                q->GetPageCount(); // Use for the side effect of renumbering the subcodes
+                
+                CheckForPacket29(q);
+            }
+            
             int mag=(q->GetPageNumber() >> 16) & 0x7;
             _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
             
-            if (CheckForPacket29(q))
-                std::cerr << "[PageList::LoadPageList] found packet 29" << std::endl;
-            }
+            
         }
     }
     closedir(dp);
@@ -129,54 +122,50 @@ int PageList::ReadDirectory(std::string filepath)
 
 void PageList::AddPage(TTXPageStream* page)
 {
-	int mag=(page->GetPageNumber() >> 16) & 0x7;
-	_pageList[mag].push_back(*page);
-	if (CheckForPacket29(page))
-	{
-		std::cerr << "[PageList::AddPage] found packet 29" << std::endl;
-		_mag[mag]->SetPacket29(_magPacket29[mag]);
-	}
+    int mag=(page->GetPageNumber() >> 16) & 0x7;
+    _pageList[mag].push_back(*page);
 }
 
-bool PageList::CheckForPacket29(TTXPageStream* page)
+void PageList::CheckForPacket29(TTXPageStream* page)
 {
-	if (page->IsCarousel()) // page mFF should never be a carousel and this code leads to a crash if it is so bail out now
-		return false;
-	int Packet29Flag = false;
-	int mag=(page->GetPageNumber() >> 16) & 0x7;
-	if (((page->GetPageNumber() >> 8) & 0xFF) == 0xFF)
-	{
-		// only read packet 29 from page mFF
-		
-		// clear any previous packet 29
-		_magPacket29[mag][0] = nullptr;
-		_magPacket29[mag][1] = nullptr;
-		_magPacket29[mag][2] = nullptr;
-		TTXLine* tempLine = page->GetTxRow(29);
-		while (tempLine != nullptr)
-		{
-			//std::cerr << "page includes packet 29" << std::endl;
-			switch (tempLine->GetCharAt(0))
-			{
-				case '@':
-					Packet29Flag = true;
-					_magPacket29[mag][0] = new TTXLine(tempLine->GetLine(), true);
-					break;
-				case 'A':
-					Packet29Flag = true;
-					_magPacket29[mag][1] = new TTXLine(tempLine->GetLine(), true);
-					break;
-				case 'D':
-					Packet29Flag = true;
-					_magPacket29[mag][2] = new TTXLine(tempLine->GetLine(), true);
-					break;
-			}
-			
-			tempLine = tempLine->GetNextLine();
-			// loop until every row 29 is copied
-		}
-	}
-	return Packet29Flag;
+    if (page->IsCarousel()) // page mFF should never be a carousel and this code leads to a crash if it is so bail out now
+        return;
+        
+    bool Packet29Flag = false;
+    int mag=(page->GetPageNumber() >> 16) & 0x7;
+    if (((page->GetPageNumber() >> 8) & 0xFF) == 0xFF) // Only read packet 29 from page mFF
+    {
+        if (_mag[mag]->GetPacket29Flag() == false) // Only allow one file to set packet29 per magazine
+        {
+            TTXLine* tempLine = page->GetTxRow(29);
+            
+            while (tempLine != nullptr)
+            {
+                switch (tempLine->GetCharAt(0))
+                {
+                    case '@':
+                        Packet29Flag = true;
+                        _mag[mag]->SetPacket29(0, new TTXLine(tempLine->GetLine(), true));
+                        break;
+                    case 'A':
+                        Packet29Flag = true;
+                        _mag[mag]->SetPacket29(1, new TTXLine(tempLine->GetLine(), true));
+                        break;
+                    case 'D':
+                        Packet29Flag = true;
+                        _mag[mag]->SetPacket29(2, new TTXLine(tempLine->GetLine(), true));
+                        break;
+                }
+                
+                tempLine = tempLine->GetNextLine();
+                // loop until every row 29 is copied
+            }
+            page->SetPacket29Flag(Packet29Flag); // mark the page
+        }
+        
+        if (Packet29Flag)
+            std::cerr << "[PageList::CheckForPacket29] Added packet 29 for magazine " << ((mag == 0)?8:mag) << std::endl;
+    }
 }
 
 // Find a page by filename
@@ -384,7 +373,7 @@ void PageList::ClearFlags()
       TTXPageStream* ptr;
       ptr=&(*p);
       // Don't unmark a file that was MARKED. Once condemned it won't be pardoned
-      if (ptr->GetStatusFlag()==TTXPageStream::FOUND)
+      if (ptr->GetStatusFlag()==TTXPageStream::FOUND || ptr->GetStatusFlag()==TTXPageStream::NEW)
       {
         ptr->SetState(TTXPageStream::NOTFOUND);
       }
@@ -403,13 +392,11 @@ void PageList::DeleteOldPages()
       ptr=&(*p);
       if (ptr->GetStatusFlag()==TTXPageStream::GONE)
       {
-        if (((ptr->GetPageNumber() >> 8) & 0xFF) == 0xFF)
+        if (ptr->GetPacket29Flag())
         {
-            // page mFF - make sure packet 29 is removed
-            _magPacket29[mag][0] = nullptr;
-            _magPacket29[mag][1] = nullptr;
-            _magPacket29[mag][2] = nullptr;
-            _mag[mag]->SetPacket29(_magPacket29[mag]);
+            // Packet 29 was loaded from this page, so remove it.
+            _mag[mag]->DeletePacket29();
+            std::cerr << "[PageList::DeleteOldPages] Removing packet 29 from magazine " << ((mag == 0)?8:mag) << std::endl;
         }
         
         //std::cerr << "[PageList::DeleteOldPages] Deleted " << ptr->GetSourcePage() << std::endl;

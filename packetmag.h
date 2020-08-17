@@ -1,6 +1,7 @@
 #ifndef PACKETMAG_H
 #define PACKETMAG_H
 #include <list>
+#include <mutex>
 #include <packetsource.h>
 #include "ttxpagestream.h"
 #include "carousel.h"
@@ -42,8 +43,10 @@ class PacketMag : public PacketSource
     void SetPriority(uint8_t priority) { _priority = priority; }
 
     bool IsReady(bool force=false);
-	
-	void SetPacket29(TTXLine *lines[MAXPACKET29TYPES]);
+    
+    void SetPacket29(int i, TTXLine *line);
+    bool GetPacket29Flag() { return _hasPacket29; };
+    void DeletePacket29();
 
   protected:
 
@@ -63,10 +66,13 @@ class PacketMag : public PacketSource
       PacketState _state; /// State machine to sequence packet types
       uint8_t _thisRow; // The current line that we are outputting
       TTXLine* _lastTxt; // The text of the last row that we fetched. Used for enhanced packets
-
+      
+      int _nextPacket29DC;
       TTXLine* _packet29[MAXPACKET29TYPES]; // space to store magazine related enhancement packets
       TTXLine* _nextPacket29;
-      int _nextPacket29DC;
+      bool _hasPacket29;
+      std::mutex _mtx; // Mutex to interlock packet 29 from filemonitor
+      
       int _magRegion;
       int _status;
       int _region;

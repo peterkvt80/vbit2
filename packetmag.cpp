@@ -16,6 +16,7 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _thisRow(0),
     _lastTxt(nullptr),
     _nextPacket29DC(0),
+    _hasPacket29(false),
     _magRegion(0),
     _specialPagesFlipFlop(false),
     _waitingForField(0)
@@ -73,23 +74,28 @@ Packet* PacketMag::GetPacket(Packet* p)
     switch (_state)
     {
         case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
-            if (GetEvent(EVENT_PACKET_29))
+            if (GetEvent(EVENT_PACKET_29) && _hasPacket29)
             {
-                while (_packet29[_nextPacket29DC] == nullptr)
+                if (_mtx.try_lock()) // skip if unable to get lock
                 {
-                    _nextPacket29DC++;
-                }
-                
-                if (_nextPacket29DC >= MAXPACKET29TYPES)
-                {
-                    _nextPacket29DC = 0;
-                    ClearEvent(EVENT_PACKET_29);
-                }
-                else
-                {
-                    p->SetRow(_magNumber, 29, _packet29[_nextPacket29DC]->GetLine(), CODING_13_TRIPLETS);
-                    _nextPacket29DC++;
-                    return p;
+                    while (_packet29[_nextPacket29DC] == nullptr)
+                    {
+                        _nextPacket29DC++;
+                    }
+                    
+                    if (_nextPacket29DC >= MAXPACKET29TYPES)
+                    {
+                        _nextPacket29DC = 0;
+                        ClearEvent(EVENT_PACKET_29);
+                    }
+                    else
+                    {
+                        p->SetRow(_magNumber, 29, _packet29[_nextPacket29DC]->GetLine(), CODING_13_TRIPLETS);
+                        _nextPacket29DC++;
+                        _mtx.unlock(); // unlock before we return!
+                        return p;
+                    }
+                    _mtx.unlock(); // we got a lock so unlock again
                 }
             }
             _specialPagesFlipFlop = !_specialPagesFlipFlop; // toggle the flag so that we interleave special pages and regular pages during the special pages event so that rolling headers aren't stopped completely
@@ -420,10 +426,9 @@ bool PacketMag::IsReady(bool force)
     }
 };
 
-void PacketMag::SetPacket29(TTXLine *lines[MAXPACKET29TYPES]){
-    //std::cerr << "[PacketMag::setPacket29]" << std::endl;
-    for (int i=0;i<MAXPACKET29TYPES;i++)
-        _packet29[i] = lines[i];
+void PacketMag::SetPacket29(int i, TTXLine *line){
+    _packet29[i] = line;
+    _hasPacket29 = true;
     
     if (_packet29[0])
     {
@@ -433,4 +438,17 @@ void PacketMag::SetPacket29(TTXLine *lines[MAXPACKET29TYPES]){
     {
         _magRegion = ((_packet29[2]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[2]->GetCharAt(3) & 0x3) << 2);
     }
+}
+
+void PacketMag::DeletePacket29(){
+    _mtx.lock();
+    for (int i=0;i<MAXPACKET29TYPES;i++)
+    {
+        if (_packet29[i] != nullptr){
+            delete _packet29[i]; // delete TTXLine created in PageList::CheckForPacket29
+            _packet29[i] = nullptr;
+        }
+    }
+    _hasPacket29 = false;
+    _mtx.unlock();
 }

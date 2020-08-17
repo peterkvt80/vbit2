@@ -119,6 +119,9 @@ class TTXPageStream : public TTXPage
     // Todo: These are migrating to TTXPage
     void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
     bool Selected(){return _Selected;}; /// Return the selected state
+    
+    void SetPacket29Flag(bool value){_loadedPacket29=value;}; // Used by PageList::CheckForPacket29
+    bool GetPacket29Flag(){return _loadedPacket29;}; // Used by PageList::DeleteOldPages
 
   protected:
 
@@ -133,7 +136,9 @@ class TTXPageStream : public TTXPage
     // Things that affect the display list
     time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
     Status _fileStatus;	/// Used to mark if we found the file. (Used to detect deletions)
-
+    
+    bool _loadedPacket29; // Packet 29 for magazine was loaded from this page. Should only be set on one page in each magazine.
+    
     bool _Selected;   /// Marked as selected by the inserter P command
 
     bool _isCarousel;
