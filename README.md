@@ -10,6 +10,8 @@ This is intended to replace vbit-pi-stream. It handles carousels better and uses
 It will use a lot more ram but also a lot less file system access and less CPU.
 It is a console application that can be compiled for Raspberry Pi or Windows.
 
+It generates a T42 teletext stream that can be piped into raspi-teletext to make teletext that TVs can decode. Or into vbit-py to drive a vbit2 teletext inserter. Or into the vbit-iv in-vision renderer.
+
 This program is written in c++11. It was developed on Windows. I used Code::Blocks and added a compiler TDM-GCC-64.
 The toolchain change is needed to support c++11 and more specifically threads.
 Please contact me if you are trying to set up a windows development environment.
