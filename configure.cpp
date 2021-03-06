@@ -174,7 +174,7 @@ int Configure::LoadConfigFile(std::string filename)
                                     error = 1;
                                 }
                                 break;
-                            case 3: // "country_network_identification" - four character hex. eg. FA6F
+                            case 3: // "network_identification_code" - four character hex. eg. FA6F
                                 if (value.size() == 4){
                                     size_t idx;
                                     try {
