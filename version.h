@@ -1,6 +1,6 @@
 #ifndef _VERSION_H_
 #define _VERSION_H_
 
-#define VBIT2_VERSION "v2.4.0"
+#define VBIT2_VERSION "v2.4.1"
 
 #endif
