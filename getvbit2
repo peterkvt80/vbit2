@@ -21,16 +21,22 @@ latestTag=`curl --silent "https://api.github.com/repos/peterkvt80/vbit2/releases
 git checkout $latestTag
 make
 
-# install systemd user script
+# create links
+mkdir -p $HOME/.local/bin
+ln -s -f `pwd`/vbit2 $HOME/.local/bin/
+ln -s -f `pwd`/runvbit2.sh $HOME/.local/bin/
+ln -s -f `pwd`/vbit-config $HOME/.local/bin/
+
+# install systemd user scripts
+mkdir -p $HOME/.local/share/systemd/user
+cp vbit2.service $HOME/.local/share/systemd/user
+cp teletext-update.timer $HOME/.local/share/systemd/user
+cp teletext-update.service $HOME/.local/share/systemd/user
+
 mkdir -p $HOME/.config/systemd/user/
-systemctl --user link $HOME/vbit2/vbit2.service
-systemctl --user link $HOME/vbit2/teletext-update.timer
-systemctl --user link $HOME/vbit2/teletext-update.service
 systemctl --user daemon-reload
 loginctl enable-linger
 
-mkdir -p $HOME/.local/bin
-ln -s $HOME/vbit2/vbit-config $HOME/.local/bin/
 if [[ ! $PATH =~ "$HOME/.local/bin" ]]; then
   PATH="$HOME/.local/bin:$PATH"
 fi

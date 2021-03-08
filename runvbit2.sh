@@ -45,4 +45,4 @@ if [ ! -z "$lpf" ]; then
 fi
 MASK=`printf "0x%04x" $num`
 
-$HOME/raspi-teletext/teletext -m $MASK - < <( $HOME/vbit2/vbit2 --dir "$PAGESDIRECTORY" )
+$HOME/raspi-teletext/teletext -m $MASK - < <( $HOME/.local/bin/vbit2 --dir "$PAGESDIRECTORY" )

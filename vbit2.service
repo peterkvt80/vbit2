@@ -3,7 +3,7 @@ Description=VBIT2
 
 [Service]
 Type=simple
-ExecStart=%h/vbit2/runvbit2.sh
+ExecStart=%h/.local/bin/runvbit2.sh
 Restart=always
 
 [Install]

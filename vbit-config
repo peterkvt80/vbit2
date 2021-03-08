@@ -1,6 +1,7 @@
 #!/bin/bash
 
-KNOWN="$HOME/vbit2/known_services"
+SCRIPTDIR=`dirname "$(readlink -f "$0")"`
+KNOWN="$SCRIPTDIR/known_services"
 SERVICESDIR="$HOME/.teletext-services"
 CONFIG="$SERVICESDIR/config"
 
@@ -464,7 +465,6 @@ options_menu(){
   elif [[ ! "${selection[@]}" =~ "B" ]] && [[ "${was[@]}" =~ "B" ]]; then
     # boot option isn't set but was before
     systemctl --user disable vbit2.service
-    systemctl --user link $HOME/vbit2/vbit2.service
   fi
 
   if [[ "${selection[@]}" =~ "U" ]] && [[ ! "${was[@]}" =~ "U" ]]; then
@@ -473,7 +473,6 @@ options_menu(){
   elif [[ ! "${selection[@]}" =~ "U" ]] && [[ "${was[@]}" =~ "U" ]]; then
     # update option isn't set but was before
     systemctl --user disable teletext-update.timer --now
-    systemctl --user link $HOME/vbit2/teletext-update.timer
   fi
 
   clear
@@ -541,7 +540,7 @@ main_menu(){
         ;;
       "U")
         clear
-        $HOME/vbit2/update.sh
+        $SCRIPTDIR/update.sh
         exit
         ;;
     esac

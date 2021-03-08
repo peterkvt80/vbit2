@@ -4,9 +4,9 @@
 # tagged release
 
 main(){
-  # service files may have changed so reload them
-  systemctl --user daemon-reload
-
+  # ensure we are in the vbit2 source directory
+  cd `dirname "$(readlink -f "$0")"`
+  
   # if it's an old install without auto deps we should do a complete recompile
   if [ ! -f vbit2.d ]; then
     # hope that presence of vbit2.d means all dep files are present
@@ -18,10 +18,41 @@ main(){
 
   # recompile vbit2
   make
-
+  
+  # create links
+  mkdir -p $HOME/.local/bin
+  ln -s -f `pwd`/vbit2 $HOME/.local/bin/
+  ln -s -f `pwd`/runvbit2.sh $HOME/.local/bin/
+  ln -s -f `pwd`/vbit-config $HOME/.local/bin/
+  
+  # install systemd user scripts
+  mkdir -p $HOME/.local/share/systemd/user
+  cp vbit2.service $HOME/.local/share/systemd/user
+  cp teletext-update.timer $HOME/.local/share/systemd/user
+  cp teletext-update.service $HOME/.local/share/systemd/user
+  
+  systemctl --user daemon-reload
+  
+  cleanoldunits
+  
   # restart vbit if service is active
   if [[ `systemctl --user is-active vbit2.service` == "active" ]]; then
     systemctl --user restart vbit2.service
+  fi
+}
+
+cleanoldunits(){
+  # clean up older systemd files
+  if [ -f $HOME/.config/systemd/user/vbit2.service ]; then
+    systemctl --user disable vbit2.service --now # removes old link
+  fi
+
+  if [ -f $HOME/.config/systemd/user/teletext-update.service ]; then
+    systemctl --user disable teletext-update.service --now # removes old link
+  fi
+
+  if [ -f $HOME/.config/systemd/user/teletext-update.timer ]; then
+    systemctl --user disable teletext-update.timer --now # removes old link
   fi
 }
 
@@ -31,7 +62,6 @@ migrate(){
   if [ -f $HOME/vbit2.sh ]; then FOUND+=("$HOME/vbit2.sh"); fi
   if [ -f $HOME/updatePages.sh ]; then FOUND+=("$HOME/updatePages.sh"); fi
   if [ -d $HOME/raspi-teletext-master ]; then FOUND+=("$HOME/raspi-teletext-master"); fi
-  if [ -d $HOME/Pages ]; then FOUND+=("$HOME/Pages"); fi
   if [ -f /etc/systemd/system/vbit2.service ]; then FOUND+=("/etc/systemd/system/vbit2.service"); fi
   if [ ! ${#FOUND[@]} -eq 0 ]; then
     printf 'The following files were found which relate to an old version of vbit2:' | fold -s -w `tput cols`
@@ -51,12 +81,16 @@ migrate(){
       sudo rm -rf ${FOUND[@]}
       # run the new installer
       ./getvbit2
-
+      
+      if [ -d $HOME/Pages ]; then
+        printf 'The directory %s is no longer required.\n' "$HOME/Pages"
+      fi
+      
       if [ -d $HOME/teletext ]; then
         printf 'The directory %s is no longer required.\n' "$HOME/teletext"
       fi
-
     fi
+    exit
   fi
 }
 
