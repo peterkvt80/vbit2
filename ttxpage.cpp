@@ -648,5 +648,8 @@ void TTXPage::SetPageCodingInt(int pageCoding)
         case 3:
             m_pagecoding = CODING_HAMMING_8_4;
             break;
+        case 4:
+            m_pagecoding = CODING_HAMMING_7BIT_GROUPS;
+            break;
     }
 }

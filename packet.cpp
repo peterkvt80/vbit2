@@ -43,33 +43,55 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
 	SetPacketText(val);
 	_coding = coding;
 
-	// The following block of code is for page enhancement
-	// packets read from special OL rows in tti page files.
-	// If OL,28, packet is used the page file should not contain a non zero RE,
-	if (coding == CODING_13_TRIPLETS)
-	{
-		// Special handler to allow stuffing enhancement packets in as OL rows
-		// Each 18 bits of data for a triplet is coded in the input line as
-		// three bytes least significant first where each byte contains 6 data
-		// bits in b0-b5.
-		designationcode = _packet[5] & 0x0F;
-		_packet[5] = HamTab[designationcode]; // designation code is 8/4 hamming coded
-
-		/* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish) */
-		for (int i = 1; i<=13; i++){
-			//std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
-			triplet = _packet[i*3+3] & 0x3F;
-			triplet |= ((_packet[i*3+4]) & 0x3F) << 6;
-			triplet |= ((_packet[i*3+5]) & 0x3F) << 12;
-			SetTriplet(i, triplet);
-		}
-	}
-    else if (coding == CODING_HAMMING_8_4)
+    switch(coding)
     {
-        for (int i = 0; i<40; i++)
-        {
-            _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
-        }
+        case CODING_7BIT_TEXT:
+            Parity();
+            break;
+            
+        case CODING_13_TRIPLETS:
+            // Special handler to allow stuffing enhancement packets in as OL rows
+            // Each 18 bits of data for a triplet is coded in the input line as
+            // three bytes least significant first where each byte contains 6 data
+            // bits in b0-b5.
+            designationcode = _packet[5] & 0x0F;
+            _packet[5] = HamTab[designationcode]; // designation code is 8/4 hamming coded
+
+            /* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish) */
+            for (int i = 1; i<=13; i++){
+                //std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
+                triplet = _packet[i*3+3] & 0x3F;
+                triplet |= ((_packet[i*3+4]) & 0x3F) << 6;
+                triplet |= ((_packet[i*3+5]) & 0x3F) << 12;
+                SetTriplet(i, triplet);
+            }
+            break;
+            
+        case CODING_HAMMING_8_4:
+            for (int i = 0; i<40; i++)
+            {
+                _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
+            }
+            break;
+            
+        case CODING_HAMMING_7BIT_GROUPS:
+            for (int i = 0; i<8; i++)
+            {
+                _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
+            }
+            for (int i = 8; i<20; i++)
+            {
+                _packet[5+i] = ParTab[(uint8_t)(_packet[5+i]&0x7f)];
+            }
+            for (int i = 20; i<28; i++)
+            {
+                _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
+            }
+            for (int i = 28; i<40; i++)
+            {
+                _packet[5+i] = ParTab[(uint8_t)(_packet[5+i]&0x7f)];
+            }
+            break;
     }
 }
 

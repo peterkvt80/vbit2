@@ -358,8 +358,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                   // Assemble the packet
                   p->SetRow(_magNumber, _thisRow, _lastTxt->GetLine(), _page->GetPageCoding());
-                  if (_page->GetPageCoding() == CODING_7BIT_TEXT)
-                      p->Parity(); // only set parity for normal text rows
                   assert(p->IsHeader()!=true);
                 }
             }
