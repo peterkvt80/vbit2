@@ -632,24 +632,21 @@ void TTXPage::SetPageFunctionInt(int pageFunction)
     }
 }
 
-void TTXPage::SetPageCodingInt(int pageCoding)
+PageCoding TTXPage::ReturnPageCoding(int pageCoding)
 {
     switch (pageCoding){
         default: // treat codings we don't know yet as normal text.
         case 0:
-            m_pagecoding = CODING_7BIT_TEXT;
-            break;
+            return CODING_7BIT_TEXT;
         case 1:
-            m_pagecoding = CODING_8BIT_DATA;
-            break;
+            return CODING_8BIT_DATA;
         case 2:
-            m_pagecoding = CODING_13_TRIPLETS;
-            break;
+            return CODING_13_TRIPLETS;
         case 3:
-            m_pagecoding = CODING_HAMMING_8_4;
-            break;
+            return CODING_HAMMING_8_4;
         case 4:
-            m_pagecoding = CODING_HAMMING_7BIT_GROUPS;
-            break;
+            return CODING_HAMMING_7BIT_GROUPS;
+        case 5:
+            return CODING_PER_PACKET;
     }
 }

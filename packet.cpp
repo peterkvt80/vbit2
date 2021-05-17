@@ -38,15 +38,33 @@ Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag),
 void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
 {
 	int triplet;
-	int designationcode;
 	SetMRAG(mag, row);
 	SetPacketText(val);
 	_coding = coding;
-
+    
     switch(coding)
     {
+        case CODING_PER_PACKET:
+            _coding = TTXPage::ReturnPageCoding(_packet[5] & 0xF); // set packet coding based on first byte of packet
+            /* fallthrough */
+        case CODING_13_TRIPLETS:
+        case CODING_HAMMING_8_4:
+        case CODING_HAMMING_7BIT_GROUPS:
+            _packet[5] = HamTab[_packet[5] & 0x0F]; // first byte is hamming 8/4 coded
+            break;
+            
         case CODING_7BIT_TEXT:
-            Parity();
+            _packet[5]=ParTab[(uint8_t)(_packet[5]&0x7f)]; // set parity on first byte
+        default:
+            break;
+    }
+    
+    switch(_coding)
+    {
+        default: // treat an invalid coding as 7-bit text
+        case CODING_7BIT_TEXT:
+            // first byte parity already set by first switch statement
+            Parity(6);
             break;
             
         case CODING_13_TRIPLETS:
@@ -54,9 +72,7 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
             // Each 18 bits of data for a triplet is coded in the input line as
             // three bytes least significant first where each byte contains 6 data
             // bits in b0-b5.
-            designationcode = _packet[5] & 0x0F;
-            _packet[5] = HamTab[designationcode]; // designation code is 8/4 hamming coded
-
+            // designation code is 8/4 hamming coded by first switch statement
             /* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish) */
             for (int i = 1; i<=13; i++){
                 //std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
@@ -68,14 +84,16 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
             break;
             
         case CODING_HAMMING_8_4:
-            for (int i = 0; i<40; i++)
+            // first byte already hamming 8/4 coded by first switch statement
+            for (int i = 1; i<40; i++)
             {
                 _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
             }
             break;
             
         case CODING_HAMMING_7BIT_GROUPS:
-            for (int i = 0; i<8; i++)
+            // first byte already hamming 8/4 coded by first switch statement
+            for (int i = 1; i<8; i++)
             {
                 _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
             }
@@ -91,6 +109,10 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
             {
                 _packet[5+i] = ParTab[(uint8_t)(_packet[5+i]&0x7f)];
             }
+            break;
+        
+        case CODING_8BIT_DATA:
+            // do nothing to 8-bit data
             break;
     }
 }

@@ -34,7 +34,7 @@
 #define MAXROW 29
 
 // @todo more page codings
-enum PageCoding {CODING_7BIT_TEXT,CODING_8BIT_DATA,CODING_13_TRIPLETS,CODING_HAMMING_8_4,CODING_HAMMING_7BIT_GROUPS};
+enum PageCoding {CODING_7BIT_TEXT,CODING_8BIT_DATA,CODING_13_TRIPLETS,CODING_HAMMING_8_4,CODING_HAMMING_7BIT_GROUPS,CODING_PER_PACKET};
 enum PageFunction {LOP, DATABROADCAST, GPOP, POP, GDRCS, DRCS, MOT, MIP, BTT, AIT, MPT, MPT_EX};
 
 class TTXPage
@@ -190,8 +190,9 @@ class TTXPage
         PageFunction GetPageFunction() {return m_pagefunction;}
         
         // set the page function or coding based on their integer representations in ETS 300 706 section 9.4.2.1
+        static PageCoding ReturnPageCoding(int pageCoding);
         void SetPageFunctionInt(int pageFunction);
-        void SetPageCodingInt(int pageCoding);
+        void SetPageCodingInt(int pageCoding){m_pagecoding = ReturnPageCoding(pageCoding);};
 
         bool Special() {return (m_pagefunction == GPOP || m_pagefunction == POP || m_pagefunction == GDRCS || m_pagefunction == DRCS || m_pagefunction == MOT || m_pagefunction == MIP);} // more convenient way to tell if a page is 'special'.
 
