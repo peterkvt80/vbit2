@@ -11,6 +11,8 @@ SERVICEDATA=(\
   "Ceefax (West),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/West,Ceefax/regional,Ceefax" \
   "Ceefax (Worldwide),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/Worldwide,Ceefax/regional,Ceefax" \
   "Ceefax (Yorks and Lincs),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/Yorks&Lincs,Ceefax/regional,Ceefax" \
+  "Ceefax (London),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/London,Ceefax/regional,Ceefax" \
+  "Ceefax (Wales),svn,https://internal.nathanmediaservices.co.uk/svn/ceefax/Wales,Ceefax/regional,Ceefax" \
   "Chunkytext,git,https://zxnet.co.uk/git/cf.git,Chunkytext," \
   "SPARK,git,https://github.com/ZXGuesser/spark-teletext.git,SPARK," \
 )
