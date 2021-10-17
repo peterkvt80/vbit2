@@ -49,6 +49,9 @@ public:
     uint8_t GetLinesPerField(){return _linesPerField;}
     bool GetReverseFlag(){return _reverseBits;}
     int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
+    
+    void SetMasterClock(time_t t){_masterClock = t;}
+    time_t GetMasterClock(){return _masterClock;}
 
 private:
 	int DirExists(char *path);
@@ -76,6 +79,8 @@ private:
 	uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
 	bool _commandPortEnabled;
     bool _reverseBits;
+    
+    time_t _masterClock;
 };
 
 }

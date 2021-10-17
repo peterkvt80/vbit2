@@ -199,13 +199,11 @@ bool Packet::get_offset_time(char* str)
  * but hard code this for now
  * Most of this should be rewritten for c++
  */
-char* Packet::tx(bool reverse)
+char* Packet::tx(time_t t, bool reverse)
 {
     // Get local time
-    time_t rawtime;
     struct tm * timeinfo;
-    time(&rawtime);
-    timeinfo=localtime(&rawtime);
+    timeinfo=localtime(&t);
 
     if (_isHeader) // We can do header substitutions
     {

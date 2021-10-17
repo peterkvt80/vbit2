@@ -21,7 +21,7 @@ Packet830::~Packet830()
 
 Packet* Packet830::GetPacket(Packet* p)
 {
-	time_t timeRaw = time(nullptr);
+	time_t timeRaw = _configure->GetMasterClock();
 	time_t timeLocal;
 	struct tm *tmLocal;
 	struct tm *tmGMT;

@@ -12,7 +12,6 @@ Service::Service()
 Service::Service(Configure *configure, PageList *pageList) :
 	_configure(configure),
 	_pageList(pageList),
-	_lineCounter(0),
 	_fieldCounter(50) // roll over immediately
 {
   vbit::PacketMag **magList=_pageList->GetMagazines();
@@ -28,6 +27,12 @@ Service::Service(Configure *configure, PageList *pageList) :
   _register(new Packet830(_configure));
   
   _linesPerField = _configure->GetLinesPerField();
+  
+  _lineCounter = _linesPerField; // roll over immediately
+  
+  time_t now;
+  time(&now); // initialise master clock to system time
+  configure->SetMasterClock(now); // put master clock in configure so that sources can access it. Horrible spaghetti coding
 }
 
 Service::~Service()
@@ -76,14 +81,16 @@ int Service::run()
 
 	// Send ONLY one packet per loop
 	_updateEvents();
+    
+    time_t masterClock = _configure->GetMasterClock();
 
 		// Special case for subtitles. Subtitles always go if there is one waiting
 		if (_subtitle->IsReady())
 		{
 			if (_subtitle->GetPacket(pkt) != nullptr){
-				std::cout.write(pkt->tx(reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+				std::cout.write(pkt->tx(masterClock, reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
 			} else {
-				std::cout.write(filler->tx(), 42);
+				std::cout.write(filler->tx(masterClock), 42);
 			}
 		}
 	  else
@@ -125,14 +132,14 @@ int Service::run()
 			{
 				// GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
 				if (p->GetPacket(pkt) != nullptr){
-					std::cout.write(pkt->tx(reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+					std::cout.write(pkt->tx(masterClock, reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
 				} else {
-					std::cout.write(filler->tx(), 42);
+					std::cout.write(filler->tx(masterClock), 42);
 				}
 			}
 			else
 			{
-				std::cout.write(filler->tx(), 42);
+				std::cout.write(filler->tx(masterClock), 42);
 			}
 		}
 
@@ -142,65 +149,69 @@ int Service::run()
 
 void Service::_updateEvents()
 {
-  static int seconds=0;
-  // Step the counters
-  _lineCounter++;
-  time_t now;
-  time(&now);
-  if (difftime(now,_then) > 0) // system clock second has ticked
-  {
-      _then = now;
-      seconds++;
-      _fieldCounter=0; // reset field counter
-  }
-  if (_lineCounter%_linesPerField==0) // new field
-  {
-    _lineCounter=0;
+    time_t masterClock = _configure->GetMasterClock();
     
-    if (_fieldCounter==0)
+    // Step the counters
+    _lineCounter++;
+    
+    if (_lineCounter%_linesPerField==0) // new field
     {
-      if (seconds%15==0){ // how often do we want to trigger sending special packets?
+        _lineCounter=0;
+        
+        _fieldCounter++;
+        
+        if (_fieldCounter >= 50)
+        {
+            _fieldCounter = 0;
+            masterClock++;
+            _configure->SetMasterClock(masterClock);
+            
+            using std::chrono::system_clock;
+            time_t now;
+            time(&now);
+            if (masterClock > now + 1) // allow vbit2 to buffer 1 second into the future
+                std::this_thread::sleep_until(system_clock::from_time_t(now + 1)); // back off for 1 second
+            
+            if (masterClock%15==0){ // how often do we want to trigger sending special packets?
+                for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
+                {
+                    (*iterator)->SetEvent(EVENT_SPECIAL_PAGES);
+                    (*iterator)->SetEvent(EVENT_PACKET_29);
+                }
+            }
+        }
+        // New field, so set the FIELD event in all the sources.
         for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
         {
-          (*iterator)->SetEvent(EVENT_SPECIAL_PAGES);
-          (*iterator)->SetEvent(EVENT_PACKET_29);
+            (*iterator)->SetEvent(EVENT_FIELD);
         }
-      }
+        
+        if (_fieldCounter%10==0) // Packet 830 happens every 200ms.
+        {
+            Event ev=EVENT_P830_FORMAT_1;
+            switch (_fieldCounter/10)
+            {
+                case 0:
+                    ev=EVENT_P830_FORMAT_1;
+                    break;
+                case 1:
+                    ev=EVENT_P830_FORMAT_2_LABEL_0;
+                    break;
+                case 2:
+                    ev=EVENT_P830_FORMAT_2_LABEL_1;
+                    break;
+                case 3:
+                    ev=EVENT_P830_FORMAT_2_LABEL_2;
+                    break;
+                case 4:
+                    ev=EVENT_P830_FORMAT_2_LABEL_3;
+                    break;
+                }
+            for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
+            {
+                (*iterator)->SetEvent(ev);
+            }
+        }
     }
-    // New field, so set the FIELD event in all the sources.
-    for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
-    {
-      (*iterator)->SetEvent(EVENT_FIELD);
-    }
-    
-    if (_fieldCounter%10==0 && _fieldCounter<50) // Packet 830 happens every 200ms.
-    {
-      Event ev=EVENT_P830_FORMAT_1;
-      switch (_fieldCounter/10)
-      {
-      case 0:
-        ev=EVENT_P830_FORMAT_1;
-        break;
-      case 1:
-        ev=EVENT_P830_FORMAT_2_LABEL_0;
-        break;
-      case 2:
-        ev=EVENT_P830_FORMAT_2_LABEL_1;
-        break;
-      case 3:
-        ev=EVENT_P830_FORMAT_2_LABEL_2;
-        break;
-      case 4:
-        ev=EVENT_P830_FORMAT_2_LABEL_3;
-        break;
-      }
-      for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
-      {
-        (*iterator)->SetEvent(ev);
-      }
-    }
-    
-    _fieldCounter++; // next field
-  }
-  // @todo Databroadcast events. Flag when there is data in the buffer.
+    // @todo Databroadcast events. Flag when there is data in the buffer.
 }
