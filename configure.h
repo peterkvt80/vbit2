@@ -46,7 +46,7 @@ public:
 	uint8_t GetSubtitleRepeats(){return _subtitleRepeats;}
 	uint16_t GetCommandPort(){return _commandPort;}
 	bool GetCommandPortEnabled(){return _commandPortEnabled;}
-    uint8_t GetLinesPerField(){return _linesPerField;}
+    uint16_t GetLinesPerField(){return _linesPerField;}
     bool GetReverseFlag(){return _reverseBits;}
     int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
     
@@ -64,7 +64,7 @@ private:
 	uint16_t _commandPort;
 
 	bool _rowAdaptive;
-    uint8_t _linesPerField;
+    uint16_t _linesPerField;
 	// settings for generation of packet 8/30
 	bool _multiplexedSignalFlag; 	// false indicates teletext is multiplexed with video, true means full frame teletext.
     int _magazinePriority[8];

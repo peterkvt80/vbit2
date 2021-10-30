@@ -140,9 +140,9 @@ class Packet
         uint8_t _row; //<! Row number 0 to 31
         PageCoding _coding; // packet coding
 
-        bool get_offset_time(char* str);
+        bool get_offset_time(time_t t, char* str);
         bool get_net(char* str);
-        bool get_time(char* str);
+        bool get_time(time_t t, char* str);
         /** Hamming 24/18
          * The incoming triplet should be packed 18 bits of an int 32 representing D1..D18
          * The int is repacked with parity bits

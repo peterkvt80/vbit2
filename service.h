@@ -56,8 +56,8 @@ private:
 	PageList* _pageList; /// Member reference to the pages list
 
 	// Member variables for event management
-    uint8_t _linesPerField;
-	uint8_t _lineCounter; // Which VBI line are we on? Used to signal a new field.
+    uint16_t _linesPerField;
+	uint16_t _lineCounter; // Which VBI line are we on? Used to signal a new field.
 	uint8_t _fieldCounter; // Which field? Used to time packet 8/30
 	std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
     

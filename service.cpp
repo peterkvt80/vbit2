@@ -30,9 +30,8 @@ Service::Service(Configure *configure, PageList *pageList) :
   
   _lineCounter = _linesPerField; // roll over immediately
   
-  time_t now;
-  time(&now); // initialise master clock to system time
-  configure->SetMasterClock(now); // put master clock in configure so that sources can access it. Horrible spaghetti coding
+  // initialise master clock to unix epoch, it will be set when run() starts generating packets
+  configure->SetMasterClock(0); // put master clock in configure so that sources can access it. Horrible spaghetti coding
 }
 
 Service::~Service()
@@ -147,6 +146,8 @@ int Service::run()
 	return 99; // can't return but this keeps the compiler happy
 } // worker
 
+#define FORWARDSBUFFER 1
+
 void Service::_updateEvents()
 {
     time_t masterClock = _configure->GetMasterClock();
@@ -156,21 +157,31 @@ void Service::_updateEvents()
     
     if (_lineCounter%_linesPerField==0) // new field
     {
+        std::cout << std::flush;
+        
         _lineCounter=0;
         
         _fieldCounter++;
         
+        time_t now;
+        time(&now);
+        
+        if (masterClock > now + FORWARDSBUFFER) // allow vbit2 to run into the future before limiting packet rate
+            std::this_thread::sleep_for(std::chrono::milliseconds(20)); // back off for 1 field to limit output to (less than) 50 fields per second
+        
         if (_fieldCounter >= 50)
         {
             _fieldCounter = 0;
-            masterClock++;
+            masterClock++; // step the master clock
             _configure->SetMasterClock(masterClock);
             
-            using std::chrono::system_clock;
-            time_t now;
-            time(&now);
-            if (masterClock > now + 1) // allow vbit2 to buffer 1 second into the future
-                std::this_thread::sleep_until(system_clock::from_time_t(now + 1)); // back off for 1 second
+            //std::cerr << now << " " << masterClock << "\n";
+            
+            if (masterClock < now || masterClock > now + FORWARDSBUFFER + 1){ // if internal master clock is behind real time, or too far ahead, resynchronise it.
+                masterClock = now;
+                _configure->SetMasterClock(masterClock);
+                std::cerr << "[Service::_updateEvents] Resynchronising master clock" << std::endl; // emit warning
+            }
             
             if (masterClock%15==0){ // how often do we want to trigger sending special packets?
                 for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)

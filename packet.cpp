@@ -170,10 +170,10 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
  * str[4:3] is a two digit of half hour offsets from UTC
  * @return local time at offset from UTC
  */
-bool Packet::get_offset_time(char* str)
+bool Packet::get_offset_time(time_t t, char* str)
 {
     char strTime[6];
-    time_t rawtime = time(nullptr);
+    time_t rawtime = t;
     struct tm *tmGMT;
 
     // What is our offset in seconds?
@@ -337,7 +337,7 @@ char* Packet::tx(time_t t, bool reverse)
             }
             if (tmpptr) {
                 //std::cout << "[test 1]" << _packet << std::endl;
-                get_offset_time(tmpptr); // TODO: something with return value
+                get_offset_time(t, tmpptr); // TODO: something with return value
                 //exit(4);
             }
             else
@@ -358,7 +358,7 @@ char* Packet::tx(time_t t, bool reverse)
         // Special case for system time. Put %%%%%%%%%%%%timedate to get time and date
         tmpptr=strstr((char*) _packet,"%%%%%%%%%%%%timedate");
         if (tmpptr) {
-            get_time(strtemp);
+            get_time(t, strtemp);
             stringToBytes(tmpptr,strtemp,20);
         }
         // ======= VERSION ========
@@ -515,14 +515,11 @@ bool Packet::get_temp(char* str)
  *  Pinched from raspi-teletext demo.c
  * @return Time as 20 characters
  */
-bool Packet::get_time(char* str)
+bool Packet::get_time(time_t t, char* str)
 {
-    time_t rawtime;
     struct tm *info;
 
-    time( &rawtime );
-
-    info = localtime( &rawtime );
+    info = localtime( &t );
 
     strftime(str, 21, "\x02%a %d %b\x03%H:%M/%S", info);
 		return false; // @todo
