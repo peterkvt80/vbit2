@@ -12,7 +12,7 @@ Service::Service()
 Service::Service(Configure *configure, PageList *pageList) :
 	_configure(configure),
 	_pageList(pageList),
-	_fieldCounter(50) // roll over immediately
+	_fieldCounter(49) // roll over immediately
 {
   vbit::PacketMag **magList=_pageList->GetMagazines();
   // Register all the packet sources
@@ -28,7 +28,7 @@ Service::Service(Configure *configure, PageList *pageList) :
   
   _linesPerField = _configure->GetLinesPerField();
   
-  _lineCounter = _linesPerField; // roll over immediately
+  _lineCounter = _linesPerField - 1; // roll over immediately
   
   // initialise master clock to unix epoch, it will be set when run() starts generating packets
   configure->SetMasterClock(0); // put master clock in configure so that sources can access it. Horrible spaghetti coding
