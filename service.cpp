@@ -12,7 +12,8 @@ Service::Service()
 Service::Service(Configure *configure, PageList *pageList) :
 	_configure(configure),
 	_pageList(pageList),
-	_fieldCounter(49) // roll over immediately
+	_fieldCounter(49), // roll over immediately
+    _debugPacketCI(0) // continuity counter for debug datacast packets
 {
   vbit::PacketMag **magList=_pageList->GetMagazines();
   // Register all the packet sources
@@ -60,8 +61,6 @@ int Service::run()
         std::cerr << "[Service::run] output reversed bytes" << std::endl;
         filler->tx(true); // reverse bytes in filler packet, this modifies the packet so don't reverse it when used below
     }
-  
-    time(&_then); // prepare timer
 
   std::cerr << "[Service::run] Loop starts" << std::endl;
   std::cerr << "[Service::run] Lines per field: " << (int)_linesPerField << std::endl;
@@ -150,6 +149,8 @@ int Service::run()
 
 void Service::_updateEvents()
 {
+    uint16_t errflags = 0;
+    
     time_t masterClock = _configure->GetMasterClock();
     
     // Step the counters
@@ -178,6 +179,9 @@ void Service::_updateEvents()
             //std::cerr << now << " " << masterClock << "\n";
             
             if (masterClock < now || masterClock > now + FORWARDSBUFFER + 1){ // if internal master clock is behind real time, or too far ahead, resynchronise it.
+                errflags |= 1; // clock resync
+                if (masterClock < now)
+                    errflags |= 2; // clock behind
                 masterClock = now;
                 _configure->SetMasterClock(masterClock);
                 std::cerr << "[Service::_updateEvents] Resynchronising master clock" << std::endl; // emit warning
@@ -223,6 +227,17 @@ void Service::_updateEvents()
                 (*iterator)->SetEvent(ev);
             }
         }
+        
+        // DEBUG crude packets for timing measurement and monitoring
+        // TODO: generalise this and move it away into a nice class so it can be used for other things
+        vbit::Packet* pkt=new vbit::Packet(8,31,"                                        ");
+        std::ostringstream text;
+        text << "VBIT DEBUG: T=" << std::setfill('0') << std::setw(8) << std::uppercase << std::hex << masterClock;
+        text << " F=" << std::setw(2) << std::to_string(_fieldCounter);
+        text << " E=" << std::setw(2) << std::uppercase << std::hex << errflags;
+        pkt->IDLA(8, 4, 0xffff, _debugPacketCI++, text.str()); // hard code to datachannel 8, SPA 0xffff
+        std::cout.write(pkt->tx(masterClock), 42);
+        _lineCounter++;
     }
     // @todo Databroadcast events. Flag when there is data in the buffer.
 }

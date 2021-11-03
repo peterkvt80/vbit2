@@ -59,9 +59,10 @@ private:
     uint16_t _linesPerField;
 	uint16_t _lineCounter; // Which VBI line are we on? Used to signal a new field.
 	uint8_t _fieldCounter; // Which field? Used to time packet 8/30
-	std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
     
-    time_t _then;
+    uint8_t _debugPacketCI; // continuity indicator for debug packet databroadcast stream
+    
+	std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
 
 	vbit::PacketSubtitle* _subtitle; // Newfor needs to know which packet source is doing subtitles
 

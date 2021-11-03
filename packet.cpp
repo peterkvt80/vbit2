@@ -489,6 +489,64 @@ void Packet::Fastext(int* links, int mag)
 	}
 }
 
+void Packet::IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, std::string data)
+{
+    /* TODO: implement more generally - currently only supports what's needed by debug packets in Service::_updateEvents
+             This function will almost certainly be modified or replaced to implement datacast packets more generally later */
+    
+    _coding = CODING_8BIT_DATA; // don't allow this to be re-processed with parity etc
+    
+    SetMRAG(datachannel & 0x7,((datachannel & 8) >> 3) + 30);
+    
+    _packet[5]=HamTab[0]; // Format Type: no repeat, implicit CI, no DL
+    _packet[6]=HamTab[ial&0xf];
+    
+    uint8_t p = 7;
+    for (uint8_t i = 0; i < (ial&0x7) && i < 7; i++){
+        _packet[p++] = HamTab[(spa >> (4 * i)) & 0xf];
+    }
+    
+    strncpy(&_packet[p],data.c_str(),43 - p);
+    
+    uint16_t crc = 0;
+    
+    for (uint8_t i = p; i < 43; i++){
+        IDLcrc(&crc, _packet[i]); // calculate CRC for user data
+    }
+    
+    // if implicit ci...
+    uint16_t tmpcrc = crc; // stash the crc
+    
+    crc = (ci << 8) | ci; // initialise crc with ci value in both bytes
+    
+    ReverseCRC(&crc, tmpcrc>>8); // reverse the crc from desired value with previously calculated crc as the input
+    ReverseCRC(&crc, tmpcrc&0xff);
+    
+    _packet[43]=crc&0xff; // store modified crc in packet
+    _packet[44]=crc>>8;
+    
+    // else would just store the original crc
+}
+
+void Packet::IDLcrc(uint16_t *crc, uint8_t data)
+{
+    *crc ^= data;
+    
+    for (uint8_t i = 0; i < 8; i++){
+        *crc = (*crc & 1) ? (*crc >> 1) ^ 0x8940 : (*crc >> 1);
+    }
+}
+
+void Packet::ReverseCRC(uint16_t *crc, uint8_t byte)
+{
+    /* reverse the IDL A crc */
+    uint8_t bit;
+    for (uint8_t i = 0; i < 8; i++){
+        bit =  (byte >> (7-i)) & 1;
+        *crc = (*crc & 0x8000) ? (((*crc << 1) | bit) ^ 0x1281) : ((*crc << 1) | bit);
+    }
+}
+
 #ifdef RASPBIAN
 /** get_temp
  *  Pinched from raspi-teletext demo.c

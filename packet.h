@@ -109,6 +109,12 @@ class Packet
          */
 				void Fastext(int* links, int mag);
 
+        /*  Independent data line format A 
+            Only implements a subset of options for now.
+            This function declaration will almost certainly change or go away later.
+        */
+        void IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, std::string data);
+        
 				/**
 				 * @return The current row number
 				 */
@@ -139,6 +145,9 @@ class Packet
         uint32_t _page;//<! The page number this packet belongs to 00 to ff
         uint8_t _row; //<! Row number 0 to 31
         PageCoding _coding; // packet coding
+
+        void IDLcrc(uint16_t *crc, uint8_t data); // calculate a CRC checksum for one byte
+        void ReverseCRC(uint16_t *crc, uint8_t byte);
 
         bool get_offset_time(time_t t, char* str);
         bool get_net(char* str);
