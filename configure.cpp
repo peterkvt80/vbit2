@@ -40,6 +40,7 @@ Configure::Configure(int argc, char** argv) :
     _commandPortEnabled = false;
     
     _reverseBits = false;
+    _debug = false;
 
     _rowAdaptive = false;
     _linesPerField = 16; // default to 16 lines per field
@@ -65,6 +66,11 @@ Configure::Configure(int argc, char** argv) :
             else if (strncmp(argv[i],"--reverse",9)==0)
             {
                 _reverseBits = true;
+            }
+            else if (strncmp(argv[i],"--debug",7)==0)
+            {
+                _debug = true;
+                std::cerr << "[Configure::Configure] " << "debugging enabled" << std::endl;
             }
         }
     }

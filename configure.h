@@ -26,63 +26,66 @@ namespace ttx
 {
 class Configure
 {
-public:
-	//Configure();
-	/** Constructor can take overrides from the command line
-	 */
-	Configure(int argc=0, char** argv=NULL);
-	~Configure();
-
-	inline char* GetPageDirectory(){return _pageDir;};
-
-	std::string GetHeaderTemplate(){return _headerTemplate;}
-	bool GetRowAdaptive(){return _rowAdaptive;}
-	std::string GetServiceStatusString(){return _serviceStatusString;}
-	bool GetMultiplexedSignalFlag(){return _multiplexedSignalFlag;}
-	uint16_t GetNetworkIdentificationCode(){return _NetworkIdentificationCode;}
-	uint8_t GetInitialMag(){return _initialMag;}
-	uint8_t GetInitialPage(){return _initialPage;}
-	uint16_t GetInitialSubcode(){return _initialSubcode;}
-	uint8_t GetSubtitleRepeats(){return _subtitleRepeats;}
-	uint16_t GetCommandPort(){return _commandPort;}
-	bool GetCommandPortEnabled(){return _commandPortEnabled;}
-    uint16_t GetLinesPerField(){return _linesPerField;}
-    bool GetReverseFlag(){return _reverseBits;}
-    int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
-    
-    void SetMasterClock(time_t t){_masterClock = t;}
-    time_t GetMasterClock(){return _masterClock;}
-
-private:
-	int DirExists(char *path);
-
-	int LoadConfigFile(std::string filename);
-
-	// template string for generating header packets
-	std::string _headerTemplate;
-	
-	uint16_t _commandPort;
-
-	bool _rowAdaptive;
-    uint16_t _linesPerField;
-	// settings for generation of packet 8/30
-	bool _multiplexedSignalFlag; 	// false indicates teletext is multiplexed with video, true means full frame teletext.
-    int _magazinePriority[8];
-	uint8_t _initialMag;
-	uint8_t _initialPage;
-	uint16_t _initialSubcode;
-	uint16_t _NetworkIdentificationCode;
-	uint16_t _CountryNetworkIdentificationCode;
-	std::string _serviceStatusString; /// 20 characters
-	char _configFile[MAXPATH]; /// Configuration file name --config
-	char _pageDir[MAXPATH]; /// Configuration file name --dir
-	uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
-	bool _commandPortEnabled;
-    bool _reverseBits;
-    
-    time_t _masterClock;
-};
-
+    public:
+        //Configure();
+        /** Constructor can take overrides from the command line
+         */
+        Configure(int argc=0, char** argv=NULL);
+        ~Configure();
+        
+        inline char* GetPageDirectory(){return _pageDir;};
+        
+        std::string GetHeaderTemplate(){return _headerTemplate;}
+        bool GetRowAdaptive(){return _rowAdaptive;}
+        std::string GetServiceStatusString(){return _serviceStatusString;}
+        bool GetMultiplexedSignalFlag(){return _multiplexedSignalFlag;}
+        uint16_t GetNetworkIdentificationCode(){return _NetworkIdentificationCode;}
+        uint8_t GetInitialMag(){return _initialMag;}
+        uint8_t GetInitialPage(){return _initialPage;}
+        uint16_t GetInitialSubcode(){return _initialSubcode;}
+        uint8_t GetSubtitleRepeats(){return _subtitleRepeats;}
+        uint16_t GetCommandPort(){return _commandPort;}
+        bool GetCommandPortEnabled(){return _commandPortEnabled;}
+        uint16_t GetLinesPerField(){return _linesPerField;}
+        bool GetReverseFlag(){return _reverseBits;}
+        bool GetDebugFlag(){return _debug;}
+        int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
+        
+        void SetMasterClock(time_t t){_masterClock = t;}
+        time_t GetMasterClock(){return _masterClock;}
+        
+    private:
+        int DirExists(char *path);
+        
+        int LoadConfigFile(std::string filename);
+        
+        // template string for generating header packets
+        std::string _headerTemplate;
+        
+        uint16_t _commandPort;
+        
+        bool _rowAdaptive;
+        uint16_t _linesPerField;
+        
+        // settings for generation of packet 8/30
+        bool _multiplexedSignalFlag; 	// false indicates teletext is multiplexed with video, true means full frame teletext.
+        int _magazinePriority[8];
+        uint8_t _initialMag;
+        uint8_t _initialPage;
+        uint16_t _initialSubcode;
+        uint16_t _NetworkIdentificationCode;
+        uint16_t _CountryNetworkIdentificationCode;
+        std::string _serviceStatusString; /// 20 characters
+        
+        char _configFile[MAXPATH]; /// Configuration file name --config
+        char _pageDir[MAXPATH]; /// Configuration file name --dir
+        uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
+        bool _commandPortEnabled;
+        bool _reverseBits;
+        bool _debug;
+        
+        time_t _masterClock;
+    };
 }
 
 #endif
