@@ -55,13 +55,6 @@ int Service::run()
     vbit::Packet* pkt=new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
 
     static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // A pre-prepared quiet packet to avoid eating the heap
-  
-    bool reverse = _configure->GetReverseFlag();
-    if (reverse)
-    {
-        std::cerr << "[Service::run] output reversed bytes" << std::endl;
-        filler->tx(true); // reverse bytes in filler packet, this modifies the packet so don't reverse it when used below
-    }
 
     std::cerr << "[Service::run] Loop starts" << std::endl;
     std::cerr << "[Service::run] Lines per field: " << (int)_linesPerField << std::endl;
@@ -81,15 +74,13 @@ int Service::run()
         // Send ONLY one packet per loop
         _updateEvents();
         
-        time_t masterClock = _configure->GetMasterClock();
-        
         // Special case for subtitles. Subtitles always go if there is one waiting
         if (_subtitle->IsReady())
         {
             if (_subtitle->GetPacket(pkt) != nullptr){
-                std::cout.write(pkt->tx(masterClock, reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+                _packetOutput(pkt);
             } else {
-                std::cout.write(filler->tx(masterClock), 42);
+                _packetOutput(filler);
             }
         }
         else
@@ -131,14 +122,14 @@ int Service::run()
             {
                 // GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
                 if (p->GetPacket(pkt) != nullptr){
-                    std::cout.write(pkt->tx(masterClock, reverse), 42); // Transmit the packet - using cout.write to ensure writing 42 bytes even if it contains a null.
+                    _packetOutput(pkt);
                 } else {
-                    std::cout.write(filler->tx(masterClock), 42);
+                    _packetOutput(filler);
                 }
             }
             else
             {
-                std::cout.write(filler->tx(masterClock), 42);
+                _packetOutput(filler);
             }
         }
 
@@ -232,15 +223,35 @@ void Service::_updateEvents()
         if (_configure->GetDebugFlag()){
             // DEBUG crude packets for timing measurement and monitoring
             // TODO: generalise this and move it away into a nice class so it can be used for other things
-            vbit::Packet* pkt=new vbit::Packet(8,31,"                                        ");
+            static vbit::Packet* pkt=new vbit::Packet(8,31,"                                        "); // static to avoid eating memory - this should be a packet source using the one packet in run()
             std::ostringstream text;
             text << "VBIT DEBUG: T=" << std::setfill('0') << std::setw(8) << std::uppercase << std::hex << masterClock;
             text << " F=" << std::setw(2) << std::to_string(_fieldCounter);
             text << " E=" << std::setw(2) << std::uppercase << std::hex << errflags;
             pkt->IDLA(8, 4, 0xffff, _debugPacketCI++, text.str()); // hard code to datachannel 8, SPA 0xffff
-            std::cout.write(pkt->tx(masterClock), 42);
+            _packetOutput(pkt);
             _lineCounter++;
         }
     }
     // @todo Databroadcast events. Flag when there is data in the buffer.
+}
+
+void Service::_packetOutput(vbit::Packet* pkt)
+{
+    char *p = pkt->tx(_configure->GetMasterClock());
+    
+    /* t42 output */
+    if (_configure->GetReverseFlag())
+    {
+        static char tmp[PACKETSIZE];
+        for (int i=0;i<PACKETSIZE;i++)
+        {
+            tmp[i]=_vbi_bit_reverse[(uint8_t)(p[i])];
+        }
+        std::cout.write(tmp, 42);
+    }
+    else
+    {
+        std::cout.write(p, 42);
+    }
 }

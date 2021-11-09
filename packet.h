@@ -61,11 +61,8 @@ class Packet
          * There are one or two things that can affect the format.
          * We create transmission ready packets of 45 bytes.
          * raspi-teletext does not use the clock run and framing code in so we skip the first three bytes.
-         * The endian depends on the hardware attached.
-         * Sometimes we need to reverse the bit order
-         *
          */
-        char* tx(time_t t, bool reverse=false);
+        char* tx(time_t t);
 
         /** SetMRAG
          * Sets the first five bytes of the packet

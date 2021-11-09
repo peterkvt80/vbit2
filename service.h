@@ -73,7 +73,10 @@ private:
    * @brief Check if anything changed, and if so signal the event to the packet sources.
    * Must be called once per transmitted row so that it can maintain a field count
    */
-	void _updateEvents();
+    void _updateEvents();
+    
+    /* output a packet in the desired format */
+    void _packetOutput(vbit::Packet* pkt);
 
 };
 

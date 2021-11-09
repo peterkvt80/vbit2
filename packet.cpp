@@ -199,7 +199,7 @@ bool Packet::get_offset_time(time_t t, char* str)
  * but hard code this for now
  * Most of this should be rewritten for c++
  */
-char* Packet::tx(time_t t, bool reverse)
+char* Packet::tx(time_t t)
 {
     // Get local time
     struct tm * timeinfo;
@@ -368,14 +368,6 @@ char* Packet::tx(time_t t, bool reverse)
             stringToBytes(tmpptr,(char *)VBIT2_VERSION,6);
         }
         Parity(5); // redo the parity because substitutions will need processing
-    }
-
-    if (reverse)
-    {
-        for (int i=0;i<PACKETSIZE;i++)
-        {
-            _packet[i]=_vbi_bit_reverse[(uint8_t)(_packet[i])];
-        }
     }
     
     return &_packet[3]; // For raspi-pi we skip clock run in and framing code
