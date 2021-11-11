@@ -14,6 +14,7 @@
 #include <packetmag.h>
 #include <packet830.h>
 #include <packetsubtitle.h>
+#include <packetDebug.h>
 /// Eight magazines and subtitles (maybe other packets too)
 #define STREAMS 9
 
@@ -60,11 +61,11 @@ private:
 	uint16_t _lineCounter; // Which VBI line are we on? Used to signal a new field.
 	uint8_t _fieldCounter; // Which field? Used to time packet 8/30
     
-    uint8_t _debugPacketCI; // continuity indicator for debug packet databroadcast stream
-    
 	std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
 
 	vbit::PacketSubtitle* _subtitle; // Newfor needs to know which packet source is doing subtitles
+    
+    vbit::PacketDebug* _debug; // Debug packet source
 
 	// Member functions
 	void _register(vbit::PacketSource *src); /// Register packet sources

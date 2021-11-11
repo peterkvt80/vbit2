@@ -481,7 +481,7 @@ void Packet::Fastext(int* links, int mag)
 	}
 }
 
-void Packet::IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, std::string data)
+void Packet::IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, std::vector<uint8_t> data)
 {
     /* TODO: implement more generally - currently only supports what's needed by debug packets in Service::_updateEvents
              This function will almost certainly be modified or replaced to implement datacast packets more generally later */
@@ -498,7 +498,9 @@ void Packet::IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, st
         _packet[p++] = HamTab[(spa >> (4 * i)) & 0xf];
     }
     
-    strncpy(&_packet[p],data.c_str(),43 - p);
+    if (data.size() + p != 43)
+        data.resize(43-p, 0xAA); // protect against incorrectly sized payloads
+    std::copy(data.begin(), data.end(), &_packet[p]);
     
     uint16_t crc = 0;
     

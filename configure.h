@@ -51,6 +51,7 @@ class Configure
         bool GetDebugFlag(){return _debug;}
         int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
         
+        /* these don't really belong in configure, but it's the only place that everything can access */
         void SetMasterClock(time_t t){_masterClock = t;}
         time_t GetMasterClock(){return _masterClock;}
         

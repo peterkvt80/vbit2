@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <iostream>
+#include <vector>
 #include <iomanip>
 #include <cstring>
 #include <ctime>
@@ -110,7 +111,7 @@ class Packet
             Only implements a subset of options for now.
             This function declaration will almost certainly change or go away later.
         */
-        void IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, std::string data);
+        void IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, std::vector<uint8_t> data);
         
 				/**
 				 * @return The current row number

@@ -12,8 +12,7 @@ Service::Service()
 Service::Service(Configure *configure, PageList *pageList) :
     _configure(configure),
     _pageList(pageList),
-    _fieldCounter(49), // roll over immediately
-    _debugPacketCI(0) // continuity counter for debug datacast packets
+    _fieldCounter(49) // roll over immediately
 {
     vbit::PacketMag **magList=_pageList->GetMagazines();
     // Register all the packet sources
@@ -24,9 +23,11 @@ Service::Service(Configure *configure, PageList *pageList) :
         _register(m); // use the PacketMags created in pageList rather than duplicating them
     }
     
-    // Add packet sources for subtitles, databroadcast and packet 830
+    // Add packet sources for subtitles and packet 830
     _register(_subtitle=new PacketSubtitle(_configure));
     _register(new Packet830(_configure));
+    
+    _register(_debug=new PacketDebug(_configure));
     
     _linesPerField = _configure->GetLinesPerField();
     
@@ -74,8 +75,15 @@ int Service::run()
         // Send ONLY one packet per loop
         _updateEvents();
         
-        // Special case for subtitles. Subtitles always go if there is one waiting
-        if (_subtitle->IsReady())
+        if (_debug->IsReady()) // Special case for debug. Ensures it can have the first line of field
+        {
+            if (_debug->GetPacket(pkt) != nullptr){
+                _packetOutput(pkt);
+            } else {
+                _packetOutput(filler);
+            }
+        }
+        else if (_subtitle->IsReady()) // Special case for subtitles. Subtitles always go if there is one waiting
         {
             if (_subtitle->GetPacket(pkt) != nullptr){
                 _packetOutput(pkt);
@@ -141,43 +149,34 @@ int Service::run()
 
 void Service::_updateEvents()
 {
-    uint16_t errflags = 0;
-    
     time_t masterClock = _configure->GetMasterClock();
     
     // Step the counters
-    _lineCounter++;
+    _lineCounter = (_lineCounter + 1) % _linesPerField;
     
-    if (_lineCounter%_linesPerField==0) // new field
+    if (_lineCounter == 0) // new field
     {
-        std::cout << std::flush;
-        
-        _lineCounter=0;
-        
-        _fieldCounter++;
+        _fieldCounter = (_fieldCounter + 1) % 50;
         
         time_t now;
         time(&now);
         
         if (masterClock > now + FORWARDSBUFFER) // allow vbit2 to run into the future before limiting packet rate
-            std::this_thread::sleep_for(std::chrono::milliseconds(20)); // back off for 1 field to limit output to (less than) 50 fields per second
+            std::this_thread::sleep_for(std::chrono::milliseconds(20)); // back off for ≈1 field to limit output to (less than) 50 fields per second
         
-        if (_fieldCounter >= 50)
+        _debug->TimeAndField(masterClock, _fieldCounter, now); // update the clocks in debugPacket.
+        
+        if (_fieldCounter == 0)
         {
-            _fieldCounter = 0;
             masterClock++; // step the master clock
-            _configure->SetMasterClock(masterClock);
-            
-            //std::cerr << now << " " << masterClock << "\n";
             
             if (masterClock < now || masterClock > now + FORWARDSBUFFER + 1){ // if internal master clock is behind real time, or too far ahead, resynchronise it.
-                errflags |= 1; // clock resync
-                if (masterClock < now)
-                    errflags |= 2; // clock behind
                 masterClock = now;
-                _configure->SetMasterClock(masterClock);
-                std::cerr << "[Service::_updateEvents] Resynchronising master clock" << std::endl; // emit warning
+                
+                std::cerr << "[Service::_updateEvents] Resynchronising master clock" << std::endl; // emit warning on stderr
             }
+            
+            _configure->SetMasterClock(masterClock); // update 
             
             if (masterClock%15==0){ // how often do we want to trigger sending special packets?
                 for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
@@ -220,19 +219,10 @@ void Service::_updateEvents()
             }
         }
         
-        if (_configure->GetDebugFlag()){
-            // DEBUG crude packets for timing measurement and monitoring
-            // TODO: generalise this and move it away into a nice class so it can be used for other things
-            static vbit::Packet* pkt=new vbit::Packet(8,31,"                                        "); // static to avoid eating memory - this should be a packet source using the one packet in run()
-            std::ostringstream text;
-            text << "VBIT DEBUG: T=" << std::setfill('0') << std::setw(8) << std::uppercase << std::hex << masterClock;
-            text << " F=" << std::setw(2) << std::to_string(_fieldCounter);
-            text << " E=" << std::setw(2) << std::uppercase << std::hex << errflags;
-            pkt->IDLA(8, 4, 0xffff, _debugPacketCI++, text.str()); // hard code to datachannel 8, SPA 0xffff
-            _packetOutput(pkt);
-            _lineCounter++;
-        }
+        
+        std::cout << std::flush;
     }
+    
     // @todo Databroadcast events. Flag when there is data in the buffer.
 }
 
