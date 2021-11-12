@@ -108,10 +108,17 @@ class Packet
 				void Fastext(int* links, int mag);
 
         /*  Independent data line format A 
-            Only implements a subset of options for now.
-            This function declaration will almost certainly change or go away later.
+            returns the number of payload bytes which were transmitted
         */
-        void IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, std::vector<uint8_t> data);
+        enum IDLAFormatFlags : uint8_t
+        {
+            IDLA_NONE   = 0x0,
+            IDLA_RI     = 0x2,
+            IDLA_CI     = 0x4,
+            IDLA_DL     = 0x8
+        };
+        
+        int IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, uint8_t ri, uint8_t ci, std::vector<uint8_t> data);
         
 				/**
 				 * @return The current row number

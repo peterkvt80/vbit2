@@ -42,7 +42,7 @@ Packet* PacketDebug::GetPacket(Packet* p)
     data.push_back(_debugData.systemClock >> 8);
     data.push_back(_debugData.systemClock);
     
-    p->IDLA(_datachannel, 6, _servicePacketAddress, _debugPacketCI++, data);
+    p->IDLA(_datachannel, Packet::IDLA_DL, 6, _servicePacketAddress, 0, _debugPacketCI++, data);
     
     return p;
 }

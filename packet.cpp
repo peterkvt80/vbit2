@@ -481,45 +481,100 @@ void Packet::Fastext(int* links, int mag)
 	}
 }
 
-void Packet::IDLA(uint8_t datachannel, uint8_t ial, uint32_t spa, uint8_t ci, std::vector<uint8_t> data)
+int Packet::IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, uint8_t ri, uint8_t ci, std::vector<uint8_t> data)
 {
-    /* TODO: implement more generally - currently only supports what's needed by debug packets in Service::_updateEvents
-             This function will almost certainly be modified or replaced to implement datacast packets more generally later */
-    
     _coding = CODING_8BIT_DATA; // don't allow this to be re-processed with parity etc
     
     SetMRAG(datachannel & 0x7,((datachannel & 8) >> 3) + 30);
     
-    _packet[5]=HamTab[0]; // Format Type: no repeat, implicit CI, no DL
-    _packet[6]=HamTab[ial&0xf];
+    _packet[5]=HamTab[flags & 0xe]; // Format Type
+    _packet[6]=HamTab[ial&0xf]; // Interpretation and Address Length
     
     uint8_t p = 7;
+    
     for (uint8_t i = 0; i < (ial&0x7) && i < 7; i++){
-        _packet[p++] = HamTab[(spa >> (4 * i)) & 0xf];
+        _packet[p++] = HamTab[(spa >> (4 * i)) & 0xf]; // variable number of Service Packet Address nibbles
     }
     
-    if (data.size() + p != 43)
-        data.resize(43-p, 0xAA); // protect against incorrectly sized payloads
-    std::copy(data.begin(), data.end(), &_packet[p]);
+    if (flags & IDLA_RI)
+        _packet[p++]=ri; // Repeat Indicator
+    
+    uint8_t startOfCRC = p; // where the scope of CRC begins
+    
+    int sameCount = 0;
+    
+    if (flags & IDLA_CI)
+    {
+        _packet[p++]=ci; // explicit Continuity Indicator
+        sameCount = (ci == 0x00 || ci == 0xff) ? 1 : 0;
+    }
+    
+    uint8_t DLoffset = p; // store this position in case it needs to be updated later
+    if (flags & IDLA_DL)
+    {
+        _packet[p++] = 0; // initialise Data Length as zero and update it as we add bytes
+        sameCount = 0; // ignore this first zero as any amount of data that would result in a dummy byte would mean DL is > 0
+    }
+    
+    // remaining space is 45 - p - 2 crc bytes
+    
+    unsigned int bytesSent = 0; // count how much of the payload we fit in packet
+    while (p < 43)
+    {
+        if (bytesSent < data.size())
+        {
+            _packet[p] = data.at(bytesSent++);
+            if (flags & IDLA_DL)
+                _packet[DLoffset]++;
+            
+            if ((uint8_t)(_packet[p]) == 0xff || (uint8_t)(_packet[p]) == 0x00)
+            {
+                sameCount++;
+                
+                if ((uint8_t)(_packet[p]) == (uint8_t)(_packet[p-1])){
+                    if (sameCount > 7 && p < 42)
+                    {
+                        sameCount = 0;
+                        _packet[++p] = 0xaa; // add a dummy byte
+                        
+                        if (flags & IDLA_DL)
+                            _packet[DLoffset]++;
+                    }
+                }
+            }
+            else
+                sameCount = 0; // reset the counter for dummy bytes
+            
+            p++;
+        }
+        else
+        {
+            _packet[p++] = 0xaa; // fill unused part of packet with dummy bytes
+        }
+    }
     
     uint16_t crc = 0;
     
-    for (uint8_t i = p; i < 43; i++){
+    for (uint8_t i = startOfCRC; i < 43; i++){
         IDLcrc(&crc, _packet[i]); // calculate CRC for user data
     }
     
-    // if implicit ci...
-    uint16_t tmpcrc = crc; // stash the crc
-    
-    crc = (ci << 8) | ci; // initialise crc with ci value in both bytes
-    
-    ReverseCRC(&crc, tmpcrc>>8); // reverse the crc from desired value with previously calculated crc as the input
-    ReverseCRC(&crc, tmpcrc&0xff);
+    if (!(flags & IDLA_CI)) // implicit Continuity Indicator
+    {
+        // modify the CRC so that both bytes are equal to ci
+        
+        uint16_t tmpcrc = crc; // stash the crc
+        
+        crc = (ci << 8) | ci; // initialise crc with ci value in both bytes
+        
+        ReverseCRC(&crc, tmpcrc>>8); // reverse the crc from desired value with previously calculated crc as the input
+        ReverseCRC(&crc, tmpcrc&0xff);
+    }
     
     _packet[43]=crc&0xff; // store modified crc in packet
     _packet[44]=crc>>8;
     
-    // else would just store the original crc
+    return bytesSent;
 }
 
 void Packet::IDLcrc(uint16_t *crc, uint8_t data)
