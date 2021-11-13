@@ -9,7 +9,6 @@
 #include <cstring>
 #include <ctime>
 #include "tables.h"
-#include "hamm-tables.h"
 #include <cassert>
 #include "ttxpage.h"
 
@@ -139,21 +138,13 @@ namespace vbit
 
             bool get_offset_time(time_t t, uint8_t* str);
             bool get_net(char* str);
+            
             /** Hamming 24/18
-             * The incoming triplet should be packed 18 bits of an int 32 representing D1..D18
-             * The int is repacked with parity bits
+             * Hamming 24/18 encode a triplet and place at appropriate index in packet
+             * The incoming triplet should be packed 18 bits of an uint32_t representing D1..D18
+             * The triplet is repacked with parity bits
              */
-            void SetTriplet(int ix, int triplet);
-
-            /**
-             * @param p A Hamming 24/18 protected 24 bit word will be stored here,
-             *   last significant byte first, lsb first transmitted.
-             * @param c Integer between 0 ... 1 << 18 - 1.
-             *
-             * Encodes an 18 bit word with Hamming 24/18 protection
-             * as specified in ETS 300 706, Section 8.3.
-             */
-            void vbi_ham24p(uint8_t *p, unsigned int c);
+            void Hamming24EncodeTriplet(uint8_t index, uint32_t triplet);
             
             #ifdef RASPBIAN
             bool get_temp(char* str);

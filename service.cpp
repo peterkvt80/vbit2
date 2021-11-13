@@ -73,17 +73,23 @@ int Service::run()
         
         if (_debug->IsReady()) // Special case for debug. Ensures it can have the first line of field
         {
-            if (_debug->GetPacket(pkt) != nullptr){
+            if (_debug->GetPacket(pkt) != nullptr)
+            {
                 _packetOutput(pkt);
-            } else {
+            }
+            else
+            {
                 _packetOutput(filler);
             }
         }
         else if (_subtitle->IsReady()) // Special case for subtitles. Subtitles always go if there is one waiting
         {
-            if (_subtitle->GetPacket(pkt) != nullptr){
+            if (_subtitle->GetPacket(pkt) != nullptr)
+            {
                 _packetOutput(pkt);
-            } else {
+            }
+            else
+            {
                 _packetOutput(filler);
             }
         }
@@ -125,9 +131,12 @@ int Service::run()
             if (p)
             {
                 // GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
-                if (p->GetPacket(pkt) != nullptr){
+                if (p->GetPacket(pkt) != nullptr)
+                {
                     _packetOutput(pkt);
-                } else {
+                }
+                else
+                {
                     _packetOutput(filler);
                 }
             }
@@ -166,7 +175,9 @@ void Service::_updateEvents()
         {
             masterClock++; // step the master clock
             
-            if (masterClock < now || masterClock > now + FORWARDSBUFFER + 1){ // if internal master clock is behind real time, or too far ahead, resynchronise it.
+            // if internal master clock is behind real time, or too far ahead, resynchronise it.
+            if (masterClock < now || masterClock > now + FORWARDSBUFFER + 1)
+            {
                 masterClock = now;
                 
                 std::cerr << "[Service::_updateEvents] Resynchronising master clock" << std::endl; // emit warning on stderr
@@ -174,7 +185,8 @@ void Service::_updateEvents()
             
             _configure->SetMasterClock(masterClock); // update 
             
-            if (masterClock%15==0){ // how often do we want to trigger sending special packets?
+            if (masterClock%15==0) // TODO: how often do we want to trigger sending special packets?
+            {
                 for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
                 {
                     (*iterator)->SetEvent(EVENT_SPECIAL_PAGES);
@@ -194,21 +206,31 @@ void Service::_updateEvents()
             switch (_fieldCounter/10)
             {
                 case 0:
+                {
                     ev=EVENT_P830_FORMAT_1;
                     break;
+                }
                 case 1:
+                {
                     ev=EVENT_P830_FORMAT_2_LABEL_0;
                     break;
+                }
                 case 2:
+                {
                     ev=EVENT_P830_FORMAT_2_LABEL_1;
                     break;
+                }
                 case 3:
+                {
                     ev=EVENT_P830_FORMAT_2_LABEL_2;
                     break;
+                }
                 case 4:
+                {
                     ev=EVENT_P830_FORMAT_2_LABEL_3;
                     break;
                 }
+            }
             for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
             {
                 (*iterator)->SetEvent(ev);
@@ -232,7 +254,7 @@ void Service::_packetOutput(vbit::Packet* pkt)
         static std::array<uint8_t, PACKETSIZE> tmp;
         for (unsigned int i=0;i<(p->size());i++)
         {
-            tmp[i]=_vbi_bit_reverse[p->at(i)];
+            tmp[i]=ReverseByteTab[p->at(i)];
         }
         p = &tmp;
     }

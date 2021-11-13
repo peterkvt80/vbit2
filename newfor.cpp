@@ -16,9 +16,7 @@
 
 // Packet Subtitles are stored here
 
-// uint8_t subtitleCache [SUBTITLEPACKETCOUNT][PACKETSIZE];	/// Storage for 8 packets, 45 bytes per packet. (for packetCache)
-
-static uint8_t _page;	/// Page number (in hex). This is set by Page Init
+static uint8_t _page; /// Page number (in hex). This is set by Page Init
 static uint8_t _rowcount; /// Number of rows in this subtitle
 // static char packet[PACKETSIZE];
 
@@ -26,16 +24,16 @@ using namespace vbit;
 
 // This is not so pretty. @todo Factor this out of TCPClient
 static int
-vbi_unham8			(unsigned int		c)
+vbi_unham8 (unsigned int c)
 {
-	return _vbi_hamm8_inv[(uint8_t) c];
+    return Hamming8DecodeTable[(uint8_t) c];
 }
 
 
 Newfor::Newfor(PacketSubtitle* subtitle) :
-  _subtitle(subtitle)
+    _subtitle(subtitle)
 {
-		ttxpage.SetSubCode(0);
+    ttxpage.SetSubCode(0);
 }
 
 Newfor::~Newfor()
@@ -45,10 +43,12 @@ Newfor::~Newfor()
 /** initNu4
  * @detail Initialise the buffers used by Newfor
  */
-//void InitNu4()
-//{
-//	bufferInit(packetCache   ,(char*)subtitleCache ,SUBTITLEPACKETCOUNT);
-//}
+/*
+void Newfor::InitNu4()
+{
+    bufferInit(packetCache, (char*)subtitleCache ,SUBTITLEPACKETCOUNT);
+}
+*/
 
 
 /**
@@ -61,46 +61,41 @@ Newfor::~Newfor()
  */
 int Newfor::SoftelPageInit(char* cmd)
 {
-  int page=0;
-  int n;
+    int page=0;
+    int n;
 
-
-  // Useless leading 0
-  n=vbi_unham8(cmd[1]);
-  if (n<0) return 0x900; // @todo This is an error.
-  // Hundreds
-  n=vbi_unham8(cmd[2]);
-  if (n<1 || n>8) return 0x901;
-  page=n*0x100;
-  // tens (hex allowed!)
-  n=vbi_unham8(cmd[3]);
-  if (n<0 || n>0x0f) return 0x902;
-  page+=n*0x10;
-  // units
-  n=vbi_unham8(cmd[4]);
-  if (n<0 || n>0x0f) return 0x903;
-  page+=n;
-  _page=page;
-	ttxpage.SetPageNumber(page*0x100);
-  return page;
+    // Useless leading 0
+    n=vbi_unham8(cmd[1]);
+    if (n<0) return 0x900; // @todo This is an error.
+        n=vbi_unham8(cmd[2]); // Hundreds
+    if (n<1 || n>8) return 0x901;
+        page=n*0x100; // tens (hex allowed!)
+    n=vbi_unham8(cmd[3]);
+    if (n<0 || n>0x0f) return 0x902;
+        page+=n*0x10; // units
+    n=vbi_unham8(cmd[4]);
+    if (n<0 || n>0x0f) return 0x903;
+        page+=n;
+    _page=page;
+    ttxpage.SetPageNumber(page*0x100);
+    return page;
 }
 
 void Newfor::SubtitleOnair(char* response)
 {
-	strcpy(response,"Response not implemented, sorry\n");
-	// Send the page to the subtitle object in the service thread, then clear the lines.
-  _subtitle->SendSubtitle(&ttxpage);
+    strcpy(response,"Response not implemented, sorry\n");
+    // Send the page to the subtitle object in the service thread, then clear the lines.
+    _subtitle->SendSubtitle(&ttxpage);
 
-	for (int i=0;i<24;i++) // Some broadcasters sent the subs out more than once. We don't.
-	{
-			ttxpage.SetRow(i,"                                        ");
-	}
-
+    for (int i=0;i<24;i++) // Some broadcasters sent the subs out more than once. We don't.
+    {
+        ttxpage.SetRow(i,"                                        ");
+    }
 }
 
 void Newfor::SubtitleOffair()
 {
-  _subtitle->SendSubtitle(&ttxpage);	// OnAir will already have cleared out these lines so just send the page again
+    _subtitle->SendSubtitle(&ttxpage); // OnAir will already have cleared out these lines so just send the page again
 }
 
 /**
@@ -109,11 +104,11 @@ void Newfor::SubtitleOffair()
  */
 int Newfor::GetRowCount(char* cmd)
 {
-  int n=vbi_unham8(cmd[1]);
-  if (n>7)
-	n=0;
-  _rowcount=n;
-  return n;
+    int n=vbi_unham8(cmd[1]);
+    if (n>7)
+        n=0;
+    _rowcount=n;
+    return n;
 }
 
 /**
@@ -125,8 +120,8 @@ int Newfor::GetRowCount(char* cmd)
  */
 void Newfor::saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd)
 {
-	(void)mag; // temporary silence error about unused parameter
-	// What @todo about the mag? This needs to be decoded and passed on
-	if (cmd[0]==0) cmd[0]='?'; // @todo Temporary measure to defeat null strings (this will inevitably multiply problems!)
-	ttxpage.SetRow(row, cmd);
+    (void)mag; // temporary silence error about unused parameter
+    // What @todo about the mag? This needs to be decoded and passed on
+    if (cmd[0]==0) cmd[0]='?'; // @todo Temporary measure to defeat null strings (this will inevitably multiply problems!)
+    ttxpage.SetRow(row, cmd);
 }

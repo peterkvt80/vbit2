@@ -51,10 +51,10 @@ loop:
     {
         _page = nullptr;
     }
-	else if (_page->IsCarousel() && _page->GetCarouselPage() == NULL)
-	{
-		_page->StepNextSubpageNoLoop(); // ensure we don't point at a null subpage
-	}
+    else if (_page->IsCarousel() && _page->GetCarouselPage() == NULL)
+    {
+        _page->StepNextSubpageNoLoop(); // ensure we don't point at a null subpage
+    }
     
     if (_page)
     {

@@ -40,37 +40,34 @@ using namespace ttx;
 
 /* Options
  * --dir <path to pages>
- * Example (and default)
- * --dir /home/pi/teletext
  * Sets the pages directory and the location of vbit.conf.
  */
 
 int main(int argc, char** argv)
 {
-	#ifdef WIN32
-	_setmode(_fileno(stdout), _O_BINARY); // set stdout to binary mode stdout to avoid pesky line ending conversion
-	#endif
-	// std::cout << "VBIT2 started" << std::endl;
-	/// @todo option of adding a non standard config path
-	Configure *configure=new Configure(argc, argv);
-	PageList *pageList=new PageList(configure);
+    #ifdef WIN32
+    _setmode(_fileno(stdout), _O_BINARY); // set stdout to binary mode stdout to avoid pesky line ending conversion
+    #endif
+    /// @todo option of adding a non standard config path
+    Configure *configure=new Configure(argc, argv);
+    PageList *pageList=new PageList(configure);
 
-  Service* svc=new Service(configure, pageList); // Need to copy the subtitle packet source for Newfor
+    Service* svc=new Service(configure, pageList); // Need to copy the subtitle packet source for Newfor
 
-	std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
-	std::thread serviceThread(&Service::run, svc);
-	
-	if (configure->GetCommandPortEnabled())
-	{
-		// only start command thread if required
-		std::thread commandThread(&Command::run, Command(configure, svc->GetSubtitle(), pageList) );
-		commandThread.join();
-	}
-	
-	// The threads should never stop, but just in case...
-	monitorThread.join();
-	serviceThread.join();
+    std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
+    std::thread serviceThread(&Service::run, svc);
 
-	return 0;
+    if (configure->GetCommandPortEnabled())
+    {
+        // only start command thread if required
+        std::thread commandThread(&Command::run, Command(configure, svc->GetSubtitle(), pageList) );
+        commandThread.join();
+    }
+
+    // The threads should never stop, but just in case...
+    monitorThread.join();
+    serviceThread.join();
+
+    return 0;
 }
 

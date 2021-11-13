@@ -34,11 +34,11 @@ using namespace vbit;
 using namespace ttx;
 
 Command::Command(Configure *configure, PacketSubtitle* subtitle=nullptr, PageList *pageList=nullptr) :
-	_portNumber(configure->GetCommandPort()),
-	_client(subtitle, pageList)
+    _portNumber(configure->GetCommandPort()),
+    _client(subtitle, pageList)
 {
     // Constructor
-		// Start a listener thread
+    // Start a listener thread
 }
 
 Command::~Command()
@@ -69,7 +69,8 @@ void Command::run()
 
     // Initialize Winsock
     iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
-    if (iResult != 0) {
+    if (iResult != 0)
+    {
         DieWithError("WSAStartup failed");
     }
 #else
@@ -87,11 +88,11 @@ void Command::run()
 
     /* Create socket for incoming connections */
     if ((serverSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
-      DieWithError("socket() failed\n");
+        DieWithError("socket() failed\n");
 
     /* Bind to the local address */
     if (bind(serverSock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0)
-      DieWithError("bind() failed");
+        DieWithError("bind() failed");
 
     /* Mark the socket so it will listen for incoming connections */
     if (listen(serverSock, MAXPENDING) < 0)

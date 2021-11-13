@@ -14,7 +14,6 @@
 #include <assert.h>
 
 #include "ttxline.h"
-#include "hamm-tables.h"
 
 #define FIRSTPAGE 0x1ff00
 
@@ -178,8 +177,6 @@ class TTXPage
          */
         inline bool PageChanged(){return pageChanged;};
         static bool pageChanged;         // / True if we have done some edits
-
-        void DebugDump() const;
 
         inline bool Loaded() const {return m_Loaded;};
         

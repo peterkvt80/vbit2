@@ -82,7 +82,7 @@ int PageList::ReadDirectory(std::string filepath)
         }
         
         //p=new TTXPageStream(filepath+"/"+dirp->d_name);
-        if (std::string(dirp->d_name).find(".tti") != std::string::npos)	// Is the file type .tti or ttix?
+        if (std::string(dirp->d_name).find(".tti") != std::string::npos) // Is the file type .tti or ttix?
         {
             q=new TTXPageStream(filepath+"/"+dirp->d_name);
             // If the page loaded, then push it into the appropriate magazine
@@ -128,17 +128,23 @@ void PageList::CheckForPacket29(TTXPageStream* page)
                 switch (tempLine->GetCharAt(0))
                 {
                     case '@':
+                    {
                         Packet29Flag = true;
                         _mag[mag]->SetPacket29(0, new TTXLine(tempLine->GetLine(), true));
                         break;
+                    }
                     case 'A':
+                    {
                         Packet29Flag = true;
                         _mag[mag]->SetPacket29(1, new TTXLine(tempLine->GetLine(), true));
                         break;
+                    }
                     case 'D':
+                    {
                         Packet29Flag = true;
                         _mag[mag]->SetPacket29(2, new TTXLine(tempLine->GetLine(), true));
                         break;
+                    }
                 }
                 
                 tempLine = tempLine->GetNextLine();

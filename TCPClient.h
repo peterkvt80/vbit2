@@ -52,76 +52,71 @@
 
 #include "pagelist.h"
 #include "newfor.h"
-#include "hamm-tables.h"
 
 #include "packetsubtitle.h"
 
 namespace vbit
 {
+    class TCPClient
+    {
+        public:
+            TCPClient(PacketSubtitle* subtitle, ttx::PageList* pageList);
+            ~TCPClient();
+            void Handler(int clntSocket);
 
-class TCPClient
-{
-public:
-  TCPClient(PacketSubtitle* subtitle, ttx::PageList* pageList);
- ~TCPClient();
- void Handler(int clntSocket);
+        private:
+            // Constants
+            static const uint8_t MAXCMD=128;
+            static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */
 
-private:
-  // Constants
-  static const uint8_t MAXCMD=128;
-  static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */
+            // Normal command mode
+            static const uint8_t MODENORMAL=0;
+            static const uint8_t MODESOFTELPAGEINIT=1;
+            // Get row count
+            static const uint8_t MODEGETROWCOUNT=3;
+            // Get a row of data
+            static const uint8_t MODEGETROW=4;
+            // Display the row
+            static const uint8_t MODESUBTITLEONAIR=5;
+            // Clear down
+            static const uint8_t MODESUBTITLEOFFAIR=6;
+            static const uint8_t MODESUBTITLEDATAHIGHNYBBLE=7;
+            static const uint8_t MODESUBTITLEDATALOWNYBBLE=8;
 
-// Normal command mode
-  static const uint8_t MODENORMAL=0;
-  static const uint8_t MODESOFTELPAGEINIT=1;
-// Get row count
-  static const uint8_t MODEGETROWCOUNT=3;
-// Get a row of data
-  static const uint8_t MODEGETROW=4;
-// Display the row
-  static const uint8_t MODESUBTITLEONAIR=5;
-// Clear down
-  static const uint8_t MODESUBTITLEOFFAIR=6;
-  static const uint8_t MODESUBTITLEDATAHIGHNYBBLE=7;
-  static const uint8_t MODESUBTITLEDATALOWNYBBLE=8;
+            // Variables
+            char _cmd[MAXCMD];  // command buffer
+            char* _pCmd;        // Pointer into the command buffer
+            Newfor _newfor;
+            int _row;           // Row counter
+            char* _pkt;         // A teletext packet (one row of VBI)
+            int _rowAddress;    // The address of this row
 
-  // Variables
-  char _cmd[MAXCMD];	/// command buffer
-  char* _pCmd;		/// Pointer into the command buffer
-  Newfor _newfor;
-  int _row; // Row counter
-  char* _pkt;	// A teletext packet (one row of VBI)
-  int _rowAddress; // The address of this row
+            /** The page address in MPPSS (hex. 10000..8FF99. Omitting trailing characters defaults to 0
+             * wildcard
+             */
+            char _pageNumber[6];
 
-  /// The page address in MPPSS (hex. 10000..8FF99. Omitting trailing characters defaults to 0
-  /// * wildcard
-  char _pageNumber[6];
-
-  ttx::PageList* _pageList;	/// List of pages for XTP620 commands to access
-
-
-  // Functions
-  void clearCmd(void);
-  void addChar(char ch, char* response);
-  void command(char* cmd, char* response);	/// Handles XPT620 commands
-  void DieWithError(std::string errorMessage);
-
-  /** Validate a page identity of the form mppss
-   *  Where:
-   *  m=1..8
-   *  p=0..f
-   *  s=0,,9
-   *  and any digit can be wildcarded with *
-   *  and trailing digits can be omitted where they will be defaulted to 0
-   * \param src - the page identity parameter of a P command. (only one allowed in this implementation)
-   * \param dest - the validated page number
-   * \return true if the page identity is valid
-   */
-  bool Validate(char* dest, char* src);
-
-}; // TCPClient
-
-} // End of namespace vbit
+            ttx::PageList* _pageList; // List of pages for XTP620 commands to access
 
 
+            // Functions
+            void clearCmd(void);
+            void addChar(char ch, char* response);
+            void command(char* cmd, char* response); // Handles XPT620 commands
+            void DieWithError(std::string errorMessage);
+
+            /** Validate a page identity of the form mppss
+             *  Where:
+             *  m=1..8
+             *  p=0..f
+             *  s=0,,9
+             *  and any digit can be wildcarded with *
+             *  and trailing digits can be omitted where they will be defaulted to 0
+             * \param src - the page identity parameter of a P command. (only one allowed in this implementation)
+             * \param dest - the validated page number
+             * \return true if the page identity is valid
+             */
+            bool Validate(char* dest, char* src);
+    };
+}
 #endif

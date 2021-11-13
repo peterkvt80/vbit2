@@ -10,12 +10,12 @@ PacketSubtitle::PacketSubtitle(ttx::Configure *configure) :
     _repeatCount(_configure->GetSubtitleRepeats()),
     _C8Flag(true)
 {
-  //ctor
+    //ctor
 }
 
 PacketSubtitle::~PacketSubtitle()
 {
-  //dtor
+    //dtor
 }
 
 Packet* PacketSubtitle::GetPacket(Packet* p)
@@ -28,9 +28,12 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
     switch (_state)
     {
         case SUBTITLE_STATE_IDLE : // This can not happen. We can't put out a packet if we are in idle.
+        {
             std::cerr << "[PacketSubtitle::GetPacket] can not happen" << std::endl;
             break;
+        }
         case SUBTITLE_STATE_HEADER:
+        {
             std::cerr << "[PacketSubtitle::GetPacket] Header. repeat count=" << (int)_repeatCount << std::endl;
             // Construct the header packet and then wait for a field
             {
@@ -43,12 +46,14 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
                 }
                 p->Header(mag, page, 0, status); // Create the header
             }
-            p->HeaderText("XENOXXX INDUSTRIES         CLOCK");	// Only Jason will see this if he decodes a tape.
+            p->HeaderText("XENOXXX INDUSTRIES         CLOCK"); // Only Jason will see this if he decodes a tape.
             ClearEvent(EVENT_FIELD);
             _state=SUBTITLE_STATE_TEXT_ROW;
-            _rowCount=1;	// Set up iterator for page rows
+            _rowCount=1; // Set up iterator for page rows
             break;
+        }
         case SUBTITLE_STATE_TEXT_ROW:
+        {
             // 1) Copy the next non-null row to p
             if (_rowCount<24)
             {
@@ -64,9 +69,12 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
                 // @todo Check that IsReady prevents this branch from ever being taken
             }
             break;
+        }
         case SUBTITLE_STATE_NUMBER_ITEMS:
+        {
             std::cerr << "[PacketSubtitle::IsReady] This is impossible" << std::endl;
             break;
+        }
     }
     _mtx.unlock(); // unlock the critical section
     return p;
@@ -83,23 +91,28 @@ bool PacketSubtitle::IsReady(bool force)
     _mtx.lock(); // lock the critical section
     switch (_state)
     {
-    case SUBTITLE_STATE_IDLE : // Process starts with EVENT_SUBTITLE
-        if (GetEvent(EVENT_SUBTITLE))
+        case SUBTITLE_STATE_IDLE : // Process starts with EVENT_SUBTITLE
         {
-            ClearEvent(EVENT_SUBTITLE);
-            _state=SUBTITLE_STATE_HEADER;
-            result=true;
+            if (GetEvent(EVENT_SUBTITLE))
+            {
+                ClearEvent(EVENT_SUBTITLE);
+                _state=SUBTITLE_STATE_HEADER;
+                result=true;
+            }
+            break;
         }
-        break;
-    case SUBTITLE_STATE_HEADER:
-        if (GetEvent(EVENT_FIELD))
+        case SUBTITLE_STATE_HEADER:
         {
-            result=true;
+            if (GetEvent(EVENT_FIELD))
+            {
+                result=true;
+            }
+            break;
         }
-        break;
-    case SUBTITLE_STATE_TEXT_ROW:
-        // Iterate through to the next non blank row.
-        for (;_rowCount<24;_rowCount++)
+        case SUBTITLE_STATE_TEXT_ROW:
+        {
+            // Iterate through to the next non blank row.
+            for (;_rowCount<24;_rowCount++)
             {
                 if (!_page[_swap].GetRow(_rowCount)->IsBlank())
                 {
@@ -144,9 +157,12 @@ bool PacketSubtitle::IsReady(bool force)
                 }
             }
             break;
-    case SUBTITLE_STATE_NUMBER_ITEMS:
-        std::cerr << "[PacketSubtitle::IsReady] This is impossible" << std::endl;
-        break;
+        }
+        case SUBTITLE_STATE_NUMBER_ITEMS:
+        {
+            std::cerr << "[PacketSubtitle::IsReady] This is impossible" << std::endl;
+            break;
+        }
     }
     _mtx.unlock(); // unlock the critical section
     return result;

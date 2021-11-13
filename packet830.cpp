@@ -3,19 +3,19 @@
 using namespace vbit;
 
 Packet830::Packet830(ttx::Configure *configure) :
-  _configure(configure)
+    _configure(configure)
 {
-  //ctor
-  ClearEvent(EVENT_P830_FORMAT_1);
-  ClearEvent(EVENT_P830_FORMAT_2_LABEL_0 );
-  ClearEvent(EVENT_P830_FORMAT_2_LABEL_1 );
-  ClearEvent(EVENT_P830_FORMAT_2_LABEL_2 );
-  ClearEvent(EVENT_P830_FORMAT_2_LABEL_3 );
+    //ctor
+    ClearEvent(EVENT_P830_FORMAT_1);
+    ClearEvent(EVENT_P830_FORMAT_2_LABEL_0 );
+    ClearEvent(EVENT_P830_FORMAT_2_LABEL_1 );
+    ClearEvent(EVENT_P830_FORMAT_2_LABEL_2 );
+    ClearEvent(EVENT_P830_FORMAT_2_LABEL_3 );
 }
 
 Packet830::~Packet830()
 {
-  //dtor
+    //dtor
 }
 
 Packet* Packet830::GetPacket(Packet* p)
@@ -36,23 +36,23 @@ Packet* Packet830::GetPacket(Packet* p)
     uint8_t m = _configure->GetInitialMag();
     uint8_t pn = _configure->GetInitialPage();
     uint16_t sc = _configure->GetInitialSubcode();
-    data.at(1) = HamTab[pn & 0xF];
-    data.at(2) = HamTab[(pn & 0xF0) >> 4];
-    data.at(3) = HamTab[sc & 0xF];
-    data.at(4) = HamTab[((sc & 0xF0) >> 4) | ((m & 1) << 3)];
-    data.at(5) = HamTab[(sc & 0xF00) >> 8];
-    data.at(6) = HamTab[((sc & 0xF000) >> 12) | ((m & 6) << 1)];
+    data.at(1) = Hamming8EncodeTable[pn & 0xF];
+    data.at(2) = Hamming8EncodeTable[(pn & 0xF0) >> 4];
+    data.at(3) = Hamming8EncodeTable[sc & 0xF];
+    data.at(4) = Hamming8EncodeTable[((sc & 0xF0) >> 4) | ((m & 1) << 3)];
+    data.at(5) = Hamming8EncodeTable[(sc & 0xF00) >> 8];
+    data.at(6) = Hamming8EncodeTable[((sc & 0xF000) >> 12) | ((m & 6) << 1)];
 
     std::copy_n(_configure->GetServiceStatusString().begin(), 20, data.begin() + 20); // copy status display from std::string into packet data
 
     if (GetEvent(EVENT_P830_FORMAT_1))
     {
         ClearEvent(EVENT_P830_FORMAT_1);
-        data.at(0) = HamTab[muxed]; // Format 1 designation code
+        data.at(0) = Hamming8EncodeTable[muxed]; // Format 1 designation code
         
         uint16_t nic = _configure->GetNetworkIdentificationCode();
-        data.at(7) = _vbi_bit_reverse[(nic & 0xFF00) >> 8];
-        data.at(8) = _vbi_bit_reverse[nic & 0xFF];
+        data.at(7) = ReverseByteTab[(nic & 0xFF00) >> 8];
+        data.at(8) = ReverseByteTab[nic & 0xFF];
         
         /* calculate number of seconds local time is offset from UTC */
         tmLocal = localtime(&timeRaw);
@@ -100,28 +100,28 @@ Packet* Packet830::GetPacket(Packet* p)
     if (GetEvent(EVENT_P830_FORMAT_2_LABEL_0))
     {
         ClearEvent(EVENT_P830_FORMAT_2_LABEL_0);
-        data.at(0) = HamTab[muxed | 2]; // Format 2 designation code
+        data.at(0) = Hamming8EncodeTable[muxed | 2]; // Format 2 designation code
         
         //@todo
     }
     if (GetEvent(EVENT_P830_FORMAT_2_LABEL_1))
     {
         ClearEvent(EVENT_P830_FORMAT_2_LABEL_1);
-        data.at(0) = HamTab[muxed | 2]; // Format 2 designation code
+        data.at(0) = Hamming8EncodeTable[muxed | 2]; // Format 2 designation code
         
         //@todo
     }
     if (GetEvent(EVENT_P830_FORMAT_2_LABEL_2))
     {
         ClearEvent(EVENT_P830_FORMAT_2_LABEL_2);
-        data.at(0) = HamTab[muxed | 2]; // Format 2 designation code
+        data.at(0) = Hamming8EncodeTable[muxed | 2]; // Format 2 designation code
         
         //@todo
     }
     if (GetEvent(EVENT_P830_FORMAT_2_LABEL_3))
     {
         ClearEvent(EVENT_P830_FORMAT_2_LABEL_3 );
-        data.at(0) = HamTab[muxed | 2]; // Format 2 designation code
+        data.at(0) = Hamming8EncodeTable[muxed | 2]; // Format 2 designation code
         
         //@todo
     }
@@ -138,16 +138,16 @@ bool Packet830::IsReady(bool force)
         GetEvent(EVENT_P830_FORMAT_2_LABEL_1) ||
         GetEvent(EVENT_P830_FORMAT_2_LABEL_2) ||
         GetEvent(EVENT_P830_FORMAT_2_LABEL_3);
-  return result;
+    return result;
 }
 
 long Packet830::calculateMJD(int year, int month, int day)
 {
-	// calculate modified julian day number
-	int a, b, c, d;
-	a = (month - 14) / 12;
-	b = day - 32075 + (1461 * (year + 4800 + a) / 4);
-	c = (367 * (month - 2 - 12 * a) / 12);
-	d = 3 * (((year + 4900 + a) / 100) / 4);
-	return b + c - d - 2400001;
+    // calculate modified julian day number
+    int a, b, c, d;
+    a = (month - 14) / 12;
+    b = day - 32075 + (1461 * (year + 4800 + a) / 4);
+    c = (367 * (month - 2 - 12 * a) / 12);
+    d = 3 * (((year + 4900 + a) / 100) / 4);
+    return b + c - d - 2400001;
 }

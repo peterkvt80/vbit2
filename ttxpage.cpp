@@ -137,116 +137,144 @@ bool TTXPage::m_LoadTTI(std::string filename)
                 found=true;
                 switch (i)
                 {
-                case 0 : // "DS" - Destination inserter name
-                    // DS,inserter
-                    std::getline(filein, m_destination);
-                    break;
-                case 1 : // "SP" - Source page file name
-                    // SP is the path + name of the file from where is was loaded. Used also for Save.
-                    // SP,c:\Minited\inserter\ONAIR\P100.tti
-
-                    std::getline(filein, line);
-                    break;
-                case 2 : // "DE" - Description
-                    // DE,Read back page  20/11/07
-                    std::getline(filein, m_description);
-                    break;
-                case 3 : // "CT" - Cycle time (seconds)
-                    // CT,8,T
-                    std::getline(filein, line, ',');
-                    p->SetCycleTime(atoi(line.c_str()));
-                    std::getline(filein, line);
-                    m_cycletimetype=line[0]=='T'?'T':'C';
-                    // TODO: CT is not decoded correctly
-                    break;
-                case 4 : // "PN" - Page Number mppss
-                    // Where m=1..8
-                    // pp=00 to ff (hex)
-                    // ss=00 to 99 (decimal)
-                    // PN,10000
-                    std::getline(filein, line);
-                    if (line.length()<3) // Must have at least three characters for a page number
+                    case 0 : // "DS" - Destination inserter name
+                    {
+                        // DS,inserter
+                        std::getline(filein, m_destination);
                         break;
-                    m=line[0];
-                    if (m<'1' || m>'8') // Magazine must be 1 to 8
+                    }
+                    case 1 : // "SP" - Source page file name
+                    {
+                        // SP is the path + name of the file from where is was loaded. Used also for Save.
+                        // SP,c:\Minited\inserter\ONAIR\P100.tti
+
+                        std::getline(filein, line);
                         break;
-                    pageNumber=std::strtol(line.c_str(), &ptr, 16);
-                    if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
-                    {
-                        pageNumber*=0x100;
                     }
-                    else   // Normally has subpage digits
+                    case 2 : // "DE" - Description
                     {
-                        subpage=line.substr(3,2);
-                        pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),nullptr,10);
+                        // DE,Read back page  20/11/07
+                        std::getline(filein, m_description);
+                        break;
                     }
-                    if (p->m_PageNumber!=FIRSTPAGE) // // Subsequent pages need new page instances
+                    case 3 : // "CT" - Cycle time (seconds)
                     {
-                        int pagestatus = p->GetPageStatus();
-                        TTXPage* newSubPage=new TTXPage();  // Create a new instance for the subpage
-                        p->Setm_SubPage(newSubPage);            // Put in a link to it
-                        p=newSubPage;                       // And jump to the next subpage ready to populate
-                        p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
-                        p->SetCycleTimeMode(m_cycletimetype); // inherit cycle time
-                        p->SetCycleTime(m_cycletimeseconds);
+                        // CT,8,T
+                        std::getline(filein, line, ',');
+                        p->SetCycleTime(atoi(line.c_str()));
+                        std::getline(filein, line);
+                        m_cycletimetype=line[0]=='T'?'T':'C';
+                        // TODO: CT is not decoded correctly
+                        break;
                     }
-                    p->SetPageNumber(pageNumber);
+                    case 4 : // "PN" - Page Number mppss
+                    {
+                        // Where m=1..8
+                        // pp=00 to ff (hex)
+                        // ss=00 to 99 (decimal)
+                        // PN,10000
+                        std::getline(filein, line);
+                        if (line.length()<3) // Must have at least three characters for a page number
+                            break;
+                        m=line[0];
+                        if (m<'1' || m>'8') // Magazine must be 1 to 8
+                            break;
+                        pageNumber=std::strtol(line.c_str(), &ptr, 16);
+                        if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
+                        {
+                            pageNumber*=0x100;
+                        }
+                        else   // Normally has subpage digits
+                        {
+                            subpage=line.substr(3,2);
+                            pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),nullptr,10);
+                        }
+                        if (p->m_PageNumber!=FIRSTPAGE) // // Subsequent pages need new page instances
+                        {
+                            int pagestatus = p->GetPageStatus();
+                            TTXPage* newSubPage=new TTXPage();  // Create a new instance for the subpage
+                            p->Setm_SubPage(newSubPage);            // Put in a link to it
+                            p=newSubPage;                       // And jump to the next subpage ready to populate
+                            p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
+                            p->SetCycleTimeMode(m_cycletimetype); // inherit cycle time
+                            p->SetCycleTime(m_cycletimeseconds);
+                        }
+                        p->SetPageNumber(pageNumber);
 
-                    break;
-                case 5 : // "SC" - Subcode
-                    // SC,0000
-                    std::getline(filein, line);
-                    subcode=std::strtol(line.c_str(), &ptr, 16);
-
-                    p->SetSubCode(subcode);
-                    break;
-                case 6 : // "PS" - Page status flags
-                    // PS,8000
-                    std::getline(filein, line);
-                    p->SetPageStatus(std::strtol(line.c_str(), &ptr, 16));
-                    break;
-                case 7 : // "MS" - Mask
-                    // MS,0
-                    std::getline(filein, line); // Mask is intended for TED to protecting regions from editing.
-                    break;
-                case 8 : // "OL" - Output line
-                    std::getline(filein, line, ',');
-                    lineNumber=atoi(line.c_str());
-                    std::getline(filein, line);
-                    if (lineNumber>MAXROW) break;
-                    p->SetRow(lineNumber,line);
-                    lines++;
-                    break;
-                case 9 : // "FL"; - Fastext links
-                    // FL,104,104,105,106,F,100
-                    for (int fli=0;fli<6;fli++)
+                        break;
+                    }
+                    case 5 : // "SC" - Subcode
                     {
-                        if (fli<5)
-                            std::getline(filein, line, ',');
+                        // SC,0000
+                        std::getline(filein, line);
+                        subcode=std::strtol(line.c_str(), &ptr, 16);
+
+                        p->SetSubCode(subcode);
+                        break;
+                    }
+                    case 6 : // "PS" - Page status flags
+                    {
+                        // PS,8000
+                        std::getline(filein, line);
+                        p->SetPageStatus(std::strtol(line.c_str(), &ptr, 16));
+                        break;
+                    }
+                    case 7 : // "MS" - Mask
+                    {
+                        // MS,0
+                        std::getline(filein, line); // Mask is intended for TED to protecting regions from editing.
+                        break;
+                    }
+                    case 8 : // "OL" - Output line
+                    {
+                        std::getline(filein, line, ',');
+                        lineNumber=atoi(line.c_str());
+                        std::getline(filein, line);
+                        if (lineNumber>MAXROW) break;
+                        p->SetRow(lineNumber,line);
+                        lines++;
+                        break;
+                    }
+                    case 9 : // "FL"; - Fastext links
+                    {
+                        // FL,104,104,105,106,F,100
+                        for (int fli=0;fli<6;fli++)
+                        {
+                            if (fli<5)
+                                std::getline(filein, line, ',');
+                            else
+                                std::getline(filein, line); // Last parameter no comma
+                            p->SetFastextLink(fli,std::strtol(line.c_str(), &ptr, 16));
+                        }
+                        break;
+                    }
+                    case 10 : // "RD"; - not sure!
+                    {
+                        std::getline(filein, line);
+                        break;
+                    }
+                    case 11 : // "RE"; - Set page region code 0..f
+                    {
+                        std::getline(filein, line);
+                        p->SetRegion(std::strtol(line.c_str(), &ptr, 16));
+                        break;
+                    }
+                    case 12 : // "PF"; - not in the tti spec, page function and coding
+                    {
+                        std::getline(filein, line);
+                        if (line.length()<3)
+                            ss << "invalid page function/coding " << line << "\n";
                         else
-                            std::getline(filein, line); // Last parameter no comma
-                        p->SetFastextLink(fli,std::strtol(line.c_str(), &ptr, 16));
+                        {
+                            SetPageFunctionInt(std::strtol(line.substr(0,1).c_str(), &ptr, 16));
+                            SetPageCodingInt(std::strtol(line.substr(2,1).c_str(), &ptr, 16));
+                        }
+                        break;
                     }
-                    break;
-                case 10 : // "RD"; - not sure!
-                    std::getline(filein, line);
-                    break;
-                case 11 : // "RE"; - Set page region code 0..f
-                    std::getline(filein, line);
-                    p->SetRegion(std::strtol(line.c_str(), &ptr, 16));
-                    break;
-                case 12 : // "PF"; - not in the tti spec, page function and coding
-                    std::getline(filein, line);
-                    if (line.length()<3)
-                        ss << "invalid page function/coding " << line << "\n";
-                    else
+                    default:
                     {
-                        SetPageFunctionInt(std::strtol(line.substr(0,1).c_str(), &ptr, 16));
-                        SetPageCodingInt(std::strtol(line.substr(2,1).c_str(), &ptr, 16));
+                        ss << "Command not understood " << line << "\n";
                     }
-                    break;
-                default:
-                    ss << "Command not understood " << line << "\n";
                 } // switch
             } // if matched command
             // If the command was not found then skip the rest of the line
@@ -328,9 +356,11 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
     // assert(rownumber<=MAXROW);
     if (rownumber>MAXROW) return;
 
-    if (rownumber == 28 && line.length() >= 40){
+    if (rownumber == 28 && line.length() >= 40)
+    {
         dc = line.at(0) & 0x0F;
-        if (dc == 0 || dc == 2 || dc == 3 || dc == 4){
+        if (dc == 0 || dc == 2 || dc == 3 || dc == 4)
+        {
             // packet is X/28/0, X/28/2, X/28/3, or X/28/4
             int triplet = line.at(1) & 0x3F;
             triplet |= (line.at(2) & 0x3F) << 6;
@@ -381,7 +411,8 @@ int TTXPage::GetPageCount()
         // Annex A.1 states that pages with no sub-pages should be coded Mxx-0000. This is the default when no subcode is specified in tti file.
         // Annex E.2 states that the subcode may be used to transmit a BCD time code, e.g for an alarm clock. Where a non zero subcode is specified in the tti file keep it.
         
-        if (Special()){
+        if (Special())
+        {
             // "Special" pages (e.g. MOT, POP, GPOP, DRCS, GDRCS, MIP) should be coded sequentially in hexadecimal 0000-000F
             this->SetSubCode(0);
         }
@@ -394,7 +425,8 @@ int TTXPage::GetPageCount()
         for (int i=0;i<4;i++) code[i]=0;
         for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
         {
-            if (Special()){
+            if (Special())
+            {
                 // "Special" pages (e.g. MOT, POP, GPOP, DRCS, GDRCS, MIP) should be coded sequentially in hexadecimal 0000-000F
                 subcode = count;
             }
@@ -505,75 +537,98 @@ void TTXPage::SetFastextLink(int link, int value)
  */
 void TTXPage::Copy(TTXPage* src)
 {
-  // Deep copy the rows.
-  for (int i=0;i<=MAXROW;i++)
-  {
-    // Make sure that we have line object and that it does not get destroyed
-
-    if (this->m_pLine[i]==nullptr)
+    // Deep copy the rows.
+    for (int i=0;i<=MAXROW;i++)
     {
-      this->m_pLine[i]=new TTXLine();
-    }
+        // Make sure that we have line object and that it does not get destroyed
 
-    // If null then blank the line
-    if (src->m_pLine[i]==nullptr)
-    {
-      this->SetRow(i,"                                        "); // Just blank lines rather than destroy them
-    }
-    else
-    {
-      *(this->m_pLine[i])=*(src->m_pLine[i]);
-    }
+        if (this->m_pLine[i]==nullptr)
+        {
+            this->m_pLine[i]=new TTXLine();
+        }
 
-  }
-	this->m_SubPage=nullptr;  // (Might want to copy carousels but this is only used for subtitles so far)
-  // Copy everything else
-  this->CopyMetaData(src);
+        // If null then blank the line
+        if (src->m_pLine[i]==nullptr)
+        {
+            this->SetRow(i,"                                        "); // Just blank lines rather than destroy them
+        }
+        else
+        {
+            *(this->m_pLine[i])=*(src->m_pLine[i]);
+        }
+    }
+    this->m_SubPage=nullptr;  // (Might want to copy carousels but this is only used for subtitles so far)
+    // Copy everything else
+    this->CopyMetaData(src);
 }
 
 void TTXPage::SetPageFunctionInt(int pageFunction)
 {
-    switch (pageFunction){
+    switch (pageFunction)
+    {
         default: // treat page functions we don't know as level one pages
         case 0:
+        {
             m_pagefunction = LOP;
             break;
+        }
         case 2:
+        {
             m_pagefunction = GPOP;
             break;
+        }
         case 3:
+        {
             m_pagefunction = POP;
             break;
+        }
         case 4:
+        {
             m_pagefunction = GDRCS;
             break;
+        }
         case 5:
+        {
             m_pagefunction = DRCS;
             break;
+        }
         case 6:
+        {
             m_pagefunction = MOT;
             break;
+        }
         case 7:
+        {
             m_pagefunction = MIP;
             break;
+        }
         case 8:
+        {
             m_pagefunction = BTT;
             break;
+        }
         case 9:
+        {
             m_pagefunction = AIT;
             break;
+        }
         case 10:
+        {
             m_pagefunction = MPT;
             break;
+        }
         case 11:
+        {
             m_pagefunction = MPT_EX;
             break;
+        }
     }
 }
 
 PageCoding TTXPage::ReturnPageCoding(int pageCoding)
 {
-    switch (pageCoding){
+    switch (pageCoding)
+    {
         default: // treat codings we don't know yet as normal text.
         case 0:
             return CODING_7BIT_TEXT;

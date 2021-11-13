@@ -28,20 +28,20 @@ using namespace vbit;
 using namespace ttx;
 
 FileMonitor::FileMonitor(Configure *configure, PageList *pageList) :
-	_configure(configure),_pageList(pageList)
+    _configure(configure),_pageList(pageList)
 {
-  //ctor
+    //ctor
 }
 
 FileMonitor::FileMonitor()
-  : _pageList(nullptr)
+    : _pageList(nullptr)
 {
-  //ctor
+    //ctor
 }
 
 FileMonitor::~FileMonitor()
 {
-  //dtor
+    //dtor
 }
 
 void FileMonitor::run()
@@ -72,7 +72,8 @@ void FileMonitor::run()
     }
 } // run
 
-int FileMonitor::readDirectory(std::string path){
+int FileMonitor::readDirectory(std::string path)
+{
     struct dirent *dirp;
     struct stat attrib;
     

@@ -69,7 +69,7 @@ class Configure
         uint16_t _linesPerField;
         
         // settings for generation of packet 8/30
-        bool _multiplexedSignalFlag; 	// false indicates teletext is multiplexed with video, true means full frame teletext.
+        bool _multiplexedSignalFlag; // false indicates teletext is multiplexed with video, true means full frame teletext.
         int _magazinePriority[8];
         uint8_t _initialMag;
         uint8_t _initialPage;

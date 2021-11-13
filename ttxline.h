@@ -19,10 +19,10 @@ class TTXLine
         /** Default destructor */
         virtual ~TTXLine();
 
-      /** Set the teletext line contents
-       * \param val - New value to set
-       * \param validateLine - If true, it ensures the line is checked and modified if needed to be transmission ready.
-       */
+        /** Set the teletext line contents
+         * \param val - New value to set
+         * \param validateLine - If true, it ensures the line is checked and modified if needed to be transmission ready.
+         */
         void Setm_textline(std::string const& val, bool validateLine=true);
 
         /** Access m_textline
@@ -49,23 +49,19 @@ class TTXLine
          */
         char GetCharAt(int xLoc);
 
-				/** Adds line to a linked list
-				 *  This is used for enhanced packets which might require multiples of the same row
-				 */
-				void AppendLine(std::string  const& line);
+        /** Adds line to a linked list
+         *  This is used for enhanced packets which might require multiples of the same row
+         */
+        void AppendLine(std::string  const& line);
 
-				TTXLine* GetNextLine(){return _nextLine;}
-
-				void Dump();
+        TTXLine* GetNextLine(){return _nextLine;}
 
     protected:
     private:
         std::string validate(std::string const& test);
 
         std::string m_textline;
-				TTXLine* _nextLine;
-				// If SetLine or SetChar can set the changed flag.
-
+        TTXLine* _nextLine;
 };
 
 #endif // TTXLINE_H

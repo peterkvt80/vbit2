@@ -4,7 +4,8 @@
 
 using namespace ttx;
 
-int Configure::DirExists(char *path){
+int Configure::DirExists(char *path)
+{
     struct stat info;
 
     if(stat(path, &info ) != 0)
@@ -111,7 +112,8 @@ int Configure::LoadConfigFile(std::string filename)
     // these are all the valid strings for config lines
     std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats","enable_command_port","command_port","lines_per_field","magazine_priority" };
 
-    if (filein.is_open()){
+    if (filein.is_open())
+    {
         ss << "[Configure::LoadConfigFile] opened " << filename << "\n";
         std::cerr << ss.str();
 
@@ -119,52 +121,70 @@ int Configure::LoadConfigFile(std::string filename)
         std::string name;
         std::string value;
         TTXLine* header = new TTXLine();
-        while (std::getline(filein >> std::ws, line)){
-            if (line.front() != ';'){ // ignore comments
+        while (std::getline(filein >> std::ws, line))
+        {
+            if (line.front() != ';') // ignore comments
+            { 
                 std::size_t delim = line.find("=", 0);
                 int error = 0;
 
-                if (delim != std::string::npos){
+                if (delim != std::string::npos)
+                {
                     name = line.substr(0, delim);
                     value = line.substr(delim + 1);
                     iter = find(nameStrings.begin(), nameStrings.end(), name);
-                    if(iter != nameStrings.end()){
+                    if(iter != nameStrings.end())
+                    {
                         // matched string
-                        switch(iter - nameStrings.begin()){
+                        switch(iter - nameStrings.begin())
+                        {
                             case 0: // header_template
+                            {
                                 header->Setm_textline(value,true);
                                 value = header->GetLine();
                                 value.resize(32,' ');
                                 _headerTemplate.assign(value);
                                 break;
-
+                            }
                             case 1: // initial_teletext_page
-                                if (value.size() >= 3){
+                            {
+                                if (value.size() >= 3)
+                                {
                                     size_t idx;
                                     int magpage;
                                     int subcode;
-                                    try {
+                                    try
+                                    {
                                         magpage = stoi(std::string(value, 0, 3), &idx, 16);
-                                    } catch (const std::invalid_argument& ia) {
+                                    }
+                                    catch (const std::invalid_argument& ia)
+                                    {
                                         error = 1;
                                         break;
                                     }
-                                    if (magpage < 0x100 || magpage > 0x8FF || (magpage & 0xFF) == 0xFF){
+                                    if (magpage < 0x100 || magpage > 0x8FF || (magpage & 0xFF) == 0xFF)
+                                    {
                                         error = 1;
                                         break;
                                     }
-                                    if (value.size() > 3){
-                                        if ((value.size() != 8) || (value.at(idx) != ':')){
+                                    if (value.size() > 3)
+                                    {
+                                        if ((value.size() != 8) || (value.at(idx) != ':'))
+                                        {
                                             error = 1;
                                             break;
                                         }
-                                        try {
+                                        try
+                                        {
                                             subcode = stoi(std::string(value, 4, 4), &idx, 16);
-                                        } catch (const std::invalid_argument& ia) {
+                                        }
+                                        catch (const std::invalid_argument& ia)
+                                        {
                                             error = 1;
                                             break;
                                         }
-                                        if (subcode < 0x0000 || subcode > 0x3F7F || subcode & 0xC080){
+                                        if (subcode < 0x0000 || subcode > 0x3F7F || subcode & 0xC080)
+                                        {
                                             error = 1;
                                             break;
                                         }
@@ -176,94 +196,153 @@ int Configure::LoadConfigFile(std::string filename)
                                 }
                                 error = 1;
                                 break;
-
+                            }
                             case 2: // row_adaptive_mode
-                                if (!value.compare("true")){
+                            {
+                                if (!value.compare("true"))
+                                {
                                     _rowAdaptive = true;
-                                } else if (!value.compare("false")){
+                                }
+                                else if (!value.compare("false"))
+                                {
                                     _rowAdaptive = false;
-                                } else {
+                                }
+                                else
+                                {
                                     error = 1;
                                 }
                                 break;
+                            }
                             case 3: // "network_identification_code" - four character hex. eg. FA6F
-                                if (value.size() == 4){
+                            {
+                                if (value.size() == 4)
+                                {
                                     size_t idx;
-                                    try {
+                                    try
+                                    {
                                         _NetworkIdentificationCode = stoi(std::string(value, 0, 4), &idx, 16);
-                                    } catch (const std::invalid_argument& ia) {
+                                    }
+                                    catch (const std::invalid_argument& ia)
+                                    {
                                         error = 1;
                                         break;
                                     }
-                                } else {
+                                }
+                                else
+                                {
                                     error = 1;
                                 }
                                 break;
+                            }
                             case 4: // "country_network_identification" - four character hex. eg. 2C2F
-                                if (value.size() == 4){
+                            {
+                                if (value.size() == 4)
+                                {
                                     size_t idx;
-                                    try {
+                                    try
+                                    {
                                         _CountryNetworkIdentificationCode = stoi(std::string(value, 0, 4), &idx, 16);
-                                    } catch (const std::invalid_argument& ia) {
+                                    }
+                                    catch (const std::invalid_argument& ia)
+                                    {
                                         error = 1;
                                         break;
                                     }
-                                } else {
+                                }
+                                else
+                                {
                                     error = 1;
                                 }
                                 break;
+                            }
                             case 5: // "full_field"
+                            {
                                 break;
+                            }
                             case 6: // "status_display"
+                            {
                                 value.resize(20,' '); // string must be 20 characters
                                 _serviceStatusString.assign(value);
                                 break;
+                            }
                             case 7: // "subtitle_repeats" - The number of times a subtitle transmission is repeated 0..9
-                                if (value.size() == 1){
-                                    try {
+                            {
+                                if (value.size() == 1)
+                                {
+                                    try
+                                    {
                                         _subtitleRepeats = stoi(std::string(value, 0, 1));
-                                    } catch (const std::invalid_argument& ia) {
+                                    }
+                                    catch (const std::invalid_argument& ia)
+                                    {
                                         error = 1;
                                         break;
                                     }
-                                } else {
+                                }
+                                else
+                                {
                                     error = 1;
                                 }
                                 break;
+                            }
                             case 8: // "enable_command_port"
-                                if (!value.compare("true")){
+                            {
+                                if (!value.compare("true"))
+                                {
                                     _commandPortEnabled = true;
-                                } else if (!value.compare("false")){
+                                }
+                                else if (!value.compare("false"))
+                                {
                                     _commandPortEnabled = false;
-                                } else {
+                                }
+                                else
+                                {
                                     error = 1;
                                 }
                                 break;
+                            }
                             case 9: // "command_port"
-                                if (value.size() > 0 && value.size() < 6){
-                                    try {
+                            {
+                                if (value.size() > 0 && value.size() < 6)
+                                {
+                                    try
+                                    {
                                         _commandPort = stoi(std::string(value, 0, 5));
-                                    } catch (const std::invalid_argument& ia) {
+                                    }
+                                    catch (const std::invalid_argument& ia)
+                                    {
                                         error = 1;
                                         break;
                                     }
-                                } else {
+                                }
+                                else
+                                {
                                     error = 1;
                                 }
                                 break;
+                            }
                             case 10: // "lines_per_field"
-                                if (value.size() > 0 && value.size() < 4){
-                                    try {
+                            {
+                                if (value.size() > 0 && value.size() < 4)
+                                {
+                                    try
+                                    {
                                         _linesPerField = stoi(std::string(value, 0, 3));
-                                    } catch (const std::invalid_argument& ia) {
+                                    }
+                                    catch (const std::invalid_argument& ia)
+                                    {
                                         error = 1;
                                         break;
                                     }
-                                } else {
+                                }
+                                else
+                                {
                                     error = 1;
                                 }
                                 break;
+                            }
                             case 11: // "magazine_priority"
+                            {
                                 std::stringstream ss(value);
                                 std::string temps;
                                 int tmp[8];
@@ -272,9 +351,12 @@ int Configure::LoadConfigFile(std::string filename)
                                 {
                                     if (std::getline(ss, temps, ','))
                                     {
-                                        try {
+                                        try
+                                        {
                                             tmp[i] = stoi(temps);
-                                        } catch (const std::invalid_argument& ia) {
+                                        }
+                                        catch (const std::invalid_argument& ia)
+                                        {
                                             error = 1;
                                             break;
                                         }
@@ -293,8 +375,11 @@ int Configure::LoadConfigFile(std::string filename)
                                 for (i=0; i<8; i++)
                                     _magazinePriority[i] = tmp[i];
                                 break;
+                            }
                         }
-                    } else {
+                    }
+                    else
+                    {
                         error = 1; // unrecognised config line
                     }
                 }
@@ -307,7 +392,9 @@ int Configure::LoadConfigFile(std::string filename)
         }
         filein.close();
         return 0;
-    } else {
+    }
+    else
+    {
         std::cerr << "[Configure::LoadConfigFile] open failed\n";
         return -1;
     }

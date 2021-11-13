@@ -25,29 +25,39 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
     switch(coding)
     {
         case CODING_PER_PACKET:
+        {
             _coding = TTXPage::ReturnPageCoding(_packet[5] & 0xF); // set packet coding based on first byte of packet
             /* fallthrough */
+            [[gnu::fallthrough]];
+        }
         case CODING_13_TRIPLETS:
         case CODING_HAMMING_8_4:
         case CODING_HAMMING_7BIT_GROUPS:
-            _packet[5] = HamTab[_packet[5] & 0x0F]; // first byte is hamming 8/4 coded
+        {
+            _packet[5] = Hamming8EncodeTable[_packet[5] & 0x0F]; // first byte is hamming 8/4 coded
             break;
-            
+        }
         case CODING_7BIT_TEXT:
-            _packet[5] = ParTab[_packet[5] & 0x7f]; // set parity on first byte
+        {
+            _packet[5] = OddParityTable[_packet[5] & 0x7f]; // set parity on first byte
+        }
         default:
+        {
             break;
+        }
     }
     
     switch(_coding)
     {
         default: // treat an invalid coding as 7-bit text
         case CODING_7BIT_TEXT:
+        {
             // first byte parity already set by first switch statement
             Parity(6);
             break;
-            
+        }
         case CODING_13_TRIPLETS:
+        {
             // Special handler to allow stuffing enhancement packets in as OL rows
             // Each 18 bits of data for a triplet is coded in the input line as
             // three bytes least significant first where each byte contains 6 data
@@ -55,45 +65,50 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
             // designation code is 8/4 hamming coded by first switch statement
             /* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish) */
             int triplet;
-            for (int i = 1; i<=13; i++){
+            for (int i = 1; i<=13; i++)
+            {
                 triplet = _packet[i*3+3] & 0x3F;
                 triplet |= (_packet[i*3+4] & 0x3F) << 6;
                 triplet |= (_packet[i*3+5] & 0x3F) << 12;
-                SetTriplet(i, triplet);
+                Hamming24EncodeTriplet(i, triplet);
             }
             break;
-            
+        }
         case CODING_HAMMING_8_4:
+        {
             // first byte already hamming 8/4 coded by first switch statement
             for (int i = 1; i<40; i++)
             {
-                _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
+                _packet[5+i] = Hamming8EncodeTable[_packet[5+i] & 0x0F];
             }
             break;
-            
+        }
         case CODING_HAMMING_7BIT_GROUPS:
+        {
             // first byte already hamming 8/4 coded by first switch statement
             for (int i = 1; i<8; i++)
             {
-                _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
+                _packet[5+i] = Hamming8EncodeTable[_packet[5+i] & 0x0F];
             }
             for (int i = 8; i<20; i++)
             {
-                _packet[5+i] = ParTab[(uint8_t)(_packet[5+i]&0x7f)];
+                _packet[5+i] = OddParityTable[(uint8_t)(_packet[5+i]&0x7f)];
             }
             for (int i = 20; i<28; i++)
             {
-                _packet[5+i] = HamTab[_packet[5+i] & 0x0F];
+                _packet[5+i] = Hamming8EncodeTable[_packet[5+i] & 0x0F];
             }
             for (int i = 28; i<40; i++)
             {
-                _packet[5+i] = ParTab[(uint8_t)(_packet[5+i]&0x7f)];
+                _packet[5+i] = OddParityTable[(uint8_t)(_packet[5+i]&0x7f)];
             }
             break;
-        
+        }
         case CODING_8BIT_DATA:
+        {
             // do nothing to 8-bit data
             break;
+        }
     }
 }
 
@@ -118,8 +133,8 @@ void Packet::SetMRAG(uint8_t mag, uint8_t row)
     _packet[1]=0x55; // clock run in
     _packet[2]=0x27; // framing code
     
-    _packet[3]=HamTab[mag%8+((row%2)<<3)]; // mag + bit 3 is the lowest bit of row
-    _packet[4]=HamTab[((row>>1)&0x0f)];
+    _packet[3]=Hamming8EncodeTable[mag%8+((row%2)<<3)]; // mag + bit 3 is the lowest bit of row
+    _packet[4]=Hamming8EncodeTable[((row>>1)&0x0f)];
     _isHeader=row==0;
     _row=row;
     _mag=mag;
@@ -189,11 +204,11 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx(time_t t)
                 _packet[off]=_mag+'0';
             _packet[off+1]=_page/0x10+'0';
             if (_packet[off+1]>'9')
-                _packet[off+1]=_packet[off+1]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
+                _packet[off+1]=_packet[off+1]-'0'-10+'A'; // Particularly poor hex conversion algorithm
 
             _packet[off+2]=_page%0x10+'0';
             if (_packet[off+2]>'9')
-                _packet[off+2]=_packet[off+2]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
+                _packet[off+2]=_packet[off+2]-'0'-10+'A'; // Particularly poor hex conversion algorithm
         }
         
         // day name - %%a
@@ -295,7 +310,8 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx(time_t t)
         // ======= TEMPERATURE ========
         off = Packet::GetOffsetOfSubstition("%%%T");
         
-        if (off > -1) {
+        if (off > -1)
+        {
             #ifdef RASPBIAN
             get_temp(tmpstr);
             std::copy_n(tmpstr,4,_packet.begin() + off);
@@ -309,10 +325,12 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx(time_t t)
         for (;;)
         {
             off = Packet::GetOffsetOfSubstition("%t+");
-            if (off == -1) {
+            if (off == -1)
+            {
                 off = Packet::GetOffsetOfSubstition("%t-");
             }
-            if (off > -1) {
+            if (off > -1)
+            {
                 //std::cout << "[test 1]" << _packet << std::endl;
                 get_offset_time(t, _packet.data() + off); // TODO: something with return value
                 //exit(4);
@@ -323,7 +341,8 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx(time_t t)
         // ======= NETWORK ========
         // Special case for network address. Put %%%%%%%%%%%%%%n to get network address in form xxx.yyy.zzz.aaa with trailing spaces (15 characters total)
         off = Packet::GetOffsetOfSubstition("%%%%%%%%%%%%%%n");
-        if (off > -1) {
+        if (off > -1)
+        {
             #ifndef WIN32
             get_net(tmpstr);
             std::copy_n(tmpstr,15,_packet.begin() + off);
@@ -334,14 +353,16 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx(time_t t)
         // ======= TIME AND DATE ========
         // Special case for system time. Put %%%%%%%%%%%%timedate to get time and date
         off = Packet::GetOffsetOfSubstition("%%%%%%%%%%%%timedate");
-        if (off > -1) {
+        if (off > -1)
+        {
             strftime(tmpstr, 21, "\x02%a %d %b\x03%H:%M/%S", timeinfo);
             std::copy_n(tmpstr,20,_packet.begin() + off);
         }
         // ======= VERSION ========
         // %%%%%V version number eg. v2.0.0
         off = Packet::GetOffsetOfSubstition("%%%%%V");
-        if (off > -1) {
+        if (off > -1)
+        {
             std::copy_n(VBIT2_VERSION,6,_packet.begin() + off);
         }
         Parity(5); // redo the parity because substitutions will need processing
@@ -356,9 +377,9 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
 {
     uint8_t cbit;
     SetMRAG(mag,0);
-    _packet[5]=HamTab[page%0x10];
-    _packet[6]=HamTab[page/0x10];
-    _packet[7]=HamTab[(subcode&0x0f)]; // S1 four bits
+    _packet[5]=Hamming8EncodeTable[page%0x10];
+    _packet[6]=Hamming8EncodeTable[page/0x10];
+    _packet[7]=Hamming8EncodeTable[(subcode&0x0f)];         // S1 four bits
     subcode>>=4;
     // Map the page settings control bits from MiniTED to actual teletext packet.
     // To find the MiniTED settings look at the tti format document.
@@ -366,27 +387,28 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     // So for each bit in ETSI document, just divide the bit number by 2 to find the target location.
     // Where ETSI says bit 8,6,4,2 this maps to 4,3,2,1 (where the bits are numbered 1 to 8)
     cbit=0;
-    if (control & 0x4000) cbit=0x08;	// C4 Erase page
-    _packet[8]=HamTab[(subcode&0x07) | cbit]; // S2 (3 bits) add C4
+    if (control & 0x4000) cbit=0x08;                        // C4 Erase page
+    _packet[8]=Hamming8EncodeTable[(subcode&0x07) | cbit];  // S2 (3 bits) add C4
     subcode>>=4;
-    _packet[9]=HamTab[(subcode&0x0f)]; // S3 four bits
+    _packet[9]=Hamming8EncodeTable[(subcode&0x0f)];         // S3 four bits
     subcode>>=4;
+    
     cbit=0;
-    // Not sure if these bits are reversed. C5 and C6 are indistinguishable
-    if (control & 0x0002) cbit=0x08;	// C6 Subtitle
-    if (control & 0x0001) cbit|=0x04;	// C5 Newsflash
-
-    _packet[10]=HamTab[(subcode&0x03) | cbit]; // S4 C6, C5
+    if (control & 0x0001) cbit=0x04;                        // C5 Newsflash
+    if (control & 0x0002) cbit|=0x08;                       // C6 Subtitle
+    _packet[10]=Hamming8EncodeTable[(subcode&0x03) | cbit]; // S4 C6, C5
+    
     cbit=0;
-    if (control & 0x0004)  cbit=0x01;	// C7 Suppress Header
-    if (control & 0x0008) cbit|=0x02;	// C8 Update
-    if (control & 0x0010) cbit|=0x04;	// C9 Interrupted sequence
-    if (control & 0x0020) cbit|=0x08;	// C10 Inhibit display
-
-    _packet[11]=HamTab[cbit]; // C7 to C10
-    cbit=(control & 0x0380) >> 6;	// Shift the language bits C12,C13,C14.
-    // if (control & 0x0040) cbit|=0x01;	// C11 serial/parallel *** We only work in parallel mode, Serial would mean a different packet ordering.
-    _packet[12]=HamTab[cbit]; // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
+    if (control & 0x0004)  cbit=0x01;                       // C7 Suppress Header
+    if (control & 0x0008) cbit|=0x02;                       // C8 Update
+    if (control & 0x0010) cbit|=0x04;                       // C9 Interrupted sequence
+    if (control & 0x0020) cbit|=0x08;                       // C10 Inhibit display
+    _packet[11]=Hamming8EncodeTable[cbit];                  // C7 to C10
+    
+    cbit=(control & 0x0380) >> 6;                           // Shift the language bits C12,C13,C14.
+    
+    // if (control & 0x0040) cbit|=0x01;                    // C11 serial/parallel *** We only work in parallel mode, Serial would mean a different packet ordering.
+    _packet[12]=Hamming8EncodeTable[cbit];                  // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
 
     _page=page;
 }
@@ -408,7 +430,7 @@ void Packet::Parity(uint8_t offset)
     //uint8_t c;
     for (i=offset;i<PACKETSIZE;i++)
     {
-        _packet[i]=ParTab[_packet[i] & 0x7f];
+        _packet[i]=OddParityTable[_packet[i] & 0x7f];
     }
 }
 
@@ -416,15 +438,15 @@ void Packet::Fastext(int* links, int mag)
 {
     unsigned long nLink;
     uint8_t p=5;
-    _packet[p++]=HamTab[0]; // Designation code 0
+    _packet[p++]=Hamming8EncodeTable[0]; // Designation code 0
     mag&=0x07; // Mask the mag just in case. Keep it valid
 
     // add the link control byte. This will allow row 24 to show.
-    _packet[42]=HamTab[0x0f];
+    _packet[42]=Hamming8EncodeTable[0x0f];
 
     // and the page CRC
-    _packet[43]=HamTab[0]; // can't calculate this correctly while we have the substitutions in tx()
-    _packet[44]=HamTab[0];
+    _packet[43]=Hamming8EncodeTable[0]; // can't calculate this correctly while we have the substitutions in tx()
+    _packet[44]=Hamming8EncodeTable[0];
 
     // for each of the six links
     for (uint8_t i=0; i<6; i++)
@@ -434,12 +456,12 @@ void Packet::Fastext(int* links, int mag)
 
         // calculate the relative magazine
         uint8_t cRelMag=(nLink/0x100 ^ mag);
-        _packet[p++]=HamTab[nLink & 0xF];			// page units
-        _packet[p++]=HamTab[(nLink & 0xF0) >> 4];	// page tens
-        _packet[p++]=HamTab[0xF];									// subcode S1
-        _packet[p++]=HamTab[((cRelMag & 1) << 3) | 7];
-        _packet[p++]=HamTab[0xF];
-        _packet[p++]=HamTab[((cRelMag & 6) << 1) | 3];
+        _packet[p++]=Hamming8EncodeTable[nLink & 0xF];              // page units
+        _packet[p++]=Hamming8EncodeTable[(nLink & 0xF0) >> 4];      // page tens
+        _packet[p++]=Hamming8EncodeTable[0xF];                      // subcode S1
+        _packet[p++]=Hamming8EncodeTable[((cRelMag & 1) << 3) | 7]; // subcode S2 + M1
+        _packet[p++]=Hamming8EncodeTable[0xF];                      // subcode S3
+        _packet[p++]=Hamming8EncodeTable[((cRelMag & 6) << 1) | 3]; // subcode S4 + M2, M3
     }
 }
 
@@ -449,13 +471,14 @@ int Packet::IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, 
     
     SetMRAG(datachannel & 0x7,((datachannel & 8) >> 3) + 30);
     
-    _packet[5]=HamTab[flags & 0xe]; // Format Type
-    _packet[6]=HamTab[ial&0xf]; // Interpretation and Address Length
+    _packet[5]=Hamming8EncodeTable[flags & 0xe]; // Format Type
+    _packet[6]=Hamming8EncodeTable[ial&0xf]; // Interpretation and Address Length
     
     uint8_t p = 7;
     
-    for (uint8_t i = 0; i < (ial&0x7) && i < 7; i++){
-        _packet[p++] = HamTab[(spa >> (4 * i)) & 0xf]; // variable number of Service Packet Address nibbles
+    for (uint8_t i = 0; i < (ial&0x7) && i < 7; i++)
+    {
+        _packet[p++] = Hamming8EncodeTable[(spa >> (4 * i)) & 0xf]; // variable number of Service Packet Address nibbles
     }
     
     if (flags & IDLA_RI)
@@ -493,7 +516,8 @@ int Packet::IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, 
             {
                 sameCount++;
                 
-                if ((uint8_t)(_packet[p]) == (uint8_t)(_packet[p-1])){
+                if ((uint8_t)(_packet[p]) == (uint8_t)(_packet[p-1]))
+                {
                     if (sameCount > 7 && p < 42)
                     {
                         sameCount = 0;
@@ -517,7 +541,8 @@ int Packet::IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, 
     
     uint16_t crc = 0;
     
-    for (uint8_t i = startOfCRC; i < 43; i++){
+    for (uint8_t i = startOfCRC; i < 43; i++)
+    {
         IDLcrc(&crc, _packet[i]); // calculate CRC for user data
     }
     
@@ -543,7 +568,8 @@ void Packet::IDLcrc(uint16_t *crc, uint8_t data)
 {
     *crc ^= data;
     
-    for (uint8_t i = 0; i < 8; i++){
+    for (uint8_t i = 0; i < 8; i++)
+    {
         *crc = (*crc & 1) ? (*crc >> 1) ^ 0x8940 : (*crc >> 1);
     }
 }
@@ -552,7 +578,8 @@ void Packet::ReverseCRC(uint16_t *crc, uint8_t byte)
 {
     /* reverse the IDL A crc */
     uint8_t bit;
-    for (uint8_t i = 0; i < 8; i++){
+    for (uint8_t i = 0; i < 8; i++)
+    {
         bit =  (byte >> (7-i)) & 1;
         *crc = (*crc & 0x8000) ? (((*crc << 1) | bit) ^ 0x1281) : ((*crc << 1) | bit);
     }
@@ -612,36 +639,24 @@ bool Packet::get_net(char* str)
 }
 #endif
 
-void Packet::SetTriplet(int ix, int triplet)
+void Packet::Hamming24EncodeTriplet(uint8_t index, uint32_t triplet)
 {
-    uint8_t t[4];
-    if (ix<1) return;
-    vbi_ham24p(t,triplet);
-    // Now stuff the result in the packet
-    _packet[ix*3+3]=t[0];
-    _packet[ix*3+4]=t[1];
-    _packet[ix*3+5]=t[2];
-}
+    if (index<1) return;
+    
+    uint8_t D5_D11;
+    uint8_t D12_D18;
+    uint8_t P5, P6;
+    uint8_t Byte_0;
 
-void Packet::vbi_ham24p(uint8_t *		p, unsigned int c)
-{
-    unsigned int D5_D11;
-    unsigned int D12_D18;
-    unsigned int P5, P6;
-    unsigned int Byte_0;
+    Byte_0 = (Hamming24EncodeTable0[(triplet >> 0) & 0xFF] ^ Hamming24EncodeTable1[(triplet >> 8) & 0xFF] ^ Hamming24EncodeTable2[(triplet >> 16) & 0x03]);
+    _packet[index*3+3] = Byte_0;
 
-    Byte_0 = (_vbi_hamm24_fwd_0 [(c >> 0) & 0xFF]
-            ^ _vbi_hamm24_fwd_1 [(c >> 8) & 0xFF]
-            ^ _vbi_hamm24_fwd_2 [(c >> 16) & 0x03]);
-    p[0] = Byte_0;
+    D5_D11 = (triplet >> 4) & 0x7F;
+    D12_D18 = (triplet >> 11) & 0x7F;
 
-    D5_D11 = (c >> 4) & 0x7F;
-    D12_D18 = (c >> 11) & 0x7F;
+    P5 = 0x80 & ~(Hamming24ParityTable[0][D12_D18] << 2);
+    _packet[index*3+4] = D5_D11 | P5;
 
-    P5 = 0x80 & ~(_vbi_hamm24_inv_par[0][D12_D18] << 2);
-    p[1] = D5_D11 | P5;
-
-    P6 = 0x80 & ((_vbi_hamm24_inv_par[0][Byte_0]
-              ^ _vbi_hamm24_inv_par[0][D5_D11]) << 2);
-    p[2] = D12_D18 | P6;
+    P6 = 0x80 & ((Hamming24ParityTable[0][Byte_0] ^ Hamming24ParityTable[0][D5_D11]) << 2);
+    _packet[index*3+5] = D12_D18 | P6;
 }

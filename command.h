@@ -56,48 +56,38 @@
 
 namespace vbit
 {
+    class Command
+    {
+        public:
+            /**
+             * @brief Constructor
+             * @description Listens on port 5570 and accepts connections.
+             * When connected it can be sent Newfor commands.
+             */
+            Command(ttx::Configure *configure, vbit::PacketSubtitle* subtitle, ttx::PageList* pageList);
 
-class Command
-{
-    public:
+            /**
+             * @brief Destructor
+             */
+            ~Command();
 
-		/**
-     * @brief Constructor
-		 * @description Listens on port 5570 and accepts connections.
-		 * When connected it can be sent Newfor commands.
-     */
-		Command(ttx::Configure *configure, vbit::PacketSubtitle* subtitle, ttx::PageList* pageList);
+            /**
+             * @brief Run the listener thread.
+             */
+            void run();
 
-		/**
-     * @brief Constructor
-		 * @param port - TCP port number to use
-     */
-		// Command(int port);
+        private:
+            int _portNumber; /// The port number is configurable. Default is 5570 for no oarticular reason.
+            TCPClient _client; /// Did I call this a client? It is where clients connect and get their commands executed.
 
-		/**
-     * @brief Destructor
-     */
-		~Command();
+            /* Page init and subtitle data can respond with these standard codes */
+            static const uint8_t ASCII_ACK=0x06;
+            static const uint8_t ASCII_NACK=0x15;
+            
+            static const uint8_t MAXPENDING=5;    /* Maximum outstanding connection requests */
 
-		/**
-     * @brief Run the listener thread.
-     */
-		void run();
-
-		private:
-			int _portNumber;		/// The port number is configurable. Default is 5570 for no oarticular reason.
-      TCPClient _client; /// Did I call this a client? It is where clients connect and get their commands executed.
-
-			/* Page init and subtitle data can respond with these standard codes */
-			static const uint8_t ASCII_ACK=0x06;
-			static const uint8_t ASCII_NACK=0x15;
-			
-			static const uint8_t MAXPENDING=5;    /* Maximum outstanding connection requests */
-
-			void DieWithError(std::string errorMessage);  /* Error handling function */
-
-
-}; // Command
-} // namespace vbit
+            void DieWithError(std::string errorMessage);  /* Error handling function */
+    };
+}
 
 #endif

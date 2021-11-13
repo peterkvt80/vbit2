@@ -38,22 +38,22 @@ TTXPageStream::~TTXPageStream()
 
 TTXLine* TTXPageStream::GetTxRow(uint8_t row)
 {
-  // Return a line OR NULL if the row does not exist
-  TTXLine* line=NULL;
-  if (IsCarousel())
-  {
-    line=_CarouselPage->GetRow(row);
-  }
-  else // single page
-  {
-    line=GetRow(row); // _lineCounter is implied
-  }
-  if (line!=NULL) // Found a line
-  {
-    return line;
-  }
-  // No more lines? return NULL.
-  return NULL;
+    // Return a line OR NULL if the row does not exist
+    TTXLine* line=NULL;
+    if (IsCarousel())
+    {
+        line=_CarouselPage->GetRow(row);
+    }
+    else // single page
+    {
+        line=GetRow(row); // _lineCounter is implied
+    }
+    if (line!=NULL) // Found a line
+    {
+        return line;
+    }
+    // No more lines? return NULL.
+    return NULL;
 }
 
 void TTXPageStream::StepNextSubpageNoLoop()
@@ -66,28 +66,29 @@ void TTXPageStream::StepNextSubpageNoLoop()
 
 void TTXPageStream::StepNextSubpage()
 {
-	StepNextSubpageNoLoop();
-	if (_CarouselPage==NULL) // Last carousel subpage? Loop to beginning
-		_CarouselPage=this;
+    StepNextSubpageNoLoop();
+    if (_CarouselPage==NULL) // Last carousel subpage? Loop to beginning
+        _CarouselPage=this;
 }
 
 bool TTXPageStream::LoadPage(std::string filename)
 {
-  bool Loaded=false;
+    bool Loaded=false;
     //m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
-  m_PageNumber=FIRSTPAGE; // Force to replace the root page rather than add to the carousel
-  if (m_LoadTTI(filename))
-      Loaded=true;
-  return Loaded;
+    m_PageNumber=FIRSTPAGE; // Force to replace the root page rather than add to the carousel
+    if (m_LoadTTI(filename))
+        Loaded=true;
+    return Loaded;
 }
 
 bool TTXPageStream::operator==(const TTXPageStream& rhs) const
 {
-  if (this->GetSourcePage()==rhs.GetSourcePage())
-    return true;
-  return false;
+    if (this->GetSourcePage()==rhs.GetSourcePage())
+        return true;
+    return false;
 }
 
-void TTXPageStream::IncrementUpdateCount(){
+void TTXPageStream::IncrementUpdateCount()
+{
     _updateCount = (_updateCount + 1) % 8;
 }
