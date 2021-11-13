@@ -50,11 +50,9 @@ TTXLine* TTXPageStream::GetTxRow(uint8_t row)
   }
   if (line!=NULL) // Found a line
   {
-    // std::cerr << " (R" << (int)row << ") ";
     return line;
   }
   // No more lines? return NULL.
-  // std::cerr << " GetNextRow " << _lineCounter << std::endl;
   return NULL;
 }
 
@@ -76,7 +74,6 @@ void TTXPageStream::StepNextSubpage()
 bool TTXPageStream::LoadPage(std::string filename)
 {
   bool Loaded=false;
-    // std::cerr << "[TTXPage] file constructor loading " << filename<< std::endl;
     //m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
   m_PageNumber=FIRSTPAGE; // Force to replace the root page rather than add to the carousel
   if (m_LoadTTI(filename))
@@ -86,7 +83,6 @@ bool TTXPageStream::LoadPage(std::string filename)
 
 bool TTXPageStream::operator==(const TTXPageStream& rhs) const
 {
-  // std::cerr << "operator overloaded == " << rhs.GetSourcePage();
   if (this->GetSourcePage()==rhs.GetSourcePage())
     return true;
   return false;

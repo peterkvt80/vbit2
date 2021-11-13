@@ -267,8 +267,9 @@ void TCPClient::addChar(char ch, char* response)
 	static int mode=MODENORMAL;
 	static int charCount=0; // Used to accumulate Newfor
 
+    std::stringstream ss;
+
 	response[0]=0;
-	// std::cerr << "[TCPClient::addChar] ch=" << ((int)ch) << " mode=" << mode << std::endl;
 	switch (mode)
 	{
 	case MODENORMAL :
@@ -287,13 +288,11 @@ void TCPClient::addChar(char ch, char* response)
 			case 0x10 :
 				// Put the subtitle on air immediately
 				_newfor.SubtitleOnair(response);
-				// std::cerr << "[TCPClient::addChar] On air" << std::endl;
 				clearCmd();
 				mode=MODENORMAL;
 				return;
 			case 0x18 :
 				// Remove the subtitle immediately
-				// std::cerr << "[TCPClient::addChar] Subtitle Off" << std::endl;
 				_newfor.SubtitleOffair();
 				strcpy(response, "[addChar]Clear");
 				clearCmd();
@@ -306,12 +305,12 @@ void TCPClient::addChar(char ch, char* response)
 			*_pCmd++=ch;
 			*_pCmd=0;
 			if (response) response[0]=0;
-			// std::cerr << "[TCPClient::addChar] accumulate cmd=" << _cmd << std::endl;
 		}
 		else
 		{
 			// Got a complete non-newfor command
-			std::cerr << "[TCPClient::addChar] finished cmd='" << strlen(_cmd) << std::endl;
+			ss << "[TCPClient::addChar] finished cmd='" << strlen(_cmd) << "\n";
+            std::cerr << ss.str();
 			if (strlen(_cmd))  // Avoid this being called twice by \n\r combinations
       {
         command(_cmd, response);
@@ -323,7 +322,6 @@ void TCPClient::addChar(char ch, char* response)
 	// Message type 1 - Set subtitle page.
 	case MODESOFTELPAGEINIT:	// We get four more characters and then the page is set
 		// @todo If a nybble fails deham or isn't in range we should return nack
-  	// std::cerr << "[TCPClient::addChar] Page init char=" << ((int)ch) << std::endl;
 		*_pCmd++=ch;
 		charCount--;
 		// The last time around we have the completed command
@@ -331,7 +329,6 @@ void TCPClient::addChar(char ch, char* response)
 		{
 			int page=_newfor.SoftelPageInit(_cmd);
 			sprintf(response,"[addChar]MODESOFTELPAGEINIT Set page=%03x",page);
-			// std::cerr << "[TCPClient::addChar] Softel page init response=" << response << std::endl;
 			// Now that we are done, set up for the next command
 			clearCmd();
 			mode=MODENORMAL;
@@ -344,7 +341,6 @@ void TCPClient::addChar(char ch, char* response)
 		  _row=_newfor.GetRowCount(p);
 		}
 	  sprintf(response,"[TCPClient::addChar] MODEGETROWCOUNT =%d\n",_row);
-  	// std::cerr << response << std::endl;
 		mode=MODESUBTITLEDATAHIGHNYBBLE;
 		break;
 	case MODESUBTITLEDATAHIGHNYBBLE:
@@ -357,7 +353,6 @@ void TCPClient::addChar(char ch, char* response)
 		*_pCmd++=ch;
 		_rowAddress+=vbi_unham8(ch); // @todo Check validity
 	  sprintf(response,"[addChar]MODESUBTITLEDATALOWNYBBLE _rowAddress=%d\n",_rowAddress);
-		// std::cerr << response << std::endl;
 		mode=MODEGETROW;
 		_pkt=_pCmd; // Save the start of this packet
 		break;
@@ -368,7 +363,6 @@ void TCPClient::addChar(char ch, char* response)
 		if (charCount<=0) // End of line?
 		{
 			sprintf(response,"[TCPClient::addChar] MODEGETROW _rowAddress=%d _pkt=%s\n",_rowAddress,_pkt);
-			// std::cerr << response << std::endl;
 			// Generate the teletext packet
 			_newfor.saveSubtitleRow(8,_rowAddress,_pkt);
 			if (_row>1) // Next row
@@ -400,7 +394,6 @@ void TCPClient::Handler(int clntSocket)
   int recvMsgSize;                    /* Size of received message */
 	int i;
 	clearCmd();
-	// std::cerr << "[TCPClient::Handler]" << std::endl;
 
   /* Send received string and receive again until end of transmission */
   for (recvMsgSize=1;recvMsgSize > 0;)      /* zero indicates end of transmission */

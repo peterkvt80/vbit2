@@ -6,7 +6,6 @@ Packet830::Packet830(ttx::Configure *configure) :
   _configure(configure)
 {
   //ctor
-  std::cerr << "[Packet830::Packet830] constructor" << std::endl;
   ClearEvent(EVENT_P830_FORMAT_1);
   ClearEvent(EVENT_P830_FORMAT_2_LABEL_0 );
   ClearEvent(EVENT_P830_FORMAT_2_LABEL_1 );
@@ -21,116 +20,112 @@ Packet830::~Packet830()
 
 Packet* Packet830::GetPacket(Packet* p)
 {
-	time_t timeRaw = _configure->GetMasterClock();
-	time_t timeLocal;
-	struct tm *tmLocal;
-	struct tm *tmGMT;
-	int offsetHalfHours, year, month, day, hour, minute, second;
-	uint32_t modifiedJulianDay;
-	
-	// std::cerr << "[Packet830::Packet830] GetPacket" << std::endl;
+    time_t timeRaw = _configure->GetMasterClock();
+    time_t timeLocal;
+    struct tm *tmLocal;
+    struct tm *tmGMT;
+    int offsetHalfHours, year, month, day, hour, minute, second;
+    uint32_t modifiedJulianDay;
 
-	char val[40]; // 40 bytes for payload
-	memset(val, 0x15, 40); // fill with hamming coded 0
+    std::vector<uint8_t> data(40, 0x15); // 40 bytes filled with hamming coded 0
 
-	p->SetMRAG(8, 30); // Packet 8/30
+    p->SetMRAG(8, 30); // Packet 8/30
 
-	uint8_t muxed = _configure->GetMultiplexedSignalFlag();
+    uint8_t muxed = _configure->GetMultiplexedSignalFlag();
 
-	uint8_t m = _configure->GetInitialMag();
-	uint8_t pn = _configure->GetInitialPage();
-	uint16_t sc = _configure->GetInitialSubcode();
-	val[1] = HamTab[pn & 0xF];
-	val[2] = HamTab[(pn & 0xF0) >> 4];
-	val[3] = HamTab[sc & 0xF];
-	val[4] = HamTab[((sc & 0xF0) >> 4) | ((m & 1) << 3)];
-	val[5] = HamTab[(sc & 0xF00) >> 8];
-	val[6] = HamTab[((sc & 0xF000) >> 12) | ((m & 6) << 1)];
+    uint8_t m = _configure->GetInitialMag();
+    uint8_t pn = _configure->GetInitialPage();
+    uint16_t sc = _configure->GetInitialSubcode();
+    data.at(1) = HamTab[pn & 0xF];
+    data.at(2) = HamTab[(pn & 0xF0) >> 4];
+    data.at(3) = HamTab[sc & 0xF];
+    data.at(4) = HamTab[((sc & 0xF0) >> 4) | ((m & 1) << 3)];
+    data.at(5) = HamTab[(sc & 0xF00) >> 8];
+    data.at(6) = HamTab[((sc & 0xF000) >> 12) | ((m & 6) << 1)];
 
-	memcpy(&val[20],_configure->GetServiceStatusString().data(),20); // copy status display from std::string into packet data
-	
-	if (GetEvent(EVENT_P830_FORMAT_1))
-	{
-		ClearEvent(EVENT_P830_FORMAT_1);
-		val[0] = HamTab[muxed]; // Format 1 designation code
-		
-		uint16_t nic = _configure->GetNetworkIdentificationCode();
-		val[7] = _vbi_bit_reverse[(nic & 0xFF00) >> 8];
-		val[8] = _vbi_bit_reverse[nic & 0xFF];
-		
-		/* calculate number of seconds local time is offset from UTC */
+    std::copy_n(_configure->GetServiceStatusString().begin(), 20, data.begin() + 20); // copy status display from std::string into packet data
+
+    if (GetEvent(EVENT_P830_FORMAT_1))
+    {
+        ClearEvent(EVENT_P830_FORMAT_1);
+        data.at(0) = HamTab[muxed]; // Format 1 designation code
+        
+        uint16_t nic = _configure->GetNetworkIdentificationCode();
+        data.at(7) = _vbi_bit_reverse[(nic & 0xFF00) >> 8];
+        data.at(8) = _vbi_bit_reverse[nic & 0xFF];
+        
+        /* calculate number of seconds local time is offset from UTC */
         tmLocal = localtime(&timeRaw);
-		
-		/* convert tmLocal into a timestamp without correcting for timezones and summertime */
-		#ifdef WIN32
-		timeLocal = _mkgmtime(tmLocal);
-		#else
-		timeLocal = timegm(tmLocal);
-		#endif
-		
-		offsetHalfHours = difftime(timeLocal, timeRaw) / 1800;
-		//std::cerr << "Difference in half hours from UTC: "<< offsetHalfHours << std::endl;
-		// time offset code -bits 2-6 half hours offset from UTC, bit 7 sign bit
-		// bits 0 and 7 reserved - set to 1
-		val[9] = ((offsetHalfHours < 0) ? 0xC1 : 0x81) | ((abs(offsetHalfHours) & 0x1F) << 1);
-		
-		// get the time current UTC time into separate variables
-		tmGMT = gmtime(&timeRaw);
-		year = tmGMT->tm_year + 1900;
-		month = tmGMT->tm_mon + 1;
-		day = tmGMT->tm_mday;
-		hour = tmGMT->tm_hour;
-		minute = tmGMT->tm_min;
-		second = tmGMT->tm_sec;
-		
-		modifiedJulianDay = calculateMJD(year, month, day);
-		// generate five decimal digits of modified julian date decimal digits and increment each one.
-		val[10] = (modifiedJulianDay % 100000 / 10000 + 1);
-		val[11] = ((modifiedJulianDay % 10000 / 1000 + 1) << 4) | (modifiedJulianDay % 1000 / 100 + 1);
-		val[12] = ((modifiedJulianDay % 100 / 10 + 1) << 4) | (modifiedJulianDay % 10 + 1);
-		
-		// generate six decimal digits of UTC time and increment each one before transmission
-		val[13] = (((hour / 10) + 1) << 4) | ((hour % 10) + 1);
-		val[14] = (((minute / 10) + 1) << 4) | ((minute % 10) + 1);
-		val[15] = (((second / 10) + 1) << 4) | ((second % 10) + 1);
-		
-		// bytes 22-25 of the packet are marked reserved in the spec. Different broadcasters fill them with different values - we will leave them as hamming coded zero.
-		
-		p->SetPacketRaw(val);
-		p->Parity(25); // set correct parity for status display
-		return p;
-	}
+        
+        /* convert tmLocal into a timestamp without correcting for timezones and summertime */
+        #ifdef WIN32
+        timeLocal = _mkgmtime(tmLocal);
+        #else
+        timeLocal = timegm(tmLocal);
+        #endif
+        
+        offsetHalfHours = difftime(timeLocal, timeRaw) / 1800;
+        // time offset code -bits 2-6 half hours offset from UTC, bit 7 sign bit
+        // bits 0 and 7 reserved - set to 1
+        data.at(9) = ((offsetHalfHours < 0) ? 0xC1 : 0x81) | ((abs(offsetHalfHours) & 0x1F) << 1);
+        
+        // get the time current UTC time into separate variables
+        tmGMT = gmtime(&timeRaw);
+        year = tmGMT->tm_year + 1900;
+        month = tmGMT->tm_mon + 1;
+        day = tmGMT->tm_mday;
+        hour = tmGMT->tm_hour;
+        minute = tmGMT->tm_min;
+        second = tmGMT->tm_sec;
+        
+        modifiedJulianDay = calculateMJD(year, month, day);
+        // generate five decimal digits of modified julian date decimal digits and increment each one.
+        data.at(10) = (modifiedJulianDay % 100000 / 10000 + 1);
+        data.at(11) = ((modifiedJulianDay % 10000 / 1000 + 1) << 4) | (modifiedJulianDay % 1000 / 100 + 1);
+        data.at(12) = ((modifiedJulianDay % 100 / 10 + 1) << 4) | (modifiedJulianDay % 10 + 1);
+        
+        // generate six decimal digits of UTC time and increment each one before transmission
+        data.at(13) = (((hour / 10) + 1) << 4) | ((hour % 10) + 1);
+        data.at(14) = (((minute / 10) + 1) << 4) | ((minute % 10) + 1);
+        data.at(15) = (((second / 10) + 1) << 4) | ((second % 10) + 1);
+        
+        // bytes 22-25 of the packet are marked reserved in the spec. Different broadcasters fill them with different values - we will leave them as hamming coded zero.
+        
+        p->SetPacketRaw(data);
+        p->Parity(25); // set correct parity for status display
+        return p;
+    }
 
-	// PDC labels 8/30/1
-	if (GetEvent(EVENT_P830_FORMAT_2_LABEL_0))
-	{
-		ClearEvent(EVENT_P830_FORMAT_2_LABEL_0);
-		val[0] = HamTab[muxed | 2]; // Format 2 designation code
-		
-		//@todo
-	}
-	if (GetEvent(EVENT_P830_FORMAT_2_LABEL_1))
-	{
-		ClearEvent(EVENT_P830_FORMAT_2_LABEL_1);
-		val[0] = HamTab[muxed | 2]; // Format 2 designation code
-		
-		//@todo
-	}
-	if (GetEvent(EVENT_P830_FORMAT_2_LABEL_2))
-	{
-		ClearEvent(EVENT_P830_FORMAT_2_LABEL_2);
-		val[0] = HamTab[muxed | 2]; // Format 2 designation code
-		
-		//@todo
-	}
-	if (GetEvent(EVENT_P830_FORMAT_2_LABEL_3))
-	{
-		ClearEvent(EVENT_P830_FORMAT_2_LABEL_3 );
-		val[0] = HamTab[muxed | 2]; // Format 2 designation code
-		
-		//@todo
-	}
-  return nullptr;
+    // PDC labels 8/30/1
+    if (GetEvent(EVENT_P830_FORMAT_2_LABEL_0))
+    {
+        ClearEvent(EVENT_P830_FORMAT_2_LABEL_0);
+        data.at(0) = HamTab[muxed | 2]; // Format 2 designation code
+        
+        //@todo
+    }
+    if (GetEvent(EVENT_P830_FORMAT_2_LABEL_1))
+    {
+        ClearEvent(EVENT_P830_FORMAT_2_LABEL_1);
+        data.at(0) = HamTab[muxed | 2]; // Format 2 designation code
+        
+        //@todo
+    }
+    if (GetEvent(EVENT_P830_FORMAT_2_LABEL_2))
+    {
+        ClearEvent(EVENT_P830_FORMAT_2_LABEL_2);
+        data.at(0) = HamTab[muxed | 2]; // Format 2 designation code
+        
+        //@todo
+    }
+    if (GetEvent(EVENT_P830_FORMAT_2_LABEL_3))
+    {
+        ClearEvent(EVENT_P830_FORMAT_2_LABEL_3 );
+        data.at(0) = HamTab[muxed | 2]; // Format 2 designation code
+        
+        //@todo
+    }
+    return nullptr;
 }
 
 bool Packet830::IsReady(bool force)

@@ -2,6 +2,7 @@
 #define _FILEMONITOR_H_
 
 #include <iostream>
+#include <sstream>
 #include <thread>
 #include <list>
 #include <strings.h>

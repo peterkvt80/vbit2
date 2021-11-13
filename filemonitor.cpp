@@ -44,19 +44,12 @@ FileMonitor::~FileMonitor()
   //dtor
 }
 
-/**
-std::thread FileMonitor::run()
-{
-	t=new std::thread(&FileMonitor::worker, this); // Start the thread
-  //t.join(); // Rejoin after the thread terminates
-	return false;
-}
-*/
-
 void FileMonitor::run()
 {
     std::string path=_configure->GetPageDirectory() ;
-    std::cerr << "[FileMonitor::run] Monitoring " << path << std::endl;
+    std::stringstream ss;
+    ss << "[FileMonitor::run] Monitoring " << path << "\n";
+    std::cerr << ss.str();
 
     while (true)
     {
@@ -64,8 +57,6 @@ void FileMonitor::run()
         
         readDirectory(path);
         
-        // std::cerr << "[FileMonitor::run] Finished scan" << std::endl;
-
         // Delete pages that no longer exist (this blocks the thread until the pages are removed)
         _pageList->DeleteOldPages();
 
@@ -85,12 +76,16 @@ int FileMonitor::readDirectory(std::string path){
     struct dirent *dirp;
     struct stat attrib;
     
+    std::stringstream ss;
+    
     DIR *dp;
 
     // Open the directory
     if ( (dp = opendir(path.c_str())) == NULL)
     {
-        std::cerr << "Error(" << errno << ") opening " << path << std::endl;
+        std::stringstream ss;
+        ss << "Error(" << errno << ") opening " << path << "\n";
+        std::cerr << ss.str();
         return errno;
     }
     
@@ -111,7 +106,8 @@ int FileMonitor::readDirectory(std::string path){
             {
                 if (readDirectory(name)) // recurse into directory
                 {
-                    std::cerr << "Error(" << errno << ") recursing into " << name << std::endl;
+                    ss << "Error(" << errno << ") recursing into " << name << "\n";
+                    std::cerr << ss.str();
                 }
             }
             continue;
@@ -119,8 +115,6 @@ int FileMonitor::readDirectory(std::string path){
         
         if (std::string(dirp->d_name).find(".tti") != std::string::npos)
         {
-            // struct tm* clock = gmtime(&(attrib.st_mtime)); // Get the last modified time and put it into the time structure
-            // std::cerr << path << "/" << dirp->d_name << std::dec << " time:" << std::setw(2) << clock->tm_hour << ":" << std::setw(2) << clock->tm_min << std::endl;
             // Now we want to process changes
             // 1) Is it a new page? Then add it.
             TTXPageStream* q=_pageList->Locate(name);
@@ -128,10 +122,8 @@ int FileMonitor::readDirectory(std::string path){
             {
                 if (!(q->GetStatusFlag()==TTXPageStream::MARKED || q->GetStatusFlag()==TTXPageStream::GONE)) // file is not mid-deletion
                 {
-                    //std::cerr << dirp->d_name << " was found" << std::endl;
                     if (attrib.st_mtime!=q->GetModifiedTime()) // File exists. Has it changed?
                     {
-                        //std::cerr << "[FileMonitor::run] File has been modified " << dirp->d_name << std::endl;
                         // We just load the new page and update the modified time
                         // This isn't good enough.
                         // We need a mutex or semaphore to lock out this page while we do that
@@ -147,16 +139,18 @@ int FileMonitor::readDirectory(std::string path){
                             // page was not 'special' but now is, add to SpecialPages list
                             q->SetSpecialFlag(true);
                             _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                            std::cerr << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber() << std::endl;
+                            ss << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber() << "\n";
+                            std::cerr << ss.str();
                             // page will be removed from NormalPages list by the service thread
                             // page will be removed from Carousel list by the service thread
                         }
                         else if ((q->GetSpecialFlag()) && (!(q->Special())))
                         {
                             // page was 'special' but now isn't, add to NormalPages list
-                             _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                             q->SetNormalFlag(true);
-                            std::cerr << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << std::endl;
+                            _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
+                            q->SetNormalFlag(true);
+                            ss << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << "\n";
+                            std::cerr << ss.str();
                         }
                         
                         if ((!(q->Special())) && (!(q->GetCarouselFlag())) && q->IsCarousel())
@@ -165,7 +159,8 @@ int FileMonitor::readDirectory(std::string path){
                             q->SetCarouselFlag(true);
                             q->StepNextSubpage(); // ensure we're pointing at a subpage
                             _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                            std::cerr << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber() << std::endl;
+                            ss << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber() << "\n";
+                            std::cerr << ss.str();
                         }
                         
                         if (q->GetNormalFlag() && !(q->GetSpecialFlag()) && !(q->GetCarouselFlag()) && !(q->GetUpdatedFlag()))
@@ -185,7 +180,8 @@ int FileMonitor::readDirectory(std::string path){
             }
             else
             {
-                std::cerr << "[FileMonitor::run] Adding a new page " << dirp->d_name << std::endl;
+                ss << "[FileMonitor::run] Adding a new page " << dirp->d_name << "\n";
+                std::cerr << ss.str();
                 // A new file. Create the page object and add it to the page list.
                 
                 if ((q=new TTXPageStream(name)))
@@ -203,7 +199,6 @@ int FileMonitor::readDirectory(std::string path){
                             q->SetNormalFlag(false);
                             q->SetUpdatedFlag(false);
                             _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                            //std::cerr << "[FileMonitor::run] new page is special " << std::hex << q->GetPageNumber() << std::endl;
                         }
                         else
                         {
@@ -211,7 +206,6 @@ int FileMonitor::readDirectory(std::string path){
                             q->SetSpecialFlag(false);
                             q->SetNormalFlag(true);
                             _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                            //std::cerr << "[FileMonitor::run] new page is normal " << std::hex << q->GetPageNumber() << std::endl;
                             
                             if (q->IsCarousel())
                             {
@@ -219,7 +213,6 @@ int FileMonitor::readDirectory(std::string path){
                                 q->SetCarouselFlag(true);
                                 q->StepNextSubpage(); // ensure we're pointing at a subpage
                                 _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                                //std::cerr << "[FileMonitor::run] new page is a carousel " << std::hex << q->GetPageNumber() << std::endl;
                             }
                             else
                             {
@@ -233,10 +226,16 @@ int FileMonitor::readDirectory(std::string path){
                         _pageList->CheckForPacket29(q);
                     }
                     else
-                        std::cerr << "[FileMonitor::run] Failed to add" << dirp->d_name << std::endl; // should never happen
+                    {
+                        ss << "[FileMonitor::run] Failed to add" << dirp->d_name << "\n"; // should never happen
+                        std::cerr << ss.str();
+                    }
                 }
                 else
-                    std::cerr << "[FileMonitor::run] Failed to load" << dirp->d_name << std::endl;
+                {
+                    ss << "[FileMonitor::run] Failed to load" << dirp->d_name << "\n";
+                    std::cerr << ss.str();
+                }
             }
         }
     }

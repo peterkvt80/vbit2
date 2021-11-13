@@ -23,6 +23,7 @@ void NormalPages::addPage(TTXPageStream* p)
 
 TTXPageStream* NormalPages::NextPage()
 {
+    std::stringstream ss;
     if (_page == nullptr)
     {
         if (_needSorting)
@@ -52,7 +53,8 @@ loop:
         
         if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetNormalFlag()) // only remove it once
         {
-            std::cerr << "[NormalPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
+            ss << "[NormalPages::NextPage] Deleted " << _page->GetSourcePage() << "\n";
+            std::cerr << ss.str();
             _iter = _NormalPagesList.erase(_iter);
             _page->SetNormalFlag(false);
             if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetUpdatedFlag()))
@@ -63,7 +65,8 @@ loop:
         
         if (_page->Special())
         {
-            std::cerr << "[NormalPages::NextPage] page became Special"  << std::hex << _page->GetPageNumber() << std::endl;
+            ss << "[NormalPages::NextPage] page became Special"  << std::hex << _page->GetPageNumber() << "\n";
+            std::cerr << ss.str();
             _iter = _NormalPagesList.erase(_iter);
             _page->SetNormalFlag(false);
             _page = *_iter;

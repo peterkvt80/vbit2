@@ -3,44 +3,24 @@
 
 using namespace vbit;
 
-Packet::Packet() :
-  _isHeader(false),
-  _mag(1),
-  _coding(CODING_7BIT_TEXT)
+Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _page(0x8ff), _coding(CODING_7BIT_TEXT)
 {
     //ctor
-    SetMRAG(8,25);
-    _packet[45] = '\0'; // ensure termination
+    SetMRAG(mag, row);
+    SetPacketText(val);
+    assert(_row!=0); // Use Header for row 0
 }
 
-Packet::Packet(char *val) : _isHeader(false), _mag(1), _page(999), _row(99)
+Packet::~Packet()
 {
-    //ctor
-    strncpy(_packet,val,45);
-    _packet[45] = '\0'; // ensure termination
-}
-
-Packet::Packet(std::string val) : _isHeader(false), _mag(1), _page(999), _row(99)
-{
-    //ctor
-    strncpy(_packet,val.c_str(),45);
-    _packet[45] = '\0'; // ensure termination
-}
-
-Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _mag(mag), _page(999), _row(row)
-{
-	SetMRAG(_mag, _row);
-	SetPacketText(val);
-	assert(_row!=0); // Use Header for row 0
-	_packet[45] = '\0'; // ensure termination
+    //dtor
 }
 
 void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
 {
-	int triplet;
-	SetMRAG(mag, row);
-	SetPacketText(val);
-	_coding = coding;
+    SetMRAG(mag, row);
+    SetPacketText(val);
+    _coding = coding;
     
     switch(coding)
     {
@@ -54,7 +34,7 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
             break;
             
         case CODING_7BIT_TEXT:
-            _packet[5]=ParTab[(uint8_t)(_packet[5]&0x7f)]; // set parity on first byte
+            _packet[5] = ParTab[_packet[5] & 0x7f]; // set parity on first byte
         default:
             break;
     }
@@ -74,11 +54,11 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
             // bits in b0-b5.
             // designation code is 8/4 hamming coded by first switch statement
             /* 0x0a and 0x00 in the hammed output is causing a problem so disable this until they are fixed (output will be gibberish) */
+            int triplet;
             for (int i = 1; i<=13; i++){
-                //std::cerr << "[Packet::SetRow] enhancement " << std::hex << (_packet[i*3+3] & 0x3F) << " " << ((_packet[i*3+4]) & 0x3F) << " " << ((_packet[i*3+5]) & 0x3F) << std::endl;
                 triplet = _packet[i*3+3] & 0x3F;
-                triplet |= ((_packet[i*3+4]) & 0x3F) << 6;
-                triplet |= ((_packet[i*3+5]) & 0x3F) << 12;
+                triplet |= (_packet[i*3+4] & 0x3F) << 6;
+                triplet |= (_packet[i*3+5] & 0x3F) << 12;
                 SetTriplet(i, triplet);
             }
             break;
@@ -117,60 +97,41 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
     }
 }
 
-Packet::~Packet()
+void Packet::SetPacketRaw(std::vector<uint8_t> data)
 {
-    //dtor
-}
-
-void Packet::Set_packet(char *val)
-{
-    strncpy(&_packet[5],val,40);
-}
-
-void Packet::SetPacketRaw(char *val)
-{
-    // this is a raw copy of 40 bytes into our packet. use with caution.
-    memcpy(&_packet[5],val,40);
+    data.resize(40, 0x00); // ensure correct length
+    std::copy(data.begin(), data.end(), _packet.begin() + 5);
     _coding = CODING_8BIT_DATA; // don't allow this to be re-processed with parity etc
 }
 
-void Packet::SetPacketText(std::string val)
+void Packet::SetPacketText(std::string data)
 {
-	_isHeader=false; // Because it can't be a header
-	strncpy(&_packet[5],val.c_str(),40);
-}
-
-// Clear entire packet to 0
-void Packet::PacketQuiet()
-{
-	uint8_t i;
-	for (i=0;i<PACKETSIZE;i++)
-		_packet[i]=0;
+    _isHeader=false; // Because it can't be a header
+    data.resize(40, ' '); // ensure correct length
+    std::copy(data.begin(), data.end(), _packet.begin() + 5);
 }
 
 // Set CRI and MRAG. Leave the rest of the packet alone
 void Packet::SetMRAG(uint8_t mag, uint8_t row)
 {
-	char *p=_packet;
-	*p++=0x55; // clock run in
-	*p++=0x55; // clock run in
-	*p++=0x27; // framing code
-	// add MRAG
-	*p++=HamTab[mag%8+((row%2)<<3)]; // mag + bit 3 is the lowest bit of row
-	*p++=HamTab[((row>>1)&0x0f)];
-	_isHeader=row==0;
-	_row=row;
-	_mag=mag;
-} // SetMRAG
+    _packet[0]=0x55; // clock run in
+    _packet[1]=0x55; // clock run in
+    _packet[2]=0x27; // framing code
+    
+    _packet[3]=HamTab[mag%8+((row%2)<<3)]; // mag + bit 3 is the lowest bit of row
+    _packet[4]=HamTab[((row>>1)&0x0f)];
+    _isHeader=row==0;
+    _row=row;
+    _mag=mag;
+}
 
-
-/** get_offset_time. @todo Convert this to c++
+/** get_offset_time.
  * Given a parameter of say %t+02
  * where str[2] is + or -
  * str[4:3] is a two digit of half hour offsets from UTC
  * @return local time at offset from UTC
  */
-bool Packet::get_offset_time(time_t t, char* str)
+bool Packet::get_offset_time(time_t t, uint8_t* str)
 {
     char strTime[6];
     time_t rawtime = t;
@@ -191,153 +152,169 @@ bool Packet::get_offset_time(time_t t, char* str)
     tmGMT = gmtime(&rawtime);
 
     strftime(strTime, 21, "%H:%M", tmGMT);
-    stringToBytes(str,strTime,5);
+    std::copy_n(strTime,5,str);
     return true;
 }
 
-/* Ideally we would set _packet[0] for other hardware, or _packet[3] for Alistair Buxton raspi-teletext/
- * but hard code this for now
- * Most of this should be rewritten for c++
+int Packet::GetOffsetOfSubstition(std::string string)
+{
+    auto it = std::search(_packet.begin(), _packet.end(), string.begin(), string.end());
+    if (it != _packet.end())
+        return std::distance(_packet.begin(), it);
+    else
+        return -1;
+}
+
+/* Perform translations on packet for header substitution etc.
+ * return pointer to 45 byte packet data vector
  */
-char* Packet::tx(time_t t)
+std::array<uint8_t, PACKETSIZE>* Packet::tx(time_t t)
 {
     // Get local time
     struct tm * timeinfo;
     timeinfo=localtime(&t);
-
+    
+    char tmpstr[] = "                    ";
+    int off;
+    
     if (_isHeader) // We can do header substitutions
     {
-        // mpp page number. Use %%#
-        char*	ptr2=strstr(_packet,"%%#");
-        if (ptr2)
+        // mpp page number - %%#
+        off = Packet::GetOffsetOfSubstition("%%#");
+        if (off > -1)
         {
             if (_mag==0)
-                ptr2[0]='8';
+                _packet[off]='8';
             else
-                ptr2[0]=_mag+'0';
-            //std::cerr << "[Packet::tx]page=" << _page << std::endl;
-            ptr2[1]=_page/0x10+'0';
-            if (ptr2[1]>'9')
-                ptr2[1]=ptr2[1]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
-            //std::cerr << "[Packet::tx]ptr[1]=" << ptr2[1] << std::endl;
+                _packet[off]=_mag+'0';
+            _packet[off+1]=_page/0x10+'0';
+            if (_packet[off+1]>'9')
+                _packet[off+1]=_packet[off+1]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
 
-            ptr2[2]=_page%0x10+'0';
-            if (ptr2[2]>'9')
-                ptr2[2]=ptr2[2]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
-            //std::cerr << "[Packet::tx]ptr[2]=" << ptr2[2] << std::endl;
+            _packet[off+2]=_page%0x10+'0';
+            if (_packet[off+2]>'9')
+                _packet[off+2]=_packet[off+2]-'0'-10+'A'; 	// Particularly poor hex conversion algorithm
         }
-
-        char tmpstr[11];
-        ptr2=strstr(_packet,"%%a");	// Tue
-        if (ptr2)
+        
+        // day name - %%a
+        off = Packet::GetOffsetOfSubstition("%%a");
+        if (off > -1)
         {
             strftime(tmpstr,10,"%a",timeinfo);
-            ptr2[0]=tmpstr[0];
-            ptr2[1]=tmpstr[1];
-            ptr2[2]=tmpstr[2];
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=tmpstr[1];
+            _packet[off+2]=tmpstr[2];
         }
 
-        ptr2=strstr(_packet,"%%b"); // Jan
-        if (ptr2)
+        // month name - %%b
+        off = Packet::GetOffsetOfSubstition("%%b");
+        if (off > -1)
         {
             strftime(tmpstr,10,"%b",timeinfo);
-            ptr2[0]=tmpstr[0];
-            ptr2[1]=tmpstr[1];
-            ptr2[2]=tmpstr[2];
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=tmpstr[1];
+            _packet[off+2]=tmpstr[2];
         }
-
-        ptr2=strstr(_packet,"%d");	// day of month with leading zero
-        if (ptr2)
+        
+        // day of month with leading zero - %d
+        off = Packet::GetOffsetOfSubstition("%d");
+        if (off > -1)
         {
             strftime(tmpstr,10,"%d",timeinfo);
-            ptr2[0]=tmpstr[0];
-            ptr2[1]=tmpstr[1];
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=tmpstr[1];
         }
-
-        ptr2=strstr(_packet,"%e");	// day of month with no leading zero
-        if (ptr2)
+        
+        // day of month with no leading zero - %e
+        off = Packet::GetOffsetOfSubstition("%e");
+        if (off > -1)
         {
             #ifndef WIN32
             strftime(tmpstr,10,"%e",timeinfo);
-            ptr2[0]=tmpstr[0];
+            _packet[off]=tmpstr[0];
             #else
             strftime(tmpstr,10,"%d",timeinfo);
             if (tmpstr[0] == '0')
-                ptr2[0]=' ';
+                _packet[off]=' ';
             else
-                ptr2[0]=tmpstr[0];
+                _packet[off]=tmpstr[0];
             #endif
-            ptr2[1]=tmpstr[1];
+            _packet[off+1]=tmpstr[1];
         }
-
-        ptr2=strstr(_packet,"%m");	// month number with leading 0
-        if (ptr2)
+        
+        // month number with leading 0 - %m
+        off = Packet::GetOffsetOfSubstition("%m");
+        if (off > -1)
         {
             strftime(tmpstr,10,"%m",timeinfo);
-            ptr2[0]=tmpstr[0];
-            ptr2[1]=tmpstr[1];
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=tmpstr[1];
         }
-
-        ptr2=strstr(_packet,"%y");	// year. 2 digits
-        if (ptr2)
+        
+        // 2 digit year - %y
+        off = Packet::GetOffsetOfSubstition("%y");
+        if (off > -1)
         {
             strftime(tmpstr,10,"%y",timeinfo);
-            ptr2[0]=tmpstr[0];
-            ptr2[1]=tmpstr[1];
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=tmpstr[1];
         }
-
-        ptr2=strstr(_packet,"%H");	// hour.
-        if (ptr2)
+        
+        // hours - %H
+        off = Packet::GetOffsetOfSubstition("%H");
+        if (off > -1)
         {
             strftime(tmpstr,10,"%H",timeinfo);
-            ptr2[0]=tmpstr[0];
-            ptr2[1]=tmpstr[1];
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=tmpstr[1];
         }
-
-        ptr2=strstr(_packet,"%M");	// minutes.
-        if (ptr2)
+        
+        // minutes - %M
+        off = Packet::GetOffsetOfSubstition("%M");
+        if (off > -1)
         {
             strftime(tmpstr,10,"%M",timeinfo);
-            ptr2[0]=tmpstr[0];
-            ptr2[1]=tmpstr[1];
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=tmpstr[1];
         }
-
-        ptr2=strstr(_packet,"%S");	// seconds.
-        if (ptr2)
+        
+        // seconds - %S
+        off = Packet::GetOffsetOfSubstition("%S");
+        if (off > -1)
         {
             strftime(tmpstr,10,"%S",timeinfo);
-            ptr2[0]=tmpstr[0];
-            ptr2[1]=tmpstr[1];
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=tmpstr[1];
         }
-
+        
         Parity(13); // apply parity to the text of the header
     }
     else if (_coding == CODING_7BIT_TEXT) // Other text rows
     {
-        char *tmpptr;
-        for (int i=5;i<45;i++) _packet[i]=_packet[i] & 0x7f;
+        for (int i=5;i<45;i++) _packet[i] &= 0x7f; // strip parity bits off
         // ======= TEMPERATURE ========
-        char strtemp[]="                    ";
-        tmpptr=strstr((char*)_packet,"%%%T");
-        if (tmpptr) {
+        off = Packet::GetOffsetOfSubstition("%%%T");
+        
+        if (off > -1) {
             #ifdef RASPBIAN
-            get_temp(strtemp);
-            stringToBytes(tmpptr,strtemp,4);
+            get_temp(tmpstr);
+            std::copy_n(tmpstr,4,_packet.begin() + off);
             #else
-            stringToBytes(tmpptr,(char *)"err",4);
+            std::copy_n("err ",4,_packet.begin() + off);
             #endif
         }
+
         // ======= WORLD TIME ========
         // Special case for world time. Put %t<+|-><hh> to get local time HH:MM offset by +/- half hours
         for (;;)
         {
-            tmpptr=strstr((char*) _packet,"%t+");
-            if (!tmpptr) {
-                tmpptr=strstr((char*) _packet,"%t-");
+            off = Packet::GetOffsetOfSubstition("%t+");
+            if (off == -1) {
+                off = Packet::GetOffsetOfSubstition("%t-");
             }
-            if (tmpptr) {
+            if (off > -1) {
                 //std::cout << "[test 1]" << _packet << std::endl;
-                get_offset_time(t, tmpptr); // TODO: something with return value
+                get_offset_time(t, _packet.data() + off); // TODO: something with return value
                 //exit(4);
             }
             else
@@ -345,140 +322,125 @@ char* Packet::tx(time_t t)
         }
         // ======= NETWORK ========
         // Special case for network address. Put %%%%%%%%%%%%%%n to get network address in form xxx.yyy.zzz.aaa with trailing spaces (15 characters total)
-        tmpptr=strstr((char*)_packet,"%%%%%%%%%%%%%%n");
-        if (tmpptr) {
+        off = Packet::GetOffsetOfSubstition("%%%%%%%%%%%%%%n");
+        if (off > -1) {
             #ifndef WIN32
-            get_net(strtemp);
-            stringToBytes(tmpptr,strtemp,15);
+            get_net(tmpstr);
+            std::copy_n(tmpstr,15,_packet.begin() + off);
             #else
-            stringToBytes(tmpptr,(char *)"not implemented",15);
+            std::copy_n("not implemented",15,_packet.begin() + off);
             #endif
         }
         // ======= TIME AND DATE ========
         // Special case for system time. Put %%%%%%%%%%%%timedate to get time and date
-        tmpptr=strstr((char*) _packet,"%%%%%%%%%%%%timedate");
-        if (tmpptr) {
-            get_time(t, strtemp);
-            stringToBytes(tmpptr,strtemp,20);
+        off = Packet::GetOffsetOfSubstition("%%%%%%%%%%%%timedate");
+        if (off > -1) {
+            strftime(tmpstr, 21, "\x02%a %d %b\x03%H:%M/%S", timeinfo);
+            std::copy_n(tmpstr,20,_packet.begin() + off);
         }
         // ======= VERSION ========
-        // %%%V version number eg. 2.00
-        tmpptr=strstr((char*) _packet,"%%%%%V");
-        if (tmpptr) {
-            stringToBytes(tmpptr,(char *)VBIT2_VERSION,6);
+        // %%%%%V version number eg. v2.0.0
+        off = Packet::GetOffsetOfSubstition("%%%%%V");
+        if (off > -1) {
+            std::copy_n(VBIT2_VERSION,6,_packet.begin() + off);
         }
         Parity(5); // redo the parity because substitutions will need processing
     }
     
-    return &_packet[3]; // For raspi-pi we skip clock run in and framing code
-}
-
-void Packet::stringToBytes(char *ptr, char *cstr, unsigned int len){
-    // writes a C string to a len bytes wide field at ptr
-    if (strlen(cstr) < len){
-        // string is shorter than length of field
-        memset(ptr, ' ', len); // pre-blank the field to spaces
-        memcpy(ptr, cstr, strlen(cstr)); // write the short string into field
-    } else {
-        // string is longer or equal to length of field
-        memcpy(ptr, cstr, len); // write whole (or truncated) string into field
-    }
+    return &_packet;
 }
 
 /** A header has mag, row=0, page, flags, caption and time
  */
-void Packet::Header(unsigned char mag, unsigned char page, unsigned int subcode, unsigned int control)
+void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t control)
 {
-	uint8_t cbit;
-	SetMRAG(mag,0);
-	_packet[5]=HamTab[page%0x10];
-	_packet[6]=HamTab[page/0x10];
-	_packet[7]=HamTab[(subcode&0x0f)]; // S1 four bits
-	subcode>>=4;
-	// Map the page settings control bits from MiniTED to actual teletext packet.
-	// To find the MiniTED settings look at the tti format document.
-	// To find the target bit position these are in reverse order to tx and not hammed.
-	// So for each bit in ETSI document, just divide the bit number by 2 to find the target location.
-	// Where ETSI says bit 8,6,4,2 this maps to 4,3,2,1 (where the bits are numbered 1 to 8)
-	cbit=0;
-	if (control & 0x4000) cbit=0x08;	// C4 Erase page
-	_packet[8]=HamTab[(subcode&0x07) | cbit]; // S2 (3 bits) add C4
-	subcode>>=4;
-	_packet[9]=HamTab[(subcode&0x0f)]; // S3 four bits
-	subcode>>=4;
-	cbit=0;
-	// Not sure if these bits are reversed. C5 and C6 are indistinguishable
-	if (control & 0x0002) cbit=0x08;	// C6 Subtitle
-	if (control & 0x0001) cbit|=0x04;	// C5 Newsflash
+    uint8_t cbit;
+    SetMRAG(mag,0);
+    _packet[5]=HamTab[page%0x10];
+    _packet[6]=HamTab[page/0x10];
+    _packet[7]=HamTab[(subcode&0x0f)]; // S1 four bits
+    subcode>>=4;
+    // Map the page settings control bits from MiniTED to actual teletext packet.
+    // To find the MiniTED settings look at the tti format document.
+    // To find the target bit position these are in reverse order to tx and not hammed.
+    // So for each bit in ETSI document, just divide the bit number by 2 to find the target location.
+    // Where ETSI says bit 8,6,4,2 this maps to 4,3,2,1 (where the bits are numbered 1 to 8)
+    cbit=0;
+    if (control & 0x4000) cbit=0x08;	// C4 Erase page
+    _packet[8]=HamTab[(subcode&0x07) | cbit]; // S2 (3 bits) add C4
+    subcode>>=4;
+    _packet[9]=HamTab[(subcode&0x0f)]; // S3 four bits
+    subcode>>=4;
+    cbit=0;
+    // Not sure if these bits are reversed. C5 and C6 are indistinguishable
+    if (control & 0x0002) cbit=0x08;	// C6 Subtitle
+    if (control & 0x0001) cbit|=0x04;	// C5 Newsflash
 
-	// cbit|=0x08; // TEMPORARY!
- 	_packet[10]=HamTab[(subcode&0x03) | cbit]; // S4 C6, C5
-	cbit=0;
-	if (control & 0x0004)  cbit=0x01;	// C7 Suppress Header
-	if (control & 0x0008) cbit|=0x02;	// C8 Update
-	if (control & 0x0010) cbit|=0x04;	// C9 Interrupted sequence
-	if (control & 0x0020) cbit|=0x08;	// C10 Inhibit display
+    _packet[10]=HamTab[(subcode&0x03) | cbit]; // S4 C6, C5
+    cbit=0;
+    if (control & 0x0004)  cbit=0x01;	// C7 Suppress Header
+    if (control & 0x0008) cbit|=0x02;	// C8 Update
+    if (control & 0x0010) cbit|=0x04;	// C9 Interrupted sequence
+    if (control & 0x0020) cbit|=0x08;	// C10 Inhibit display
 
-	_packet[11]=HamTab[cbit]; // C7 to C10
-	cbit=(control & 0x0380) >> 6;	// Shift the language bits C12,C13,C14.
-	// if (control & 0x0040) cbit|=0x01;	// C11 serial/parallel *** We only work in parallel mode, Serial would mean a different packet ordering.
-	_packet[12]=HamTab[cbit]; // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
+    _packet[11]=HamTab[cbit]; // C7 to C10
+    cbit=(control & 0x0380) >> 6;	// Shift the language bits C12,C13,C14.
+    // if (control & 0x0040) cbit|=0x01;	// C11 serial/parallel *** We only work in parallel mode, Serial would mean a different packet ordering.
+    _packet[12]=HamTab[cbit]; // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
 
-	_page=page;
-} // Header
+    _page=page;
+}
 
 void Packet::HeaderText(std::string val)
 {
-	_isHeader=true; // Because it must be a header
-  strncpy(&_packet[13],val.c_str(),32);
+    _isHeader=true; // Because it must be a header
+    val.resize(32);
+    std::copy_n(val.begin(),32,_packet.begin() + 13);
 }
 
 /**
- * @brief Check parity.
- * \param Offset is normally 5 for rows, 13 for header
+ * @brief Set parity bits.
+ * \param Offset is normally 5 for text rows, 13 for header
  */
 void Packet::Parity(uint8_t offset)
 {
-	int i;
-	//uint8_t c;
-	for (i=offset;i<PACKETSIZE;i++)
-	{
-		_packet[i]=ParTab[(uint8_t)(_packet[i]&0x7f)];
-	}
-} // Parity
+    int i;
+    //uint8_t c;
+    for (i=offset;i<PACKETSIZE;i++)
+    {
+        _packet[i]=ParTab[_packet[i] & 0x7f];
+    }
+}
 
 void Packet::Fastext(int* links, int mag)
 {
-	unsigned long nLink;
-	// add the designation code
-	char *p;
-	uint8_t i;
-	p=_packet+5;
-	*p++=HamTab[0];	// Designation code 0
-	mag&=0x07;		// Mask the mag just in case. Keep it valid
+    unsigned long nLink;
+    uint8_t p=5;
+    _packet[p++]=HamTab[0]; // Designation code 0
+    mag&=0x07; // Mask the mag just in case. Keep it valid
 
-	// add the link control byte. This will allow row 24 to show.
-	_packet[42]=HamTab[0x0f];
+    // add the link control byte. This will allow row 24 to show.
+    _packet[42]=HamTab[0x0f];
 
-	// and the page CRC
-	_packet[43]=HamTab[0];	// Don't know how to calculate this.
-	_packet[44]=HamTab[0];
+    // and the page CRC
+    _packet[43]=HamTab[0]; // can't calculate this correctly while we have the substitutions in tx()
+    _packet[44]=HamTab[0];
 
-	// for each of the six links
-	for (i=0; i<6; i++)
-	{
-		nLink=links[i];
-		if (nLink == 0) nLink = 0x8ff; // turn zero into 8FF to be ignored
+    // for each of the six links
+    for (uint8_t i=0; i<6; i++)
+    {
+        nLink=links[i];
+        if (nLink == 0) nLink = 0x8ff; // turn zero into 8FF to be ignored
 
-		// calculate the relative magazine
-		char cRelMag=(nLink/0x100 ^ mag);
-		*p++=HamTab[nLink & 0xF];			// page units
-		*p++=HamTab[(nLink & 0xF0) >> 4];	// page tens
-		*p++=HamTab[0xF];									// subcode S1
-		*p++=HamTab[((cRelMag & 1) << 3) | 7];
-		*p++=HamTab[0xF];
-		*p++=HamTab[((cRelMag & 6) << 1) | 3];
-	}
+        // calculate the relative magazine
+        uint8_t cRelMag=(nLink/0x100 ^ mag);
+        _packet[p++]=HamTab[nLink & 0xF];			// page units
+        _packet[p++]=HamTab[(nLink & 0xF0) >> 4];	// page tens
+        _packet[p++]=HamTab[0xF];									// subcode S1
+        _packet[p++]=HamTab[((cRelMag & 1) << 3) | 7];
+        _packet[p++]=HamTab[0xF];
+        _packet[p++]=HamTab[((cRelMag & 6) << 1) | 3];
+    }
 }
 
 int Packet::IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, uint8_t ri, uint8_t ci, std::vector<uint8_t> data)
@@ -523,7 +485,7 @@ int Packet::IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, 
     {
         if (bytesSent < data.size())
         {
-            _packet[p] = data.at(bytesSent++);
+            _packet[p] = data[bytesSent++];
             if (flags & IDLA_DL)
                 _packet[DLoffset]++;
             
@@ -605,32 +567,17 @@ bool Packet::get_temp(char* str)
 {
     FILE *fp;
     char *pch;
-		char tmp[100];
+    char tmp[100];
 
     fp = popen("/usr/bin/vcgencmd measure_temp", "r");
     fgets(tmp, 99, fp);
     pclose(fp);
     pch = strtok (tmp,"=\n");
     pch = strtok (NULL,"=\n");
-		strncpy(str,pch,5);
-		return true; // @todo
+    strncpy(str,pch,5);
+    return true; // @todo
 }
 #endif
-
-
-/** get_time
- *  Pinched from raspi-teletext demo.c
- * @return Time as 20 characters
- */
-bool Packet::get_time(time_t t, char* str)
-{
-    struct tm *info;
-
-    info = localtime( &t );
-
-    strftime(str, 21, "\x02%a %d %b\x03%H:%M/%S", info);
-		return false; // @todo
-}
 
 #ifndef WIN32
 /** get_net
@@ -641,85 +588,60 @@ bool Packet::get_time(time_t t, char* str)
  */
 bool Packet::get_net(char* str)
 {
-	FILE *fp;
-	char *pch;
+    FILE *fp;
+    char *pch;
 
-	int n;
-	char temp[100];
-	fp = popen("/sbin/ip -o -f inet addr show scope global", "r");
-	fgets(temp, 99, fp);
-	pclose(fp);
-	pch = strtok (temp," \n/");
-	for (n=1; n<4; n++)
-	{
-			pch = strtok (NULL, " \n/");
-	}
-	// If we don't have a connection established, try not to crash
-	if (pch==NULL)
-	{
-		strcpy(str,"IP address????");
-		return false;
-	}
-	strncpy(str,pch,15);
-	return true; // @todo
+    int n;
+    char temp[100];
+    fp = popen("/sbin/ip -o -f inet addr show scope global", "r");
+    fgets(temp, 99, fp);
+    pclose(fp);
+    pch = strtok (temp," \n/");
+    for (n=1; n<4; n++)
+    {
+        pch = strtok (NULL, " \n/");
+    }
+    // If we don't have a connection established, try not to crash
+    if (pch==NULL)
+    {
+        strcpy(str,"IP address????");
+        return false;
+    }
+    strncpy(str,pch,15);
+    return true; // @todo
 }
 #endif
 
 void Packet::SetTriplet(int ix, int triplet)
 {
-	//std::cerr << "[Packet::SetTriplet] enters " << std::hex << "ix=" << ix << " triplet=" << triplet << std::endl;
-	uint8_t t[4];
-	if (ix<1) return;
-	vbi_ham24p(t,triplet);
-	// Now stuff the result in the packet
-	_packet[ix*3+3]=t[0];
-	_packet[ix*3+4]=t[1];
-	_packet[ix*3+5]=t[2];
+    uint8_t t[4];
+    if (ix<1) return;
+    vbi_ham24p(t,triplet);
+    // Now stuff the result in the packet
+    _packet[ix*3+3]=t[0];
+    _packet[ix*3+4]=t[1];
+    _packet[ix*3+5]=t[2];
 }
 
 void Packet::vbi_ham24p(uint8_t *		p, unsigned int c)
 {
-	unsigned int D5_D11;
-	unsigned int D12_D18;
-	unsigned int P5, P6;
-	unsigned int Byte_0;
+    unsigned int D5_D11;
+    unsigned int D12_D18;
+    unsigned int P5, P6;
+    unsigned int Byte_0;
 
-	Byte_0 = (_vbi_hamm24_fwd_0 [(c >> 0) & 0xFF]
-		  ^ _vbi_hamm24_fwd_1 [(c >> 8) & 0xFF]
-		  ^ _vbi_hamm24_fwd_2 [(c >> 16) & 0x03]);
-	p[0] = Byte_0;
+    Byte_0 = (_vbi_hamm24_fwd_0 [(c >> 0) & 0xFF]
+            ^ _vbi_hamm24_fwd_1 [(c >> 8) & 0xFF]
+            ^ _vbi_hamm24_fwd_2 [(c >> 16) & 0x03]);
+    p[0] = Byte_0;
 
-	D5_D11 = (c >> 4) & 0x7F;
-	D12_D18 = (c >> 11) & 0x7F;
+    D5_D11 = (c >> 4) & 0x7F;
+    D12_D18 = (c >> 11) & 0x7F;
 
-	P5 = 0x80 & ~(_vbi_hamm24_inv_par[0][D12_D18] << 2);
-	p[1] = D5_D11 | P5;
+    P5 = 0x80 & ~(_vbi_hamm24_inv_par[0][D12_D18] << 2);
+    p[1] = D5_D11 | P5;
 
-	P6 = 0x80 & ((_vbi_hamm24_inv_par[0][Byte_0]
-		      ^ _vbi_hamm24_inv_par[0][D5_D11]) << 2);
-	p[2] = D12_D18 | P6;
-
-	//std::cerr << "[Packet::vbi_ham24p] leaves " << std::hex << (p[0] | (p[1] << 8) | (p[2] << 16)) << std::endl;
-}
-
-void Packet::Dump()
-{
-	std::cerr << "[Packet::Dump] Enters" << std::endl;
-	for (int i=0; i<45; i++)
-	{
-		int ch=_packet[i];
-		std::cerr << std::setfill('0') << std::setw(2) << std::hex << ch << " ";
-	}
-  std::cerr << std::endl;		
-
-	for (int i=0; i<45; i++)
-  {
-		char ch=_packet[i];
-		if (ch<' ') ch='*';
-		if (ch>'~') ch='*';
-		std::cerr << " " << ch << " ";
-	}				
-  std::cerr << std::endl;		
-
-	std::cerr << std::dec;
+    P6 = 0x80 & ((_vbi_hamm24_inv_par[0][Byte_0]
+              ^ _vbi_hamm24_inv_par[0][D5_D11]) << 2);
+    p[2] = D12_D18 | P6;
 }

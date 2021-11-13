@@ -54,66 +54,64 @@ void Command::DieWithError(std::string errorMessage)
 
 void Command::run()
 {
-  std::cerr << "[Command::run] Newfor subtitle listener started" << std::endl;
-  int serverSock;                    /* Socket descriptor for server */
-  int clientSock;                    /* Socket descriptor for client */
-  struct sockaddr_in echoServAddr; /* Local address */
-  struct sockaddr_in echoClntAddr; /* Client address */
-  unsigned short echoServPort;     /* Server port */
+    std::cerr << "[Command::run] Newfor subtitle listener started\n";
+
+    int serverSock;                    /* Socket descriptor for server */
+    int clientSock;                    /* Socket descriptor for client */
+    struct sockaddr_in echoServAddr; /* Local address */
+    struct sockaddr_in echoClntAddr; /* Client address */
+    unsigned short echoServPort;     /* Server port */
 
 #ifdef WIN32
-  int clntLen;                     /* needs to be signed int for winsock */
-	WSADATA wsaData;
-  int iResult;
+    int clntLen;                     /* needs to be signed int for winsock */
+    WSADATA wsaData;
+    int iResult;
 
-	// Initialize Winsock
-  iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
-  if (iResult != 0) {
-		DieWithError("WSAStartup failed");
-  }
+    // Initialize Winsock
+    iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
+    if (iResult != 0) {
+        DieWithError("WSAStartup failed");
+    }
 #else
-	unsigned int clntLen;            /* Length of client address data structure */
+    unsigned int clntLen;            /* Length of client address data structure */
 #endif
 
-	echoServPort = _portNumber;  /* This is the local port */
+    echoServPort = _portNumber;  /* This is the local port */
 
-	// System initialisations
-	/* Construct local address structure */
-  std::memset(&echoServAddr, 0, sizeof(echoServAddr));   /* Zero out structure */
-  echoServAddr.sin_family = AF_INET;                /* Internet address family */
-  echoServAddr.sin_addr.s_addr = htonl(INADDR_ANY); /* Any incoming interface */
-  echoServAddr.sin_port = htons(echoServPort);      /* Local port */
+    // System initialisations
+    /* Construct local address structure */
+    std::memset(&echoServAddr, 0, sizeof(echoServAddr));   /* Zero out structure */
+    echoServAddr.sin_family = AF_INET;                /* Internet address family */
+    echoServAddr.sin_addr.s_addr = htonl(INADDR_ANY); /* Any incoming interface */
+    echoServAddr.sin_port = htons(echoServPort);      /* Local port */
 
-  /* Create socket for incoming connections */
-  if ((serverSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
+    /* Create socket for incoming connections */
+    if ((serverSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
       DieWithError("socket() failed\n");
 
-  /* Bind to the local address */
-  if (bind(serverSock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0)
+    /* Bind to the local address */
+    if (bind(serverSock, (struct sockaddr *) &echoServAddr, sizeof(echoServAddr)) < 0)
       DieWithError("bind() failed");
 
-  /* Mark the socket so it will listen for incoming connections */
-  if (listen(serverSock, MAXPENDING) < 0)
-    DieWithError("listen() failed");
+    /* Mark the socket so it will listen for incoming connections */
+    if (listen(serverSock, MAXPENDING) < 0)
+        DieWithError("listen() failed");
 
-	/* Set the size of the in-out parameter */
-	clntLen = sizeof(echoClntAddr);
+    /* Set the size of the in-out parameter */
+    clntLen = sizeof(echoClntAddr);
 
-	while(1)
-	{
-    std::cerr << "[Command::run] Ready for a client to connect" << std::endl;
+    while(1)
+    {
+        std::cerr << "[Command::run] Ready for a client to connect\n";
 
-		/* Wait for a client to connect */
-		if ((clientSock = accept(serverSock, (struct sockaddr *) &echoClntAddr,
-							   &clntLen)) < 0)
-			DieWithError("accept() failed");
-    std::cerr << "[Command::run] Connected" << std::endl;
+        /* Wait for a client to connect */
+        if ((clientSock = accept(serverSock, (struct sockaddr *) &echoClntAddr, &clntLen)) < 0)
+            DieWithError("accept() failed");
+        
+        std::cerr << "[Command::run] Connected\n";
 
-		/* clientSock is connected to a client! */
+        /* clientSock is connected to a client! */
 
-		// printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
-
-		_client.Handler(clientSock);
-
-	}
+        _client.Handler(clientSock);
+    }
 }

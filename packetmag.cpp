@@ -21,16 +21,16 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _specialPagesFlipFlop(false),
     _waitingForField(0)
 {
-  //ctor
-  for (int i=0;i<MAXPACKET29TYPES;i++)
-  {
-    _packet29[i]=nullptr;
-  }
-  
-  _carousel=new vbit::Carousel();
-  _specialPages=new vbit::SpecialPages();
-  _normalPages=new vbit::NormalPages();
-  _updatedPages=new vbit::UpdatedPages();
+    //ctor
+    for (int i=0;i<MAXPACKET29TYPES;i++)
+    {
+        _packet29[i]=nullptr;
+    }
+
+    _carousel=new vbit::Carousel();
+    _specialPages=new vbit::SpecialPages();
+    _normalPages=new vbit::NormalPages();
+    _updatedPages=new vbit::UpdatedPages();
 }
 
 PacketMag::~PacketMag()
@@ -44,31 +44,17 @@ PacketMag::~PacketMag()
 
 Packet* PacketMag::GetPacket(Packet* p)
 {
-    // std::cerr << "[PacketMag::GetPacket] mag=" << _magNumber << " state=" << _state << std::endl;
     int thisPageNum;
     unsigned int thisSubcode;
     int* links=NULL;
     bool updatedFlag=false;
 
-    static vbit::Packet* filler=new Packet(8,25,"                                        "); // filler
-
     // We should only call GetPacket if IsReady has returned true
 
-    /* Nice to have a safety net
-    * but without the previous value of the force flag this can give a false positive.
-
-    if (!IsReady())
-    {
-      std::cerr << "[PacketMag::GetPacket] Packet not ready. This must not happen" << std::endl;
-      exit(0);
-    }
-    */
-
-    // If there is no page, we should send a filler
+    // no pages
     if (_pageSet->size()<1)
     {
-        p->Set_packet(filler->Get_packet());
-        return p;
+        return nullptr;
     }
 
     switch (_state)
@@ -223,12 +209,11 @@ Packet* PacketMag::GetPacket(Packet* p)
             
             // clear a flag we use to prevent duplicated X/28/0 packets
             _hasX28Region = false;
-            // p=new Packet();
             p->Header(_magNumber,thisPageNum,thisSubcode,_status);// loads of stuff to do here!
             
             p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
             
-            //p->Parity(13); // don't apply parity here it will screw up the template. parity for the header is done by tx() later
+            // don't apply parity here it will screw up the template. parity for the header is done by tx() later
             assert(p!=NULL);
 
             if (_page->IsCarousel()){
@@ -245,11 +230,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 break;
             }
             case PACKETSTATE_PACKET27:
-                //std::cerr << "TRACE-27 " << std::endl;
                 if (_lastTxt)
                 {
-                    //std::cerr << "Packet 27 length=" << _lastTxt->GetLine().length() << std::endl;
-                    //_lastTxt->Dump();
                     if ((_lastTxt->GetLine()[0] & 0xF) > 3) // designation codes > 3
                         p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_13_TRIPLETS); // enhancement linking
                     else
@@ -261,11 +243,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _state=PACKETSTATE_PACKET28; //  // Intentional fall through to PACKETSTATE_PACKET28
                 /* fallthrough */
             case PACKETSTATE_PACKET28:
-                //std::cerr << "TRACE-28 " << std::endl;
                 if (_lastTxt)
                 {
-                    //std::cerr << "Packet 28 length=" << _lastTxt->GetLine().length() << std::endl;
-                    //_lastTxt->Dump();
                     p->SetRow(_magNumber, 28, _lastTxt->GetLine(), CODING_13_TRIPLETS);
                     if ((_lastTxt->GetCharAt(0) & 0xF) == 0 || (_lastTxt->GetCharAt(0) & 0xF) == 4)
                         _hasX28Region = true; // don't generate an X/28/0 for a RE line
@@ -283,7 +262,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                     val.replace(1,1,1,(triplet & 0x3F) | 0x40);
                     val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
                     val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
-                    //std::cerr << "[PacketMag::GetPacket] region:" << std::hex << region << " nos:" << std::hex << NOS << " triplet:" << std::hex << triplet << std::endl;
                     p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
                     _lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
                     _state=PACKETSTATE_PACKET26;
@@ -304,7 +282,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                     p->SetRow(_magNumber, 26, _lastTxt->GetLine(), CODING_13_TRIPLETS);
                     // Do we have another line?
                     _lastTxt=_lastTxt->GetNextLine();
-                    // std::cerr << "*";
                     break;
                 }
                 if (_page->GetPageCoding() == CODING_7BIT_TEXT){
@@ -317,28 +294,21 @@ Packet* PacketMag::GetPacket(Packet* p)
                 }
                 /* fallthrough */
         case PACKETSTATE_TEXTROW:
-            // std::cerr << "TRACE-T " << std::endl;
             // Find the next row that isn't NULL
             for (_thisRow++;_thisRow<26;_thisRow++)
             {
-                // std::cerr << "*";
                 _lastTxt=_page->GetTxRow(_thisRow);
                 if (_lastTxt!=NULL)
                     break;
             }
-            //std::cerr << std::endl;
-            //std::cerr << "[PacketMag::GetPacket] TEXT ROW sending MRAG " << (int)_magNumber << " " << (int)_thisRow << std::endl;
 
             // Didn't find? End of this page.
             if (_thisRow>25 || _lastTxt==NULL)
             {
-                // std::cerr << "[PacketMag::GetPacket] FOO row " << std::dec << p->GetRow() << std::endl;
-                // std::cerr << p->tx(_configure->GetReverseFlag()) << std::endl;
                 if(_page->GetPageCoding() == CODING_7BIT_TEXT){
                     // if this is a normal page we've finished
                     _state=PACKETSTATE_HEADER;
                     _thisRow=0;
-                    //_outp("H");
                 } else {
                     // otherwise go on to X/26
                     _lastTxt=_page->GetTxRow(26);
@@ -351,7 +321,6 @@ Packet* PacketMag::GetPacket(Packet* p)
             //_outp("J");
                 if (_lastTxt->IsBlank() && (_configure->GetRowAdaptive() || _page->GetPageFunction() != LOP)) // If a row is empty then skip it if row adaptive mode on, or not a level 1 page
                 {
-                  // std::cerr << "[PacketMag::GetPacket] Empty row" << std::hex << _page->GetPageNumber() << std::dec << std::endl;
                   return nullptr;
                 }
                 else
@@ -363,8 +332,6 @@ Packet* PacketMag::GetPacket(Packet* p)
             }
             break;
         case PACKETSTATE_FASTEXT:
-            //std::cerr << "TRACE-F " << std::endl;
-            // std::cerr << "PACKETSTATE_FASTEXT enters" << std::endl;
             p->SetMRAG(_magNumber,27);
             if (_page->IsCarousel()){
                 links=_page->GetCarouselPage()->GetLinkSet();
@@ -374,10 +341,8 @@ Packet* PacketMag::GetPacket(Packet* p)
             p->Fastext(links,_magNumber);
             _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
             _state=PACKETSTATE_PACKET27; // makes no attempt to prevent an FL row and an X/27/0 both being sent
-            // std::cerr << "PACKETSTATE_FASTEXT exits" << std::endl;
             break;
         default:
-             std::cerr << "TRACE-OOPS " << std::endl;
             _state=PACKETSTATE_HEADER;// For now, do the next page
             return nullptr;
     }

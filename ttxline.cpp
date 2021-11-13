@@ -27,31 +27,31 @@
 
 
 TTXLine::TTXLine(std::string const& line, bool validateLine):
-	m_textline(validate(line)),
-	_nextLine(nullptr)
+    m_textline(validate(line)),
+    _nextLine(nullptr)
 
 {
-	if (!validateLine)
-		m_textline=line;
+    if (!validateLine)
+        m_textline=line;
 }
 
 TTXLine::TTXLine():m_textline("                                        "),
-	_nextLine(nullptr)
+    _nextLine(nullptr)
 {
 }
 
 TTXLine::~TTXLine()
 {
-	if (_nextLine)
-		delete _nextLine;
+    if (_nextLine)
+        delete _nextLine;
 }
 
 void TTXLine::Setm_textline(std::string const& val, bool validateLine)
 {
-	if (validateLine)
-    m_textline = validate(val);
-	else
-    m_textline = val;
+    if (validateLine)
+        m_textline = validate(val);
+    else
+        m_textline = val;
 }
 
 std::string TTXLine::validate(std::string const& val)
@@ -62,7 +62,6 @@ std::string TTXLine::validate(std::string const& val)
     for (unsigned int i=0;i<val.length() && j<40;i++)
     {
         ch = val[i] & 0x7f; // 7-bit
-
         if (val[i] == 0x1b) // ascii escape
         {
             i++;
@@ -85,28 +84,26 @@ std::string TTXLine::validate(std::string const& val)
 
 bool TTXLine::IsBlank()
 {
-	if (m_textline.length()==0)
-	{
-		return true;
-	}
-	for (unsigned int i=0;i<m_textline.length();i++)
-	// for (unsigned int i=0;i<40;i++)
-	{
-		if (m_textline.at(i)!=' ')
-		{
-			//std::cerr << "IsBlank false reason=" << (int) m_textline[i] << std::endl;
-			return false;
-		}
-	}
-	return true; // Yes, the line is blank
+    if (m_textline.length()==0)
+    {
+        return true;
+    }
+    for (unsigned int i=0;i<m_textline.length();i++)
+    {
+        if (m_textline.at(i)!=' ')
+        {
+            return false;
+        }
+    }
+    return true; // Yes, the line is blank
 }
 
 char TTXLine::SetCharAt(int x,int code)
 {
-  char c=m_textline[x];
-  code=code & 0x7f;
-  m_textline[x]=code;
-  return c;
+    char c=m_textline[x];
+    code=code & 0x7f;
+    m_textline[x]=code;
+    return c;
 }
 
 char TTXLine::GetCharAt(int xLoc)
@@ -114,7 +111,7 @@ char TTXLine::GetCharAt(int xLoc)
     if (m_textline.length()<(uint16_t)xLoc)
     {
         // @todo extend the line to 40 characters
-        std::cerr << "[TTXLine::GetCharAt] oops, need to extend this line" << std::endl;
+        std::cerr << "[TTXLine::GetCharAt] oops, need to extend this line\n";
     }
     return m_textline[xLoc];
 }
@@ -125,7 +122,6 @@ std::string TTXLine::GetLine()
     int len=m_textline.length();
     if (len>40)
     {
-        // std::cerr << "[TTXLine::GetLine] len=" << len << std::endl;
         return m_textline.substr(40);
     }
     if (len<40)
@@ -137,18 +133,8 @@ std::string TTXLine::GetLine()
 
 void TTXLine::AppendLine(std::string  const& line)
 {
-	// Seek the end of the list
-	//std::cerr << "[TTXLine::AppendLine] called" << std::endl;
-	TTXLine* p;
-	for (p=this;p->_nextLine;p=p->_nextLine);
-	p->_nextLine=new TTXLine(line,true);
-}
-
-void TTXLine::Dump()
-{
-	for (int i=0;i<40;i++)
-	{
-		std::cerr << std::hex << std::setw(2) << (int)(m_textline[i] & 0xff) << " ";
-	}
-	std::cerr << std::dec << std::endl;
+    // Seek the end of the list
+    TTXLine* p;
+    for (p=this;p->_nextLine;p=p->_nextLine);
+    p->_nextLine=new TTXLine(line,true);
 }

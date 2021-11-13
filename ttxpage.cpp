@@ -52,7 +52,6 @@ TTXPage::TTXPage(std::string filename) :
     m_Loaded(false),
     _Selected(false)
 {
-    // std::cerr << "[TTXPage] file constructor loading " << filename<< std::endl;
     m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
 
     if (!m_Loaded)
@@ -64,7 +63,6 @@ TTXPage::TTXPage(std::string filename) :
     // Other file formats support removed from here
     
     TTXPage::pageChanged=false;
-    // std::cerr << "Finished reading page. Loaded=" << m_Loaded << std::endl;
 }
 
 void TTXPage::m_Init()
@@ -94,12 +92,10 @@ TTXPage::~TTXPage()
 {
     static int j=0;
     j++;
-    //std::cerr << "[~TTXPage] " << this->GetSourcePage() << std::endl;
     // This bit causes a lot of grief.
     // Need to be super careful that we don't destroy it. Like if you make a copy then destroy the copy.
     for (int i=0;i<=MAXROW;i++)
     {
-        // std::cerr << "Deleting line " << i << std::endl;
         if (m_pLine[i]!=nullptr)
         {
             delete m_pLine[i];
@@ -109,7 +105,6 @@ TTXPage::~TTXPage()
     
     if (Getm_SubPage()!=nullptr)
     {
-        //std::cerr << "~[TTXPage]: " << j << std::endl;
         delete m_SubPage;
         m_SubPage=nullptr;
     }
@@ -123,6 +118,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
     int lines=0;
     // Open the file
     std::ifstream filein(filename.c_str());
+    std::stringstream ss;
     TTXPage* p=this;
     p->m_Init(); // reset page
     char * ptr;
@@ -133,39 +129,30 @@ bool TTXPage::m_LoadTTI(std::string filename)
     for (std::string line; std::getline(filein, line, ','); )
     {
         // This shows the command code:
-        //std::cerr << line << std::endl;
         bool found=false;
         for (int i=0;i<cmdCount && !found; i++)
         {
-            // std::cerr << "matching " << line << std::endl;
             if (!line.compare(cmd[i]))
             {
                 found=true;
-                // std::cerr << "Matched " << line << std::endl;
                 switch (i)
                 {
                 case 0 : // "DS" - Destination inserter name
                     // DS,inserter
-                    // std::cerr << "DS not implemented\n";
                     std::getline(filein, m_destination);
-                    // std::cerr << "DS read " << m_destination << std::endl;
                     break;
                 case 1 : // "SP" - Source page file name
                     // SP is the path + name of the file from where is was loaded. Used also for Save.
                     // SP,c:\Minited\inserter\ONAIR\P100.tti
-                    //std::cerr << "SP not implemented\n";
 
                     std::getline(filein, line);
-                    // std::getline(filein, m_sourcepage);
                     break;
                 case 2 : // "DE" - Description
                     // DE,Read back page  20/11/07
-                    //std::cerr << "DE not implemented\n";
                     std::getline(filein, m_description);
                     break;
                 case 3 : // "CT" - Cycle time (seconds)
                     // CT,8,T
-                    // std::cerr << "CT not implemented\n";
                     std::getline(filein, line, ',');
                     p->SetCycleTime(atoi(line.c_str()));
                     std::getline(filein, line);
@@ -184,7 +171,6 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     if (m<'1' || m>'8') // Magazine must be 1 to 8
                         break;
                     pageNumber=std::strtol(line.c_str(), &ptr, 16);
-                    // std::cerr << "Line=" << line << " " << "line length=" << line.length() << std::endl;
                     if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
                     {
                         pageNumber*=0x100;
@@ -192,13 +178,10 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     else   // Normally has subpage digits
                     {
                         subpage=line.substr(3,2);
-                        // std::cerr << "Subpage=" << subpage << std::endl;
                         pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),nullptr,10);
                     }
-                    // std::cerr << "PN enters with m_PageNumber=" << std::hex << m_PageNumber << " pageNumber=" << std::hex << pageNumber << std::endl;
                     if (p->m_PageNumber!=FIRSTPAGE) // // Subsequent pages need new page instances
                     {
-                        // std::cerr << "Created a new subpage" << std::endl;
                         int pagestatus = p->GetPageStatus();
                         TTXPage* newSubPage=new TTXPage();  // Create a new instance for the subpage
                         p->Setm_SubPage(newSubPage);            // Put in a link to it
@@ -209,15 +192,11 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     }
                     p->SetPageNumber(pageNumber);
 
-                    // std::cerr << "PN =" << std::hex << m_PageNumber << "\n";
-                    //if (m_PageNumber)
-                    //    std::cerr << "new page. TBA\n";
                     break;
                 case 5 : // "SC" - Subcode
                     // SC,0000
                     std::getline(filein, line);
                     subcode=std::strtol(line.c_str(), &ptr, 16);
-                    // std::cerr << "SC: Subcode=" << subcode << std::endl;;
 
                     p->SetSubCode(subcode);
                     break;
@@ -228,7 +207,6 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     break;
                 case 7 : // "MS" - Mask
                     // MS,0
-                    // std::cerr << "MS not implemented\n";
                     std::getline(filein, line); // Mask is intended for TED to protecting regions from editing.
                     break;
                 case 8 : // "OL" - Output line
@@ -260,7 +238,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                 case 12 : // "PF"; - not in the tti spec, page function and coding
                     std::getline(filein, line);
                     if (line.length()<3)
-                        std::cerr << "invalid page function/coding " << line << std::endl;
+                        ss << "invalid page function/coding " << line << "\n";
                     else
                     {
                         SetPageFunctionInt(std::strtol(line.substr(0,1).c_str(), &ptr, 16));
@@ -268,16 +246,16 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     }
                     break;
                 default:
-                    std::cerr << "Command not understood " << line << std::endl;
+                    ss << "Command not understood " << line << "\n";
                 } // switch
             } // if matched command
             // If the command was not found then skip the rest of the line
         } // seek command
         if (!found) std::getline(filein, line);
     }
+    std::cerr << ss.str();
     filein.close(); // Not sure that we need to close it
     p->Setm_SubPage(nullptr);
-    // if (lines>0) std::cerr << "Finished reading TTI page. Line count=" << lines << std::endl;
     TTXPage::pageChanged=false;
     return (lines>0);
 }
@@ -287,22 +265,12 @@ bool TTXPage::m_LoadTTI(std::string filename)
 TTXPage::TTXPage(const TTXPage& other)
 {
     //copy ctor.
-    // std::cerr << "TTXPage copy constructor" << std::endl;
 
     m_PageNumber=other.m_PageNumber;  // PN
     m_SubPage=other.m_SubPage;
     for (int i=0;i<=MAXROW;i++)
     {
         m_pLine[i]=other.m_pLine[i]; // Is this a deep copy?
-        /*
-        if (m_pLine[i]!=nullptr)
-            std::cerr << "[copy] Line=" << m_pLine[i]->GetLine() << std::endl;
-        */
-
-        /* Don't cover up for missing data. We need to know if a line is left empty
-        if (m_pLine[i]==nullptr)
-            m_pLine[i]=new TTXLine("This is a blank filler line in TTXPage copy constructor");
-        */
     }
     for (int i=0;i<6;i++)
         m_fastextlinks[i]=other.m_fastextlinks[i];      // FL
@@ -333,7 +301,6 @@ TTXPage& TTXPage::operator=(const TTXPage& rhs)
 
 TTXPage* TTXPage::GetPage(unsigned int pageNumber)
 {
-    //std::cerr << "[TTXPage::GetPage]" << std::endl;
     TTXPage* p=this;
     for (;pageNumber>0 && p->m_SubPage!=nullptr;p=p->m_SubPage, pageNumber--);
     // Iterate down the page list to find the required page object
@@ -343,10 +310,8 @@ TTXPage* TTXPage::GetPage(unsigned int pageNumber)
 
 TTXLine* TTXPage::GetRow(unsigned int row)
 {
-    //std::cerr << "[TTXPage::GetRow] getting row " << row << std::endl;
     if (row>MAXROW)
     {
-        std::cerr << "[TTXPage::GetRow]Invalid row requested: " << row << std::endl;
         return nullptr;
     }
     TTXLine* line=m_pLine[row];
@@ -358,52 +323,50 @@ TTXLine* TTXPage::GetRow(unsigned int row)
 
 void TTXPage::SetRow(unsigned int rownumber, std::string line)
 {
-	unsigned int dc;
-	
-	// assert(rownumber<=MAXROW);
-	if (rownumber>MAXROW) return;
+    unsigned int dc;
+    
+    // assert(rownumber<=MAXROW);
+    if (rownumber>MAXROW) return;
 
-	if (rownumber == 28 && line.length() >= 40){
-		dc = line.at(0) & 0x0F;
-		if (dc == 0 || dc == 2 || dc == 3 || dc == 4){
-			// packet is X/28/0, X/28/2, X/28/3, or X/28/4
-			int triplet = line.at(1) & 0x3F;
-			triplet |= (line.at(2) & 0x3F) << 6;
-			triplet |= (line.at(3) & 0x3F) << 12; // first triplet contains page function and coding
+    if (rownumber == 28 && line.length() >= 40){
+        dc = line.at(0) & 0x0F;
+        if (dc == 0 || dc == 2 || dc == 3 || dc == 4){
+            // packet is X/28/0, X/28/2, X/28/3, or X/28/4
+            int triplet = line.at(1) & 0x3F;
+            triplet |= (line.at(2) & 0x3F) << 6;
+            triplet |= (line.at(3) & 0x3F) << 12; // first triplet contains page function and coding
             // function and coding packet 28 override values set by an earlier PF row
-			SetPageCodingInt((triplet & 0x70) >> 4);
-			SetPageFunctionInt(triplet & 0x0F);
-		}
-	}
-	
-	if (rownumber == 26 && line.length() >= 40)
-	{
-		dc = line.at(0) & 0x0F;
-		if ((dc + 26) > m_lastpacket)
-			m_lastpacket = dc + 26;
-	}
-	else if (rownumber < 26)
-	{
-		if (rownumber > m_lastpacket)
-			m_lastpacket = rownumber;
-	}
+            SetPageCodingInt((triplet & 0x70) >> 4);
+            SetPageFunctionInt(triplet & 0x0F);
+        }
+    }
+    
+    if (rownumber == 26 && line.length() >= 40)
+    {
+        dc = line.at(0) & 0x0F;
+        if ((dc + 26) > m_lastpacket)
+            m_lastpacket = dc + 26;
+    }
+    else if (rownumber < 26)
+    {
+        if (rownumber > m_lastpacket)
+            m_lastpacket = rownumber;
+    }
 
-	if (m_pLine[rownumber]==nullptr)
-			m_pLine[rownumber]=new TTXLine(line,rownumber<MAXROW); // Didn't exist before
-	else
-	{
-		//std::cerr << "[TTXPage::SetRow] row=" << rownumber << std::endl;
-		if (rownumber<26) // Ordinary line
-		{
-			m_pLine[rownumber]->Setm_textline(line, true);
-		}
-		else // Enhanced packet
-		{
-			//std::cerr << "[TTXPage::SetRow] APPEND row=" << rownumber << std::endl;
-			// If the line already exists we want to add the packet rather than overwrite what is already there
-			m_pLine[rownumber]->AppendLine(line);
-		}
-	}
+    if (m_pLine[rownumber]==nullptr)
+            m_pLine[rownumber]=new TTXLine(line,rownumber<MAXROW); // Didn't exist before
+    else
+    {
+        if (rownumber<26) // Ordinary line
+        {
+            m_pLine[rownumber]->Setm_textline(line, true);
+        }
+        else // Enhanced packet
+        {
+            // If the line already exists we want to add the packet rather than overwrite what is already there
+            m_pLine[rownumber]->AppendLine(line);
+        }
+    }
 }
 
 int TTXPage::GetPageCount()
@@ -499,27 +462,25 @@ void TTXPage::SetLanguage(int language)
     language=language & 0x07;   // Limit language 0..7
     m_pagestatus=m_pagestatus & ~0x0380; // Clear the old language bits
     m_pagestatus=m_pagestatus | (language << 7);   // Shift the language bits into the right place and OR them in
-    // std::cerr << "Set Language: PS," << std::setw(4) << std::setfill('X') << std::hex << m_pagestatus << std::endl;
 }
 
 int TTXPage::GetLanguage()
 {
     int language;
     language=(m_pagestatus >> 7) & 0x07;
-    // std::cerr << "Get Language PS," << std::setw(4) << std::setfill('X') << std::hex << m_pagestatus << std::endl;
     return language;
 }
 
 void TTXPage::SetPageNumber(int page)
 {
+    std::stringstream ss;
     if ((page<0x10000) || (page>0x8ff99))
     {
-        std::cerr << "[TTXPage::SetPageNumber] Page number is out of range: " << std::hex << page << std::endl;
+        ss << "[TTXPage::SetPageNumber] Page number is out of range: " << std::hex << page << std::endl;
+        std::cerr << ss.str();
         page = 0x8FF00;
     }
-    //std::cerr << "PageNumber changed from " << std::hex << m_PageNumber << " to ";
     m_PageNumber=page;
-    //std::cerr << std::hex << m_PageNumber << std::endl;
 }
 
 int TTXPage::GetFastextLink(int link)
@@ -539,40 +500,20 @@ void TTXPage::SetFastextLink(int link, int value)
     m_fastextlinks[link]=value;
 }
 
-void TTXPage::DebugDump() const
-{
-    std::cerr << "PAGE DUMP\n";
-    std::cerr << "Desc:" << GetDescription() << std::endl;
-    std::cerr << "Load:" << Loaded() << std::endl;
-    std::cerr << "Page:" << std::hex << GetPageNumber() << std::dec << std::endl;
-    std::cerr << "File:" << GetSourcePage() << std::endl;
-
-    for (const TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
-        for (int i=0;i<25;i++)
-        {
-            std::cerr << "Line " << i << ": ";
-            if (p->m_pLine[i]!=nullptr)
-                std::cerr << " text=" << p->m_pLine[i]->GetLine() << std::endl;
-        }
-}
-
 /** This is similar to the copy constructor
  * @todo This would be a better version to make into a copy constructor?
  */
 void TTXPage::Copy(TTXPage* src)
 {
   // Deep copy the rows.
-  //std::cerr << "[Copy] Trace A" << std::endl;
   for (int i=0;i<=MAXROW;i++)
   {
     // Make sure that we have line object and that it does not get destroyed
-    //std::cerr << "[Copy] Trace B" << std::endl;
 
     if (this->m_pLine[i]==nullptr)
     {
       this->m_pLine[i]=new TTXLine();
     }
-    //std::cerr << "[Copy] Trace C" << std::endl;
 
     // If null then blank the line
     if (src->m_pLine[i]==nullptr)
@@ -583,10 +524,8 @@ void TTXPage::Copy(TTXPage* src)
     {
       *(this->m_pLine[i])=*(src->m_pLine[i]);
     }
-    //std::cerr << "[Copy] Trace D" << std::endl;
 
   }
-  //std::cerr << "[Copy] Trace E" << std::endl;
 	this->m_SubPage=nullptr;  // (Might want to copy carousels but this is only used for subtitles so far)
   // Copy everything else
   this->CopyMetaData(src);

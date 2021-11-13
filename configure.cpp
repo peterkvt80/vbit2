@@ -25,7 +25,7 @@ Configure::Configure(int argc, char** argv) :
     _serviceStatusString(20, ' '),
     _subtitleRepeats(1)
 {
-    std::cerr << "[Configure::Configure] Started" << std::endl;
+    std::stringstream ss;
     strncpy(_configFile,CONFIGFILE,MAXPATH-1);
 #ifdef _WIN32
     strncpy(_pageDir,"./pages",MAXPATH-1); // a relative path as a sensible default
@@ -53,7 +53,6 @@ Configure::Configure(int argc, char** argv) :
         _magazinePriority[i] = priority[i];
 
     //Scan the command line for overriding the pages file.
-    //std::cerr << "[Configure::Configure] Parameters=" << argc << " " << std::endl;
     if (argc>1)
     {
         for (int i=1;i<argc;i++)
@@ -70,19 +69,23 @@ Configure::Configure(int argc, char** argv) :
             else if (strncmp(argv[i],"--debug",7)==0)
             {
                 _debug = true;
-                std::cerr << "[Configure::Configure] " << "debugging enabled" << std::endl;
+                std::cerr << "[Configure::Configure] debugging enabled\n";
             }
         }
     }
     
-    if (!DirExists(_pageDir)){
-        std::cerr << "[Configure::Configure] " << _pageDir << " does not exist or is not a directory" << std::endl;
+    if (!DirExists(_pageDir))
+    {
+        ss << "[Configure::Configure] " << _pageDir << " does not exist or is not a directory\n";
+        std::cerr << ss.str();
         exit(EXIT_FAILURE);
     }
 
     // TODO: allow overriding config file from command line
-    std::cerr << "[Configure::Configure] Pages directory is " << _pageDir << std::endl;
-    std::cerr << "[Configure::Configure] Config file is " << _configFile << std::endl;
+    
+    ss << "[Configure::Configure] Pages directory is " << _pageDir << "\n";
+    ss << "[Configure::Configure] Config file is " << _configFile << "\n";
+    std::cerr << ss.str();
     
     std::string path;
     path = _pageDir;
@@ -95,19 +98,22 @@ Configure::Configure(int argc, char** argv) :
 
 Configure::~Configure()
 {
-    std::cerr << "[Configure] Destructor" << std::endl;
+    std::cerr << "[Configure] Destructor\n";
 }
 
 int Configure::LoadConfigFile(std::string filename)
 {
     std::ifstream filein(filename.c_str()); // Open the file
+    
+    std::stringstream ss;
 
     std::vector<std::string>::iterator iter;
     // these are all the valid strings for config lines
     std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats","enable_command_port","command_port","lines_per_field","magazine_priority" };
 
     if (filein.is_open()){
-        std::cerr << "[Configure::LoadConfigFile] opened " << filename << std::endl;
+        ss << "[Configure::LoadConfigFile] opened " << filename << "\n";
+        std::cerr << ss.str();
 
         std::string line;
         std::string name;
@@ -293,13 +299,16 @@ int Configure::LoadConfigFile(std::string filename)
                     }
                 }
                 if (error)
-                    std::cerr << "[Configure::LoadConfigFile] invalid config line: " << line << std::endl;
+                {
+                    ss << "[Configure::LoadConfigFile] invalid config line: " << line << "\n";
+                    std::cerr << ss.str();
+                }
             }
         }
         filein.close();
         return 0;
     } else {
-        std::cerr << "[Configure::LoadConfigFile] open failed" << std::endl;
+        std::cerr << "[Configure::LoadConfigFile] open failed\n";
         return -1;
     }
 }

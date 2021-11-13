@@ -5,25 +5,24 @@
 using namespace ttx;
 
 PageList::PageList(Configure *configure) :
-	_configure(configure),
-	_iterMag(0),
-	_iterSubpage(nullptr)
+    _configure(configure),
+    _iterMag(0),
+    _iterSubpage(nullptr)
 {
-	for (int i=0;i<8;i++)
-	{
-		_mag[i]=nullptr;
-	}
-	if (_configure==nullptr)
-	{
-		std::cerr << "NULL configuration object" << std::endl;
-		return;
-	}
-	LoadPageList(_configure->GetPageDirectory());
+    for (int i=0;i<8;i++)
+    {
+        _mag[i]=nullptr;
+    }
+    if (_configure==nullptr)
+    {
+        std::cerr << "NULL configuration object" << std::endl;
+        return;
+    }
+    LoadPageList(_configure->GetPageDirectory());
 }
 
 PageList::~PageList()
 {
-	// std::cerr << "[PageList] Destructor" << std::endl;
 }
 
 int PageList::LoadPageList(std::string filepath)
@@ -39,22 +38,7 @@ int PageList::LoadPageList(std::string filepath)
         return errno;
     
     PopulatePageTypeLists(); // add pages to the appropriate lists for their type
-  
-    // Just for testing
-    if (1) for (int i=0;i<8;i++)
-    {
-        vbit::PacketMag* m=_mag[i];
-        std::list<TTXPageStream>* p=m->Get_pageSet();
-        for (std::list<TTXPageStream>::const_iterator it=p->begin();it!=p->end();++it)
-        {
-            if (&(*it)==NULL)
-                std::cerr << "[PageList::LoadPageList] This can't happen unless something is broken" << std::endl;
-            // std::cerr << "[PageList::LoadPageList]Dumping :" << std::endl;
-            // it->DebugDump();
-            //std::cerr << "[PageList::LoadPageList] mag["<<i<<"] Filename =" << it->GetSourcePage()  << std::endl;
-        }
-    }
-
+    
     return 0;
 }
 
@@ -171,194 +155,191 @@ void PageList::CheckForPacket29(TTXPageStream* page)
 // Find a page by filename
 TTXPageStream* PageList::Locate(std::string filename)
 {
-  // This is called from the FileMonitor thread
-  for (int mag=0;mag<8;mag++)
-  {
-    //for (auto p : _pageList[mag])
-    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    // This is called from the FileMonitor thread
+    for (int mag=0;mag<8;mag++)
     {
-      TTXPageStream* ptr;
-      ptr=&(*p);
-      // std::cerr << "[PageList::Locate]scan:" << ptr->GetSourcePage() << std::endl;
-      if (filename==ptr->GetSourcePage())
-        return ptr;
+        //for (auto p : _pageList[mag])
+        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+        {
+            TTXPageStream* ptr;
+            ptr=&(*p);
+            // std::cerr << "[PageList::Locate]scan:" << ptr->GetSourcePage() << std::endl;
+            if (filename==ptr->GetSourcePage())
+            return ptr;
+        }
     }
-
-  }
- return NULL; // @todo placeholder What should we do here?
+    return NULL; // @todo placeholder What should we do here?
 }
 
 int PageList::Match(char* pageNumber)
 {
-  int matchCount=0;
+    int matchCount=0;
 
- 	std::cerr << "[PageList::FindPage] Selecting " << pageNumber << std::endl;
-	int begin=0;
-	int end=7;
+    std::cerr << "[PageList::FindPage] Selecting " << pageNumber << std::endl;
+    int begin=0;
+    int end=7;
 
-	for (int mag=begin;mag<end+1;mag++)
-  {
-    // For each page
-    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    for (int mag=begin;mag<end+1;mag++)
     {
-      TTXPageStream* ptr;
-      std::stringstream ss;
-      char s[6];
-      char* ps=s;
-      bool match=true;
-      for (ptr=&(*p);ptr!=nullptr;ptr=(TTXPageStream*)ptr->Getm_SubPage()) // For all the subpages in a carousel
-      {
-        // Convert the page number into a string so we can compare it
-        ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
-        strcpy(ps,ss.str().c_str());
-        // std::cerr << "[PageList::FindPage] matching " << ps << std::endl;
-
-        for (int i=0;i<5;i++)
+        // For each page
+        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
         {
-          if (pageNumber[i]!='*') // wildcard
-          {
-            if (pageNumber[i]!=ps[i])
+            TTXPageStream* ptr;
+            std::stringstream ss;
+            char s[6];
+            char* ps=s;
+            bool match=true;
+            for (ptr=&(*p);ptr!=nullptr;ptr=(TTXPageStream*)ptr->Getm_SubPage()) // For all the subpages in a carousel
             {
-              match=false;
-            }
-          }
-        }
-      }
-      if (match)
-      {
-        matchCount++;
-        // std::cerr << "[PageList::FindPage] MATCHED " << ps << std::endl;
-      }
-      ptr->SetSelected(match);
-    }
-  }
-  // Set up the iterator for commands that use pages selected by the Page Identity
-  _iterMag=0;
-  _iter=_pageList[_iterMag].begin();
+                // Convert the page number into a string so we can compare it
+                ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
+                strcpy(ps,ss.str().c_str());
+                // std::cerr << "[PageList::FindPage] matching " << ps << std::endl;
 
-	return matchCount; // final count
+                for (int i=0;i<5;i++)
+                {
+                    if (pageNumber[i]!='*') // wildcard
+                    {
+                        if (pageNumber[i]!=ps[i])
+                        {
+                            match=false;
+                        }
+                    }
+                }
+            }
+            if (match)
+            {
+                matchCount++;
+            }
+            ptr->SetSelected(match);
+        }
+    }
+    // Set up the iterator for commands that use pages selected by the Page Identity
+    _iterMag=0;
+    _iter=_pageList[_iterMag].begin();
+    
+    return matchCount; // final count
 }
 
 TTXPageStream* PageList::NextPage()
 {
-  std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
-  bool more=true;
-  if (_iterSubpage!=nullptr)
-  {
-    std::cerr << "A";
-    _iterSubpage=(TTXPageStream*) _iterSubpage->Getm_SubPage();
-    std::cerr << "B";
-  }
-  if (_iterSubpage!=nullptr)
-  {
-    std::cerr << "C";
-    return _iterSubpage;
-  }
-  std::cerr << "[PageList::NextPage] _iterSubpage is null, so checking next page" << std::endl;
-
-  if (_iter!=_pageList[_iterMag].end())
-  {
-    ++_iter; // Next page
-  }
-  if (_iter==_pageList[_iterMag].end()) // end of mag?
-  {
-    if (_iterMag<7)
+    std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
+    bool more=true;
+    if (_iterSubpage!=nullptr)
     {
-      _iterMag++; // next mag
-      _iter=_pageList[_iterMag].begin();
+        std::cerr << "A";
+        _iterSubpage=(TTXPageStream*) _iterSubpage->Getm_SubPage();
+        std::cerr << "B";
     }
-    else
+    if (_iterSubpage!=nullptr)
     {
-      more=false; // End of last mag
+        std::cerr << "C";
+        return _iterSubpage;
     }
-  }
+    std::cerr << "[PageList::NextPage] _iterSubpage is null, so checking next page" << std::endl;
 
-  if (more)
-  {
-    _iterSubpage=&(*_iter);
-    return _iterSubpage;
-  }
-  _iterSubpage=nullptr;
-  return nullptr; // Returned after the last page is iterated
+    if (_iter!=_pageList[_iterMag].end())
+    {
+        ++_iter; // Next page
+    }
+    if (_iter==_pageList[_iterMag].end()) // end of mag?
+    {
+        if (_iterMag<7)
+        {
+            _iterMag++; // next mag
+            _iter=_pageList[_iterMag].begin();
+        }
+        else
+        {
+            more=false; // End of last mag
+        }
+    }
+
+    if (more)
+    {
+        _iterSubpage=&(*_iter);
+        return _iterSubpage;
+    }
+    _iterSubpage=nullptr;
+    return nullptr; // Returned after the last page is iterated
 }
 
 TTXPageStream* PageList::PrevPage()
 {
-  //std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
-  bool more=true;
-  if (_iter!=_pageList[_iterMag].begin())
-  {
-    --_iter; // Previous page
-  }
-
-  if (_iter==_pageList[_iterMag].begin()) // beginning of mag?
-  {
-    if (_iterMag<=0)
+    //std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
+    bool more=true;
+    if (_iter!=_pageList[_iterMag].begin())
     {
-      _iterMag--; // previous mag
-      _iter=_pageList[_iterMag].end();
+        --_iter; // Previous page
     }
-    else
-    {
-      more=false;
-    }
-  }
 
-  if (more)
-  {
-    return &(*_iter);
-  }
-  return nullptr; // Returned after the first page is iterated
+    if (_iter==_pageList[_iterMag].begin()) // beginning of mag?
+    {
+        if (_iterMag<=0)
+        {
+            _iterMag--; // previous mag
+            _iter=_pageList[_iterMag].end();
+        }
+        else
+        {
+            more=false;
+        }
+    }
+
+    if (more)
+    {
+        return &(*_iter);
+    }
+    return nullptr; // Returned after the first page is iterated
 }
 
 TTXPageStream* PageList::FirstPage()
 {
-  // Reset the iterators
-  _iterMag=0;
-  _iter=_pageList[_iterMag].begin();
-  _iterSubpage=&(*_iter);
-  // Iterate through all the pages
-  std::cerr << "[PageList::FirstPage] about to find if there is a selected page" << std::endl;
-  for (TTXPageStream* p=_iterSubpage; p!=nullptr; p=NextPage())
-  {
-    if (p->Selected()) // If the page is selected, return a pointer to it
+    // Reset the iterators
+    _iterMag=0;
+    _iter=_pageList[_iterMag].begin();
+    _iterSubpage=&(*_iter);
+    // Iterate through all the pages
+    std::cerr << "[PageList::FirstPage] about to find if there is a selected page" << std::endl;
+    for (TTXPageStream* p=_iterSubpage; p!=nullptr; p=NextPage())
     {
-      std::cerr << "[PageList::FirstPage] selected page found" << std::endl;
-      return p;
+        if (p->Selected()) // If the page is selected, return a pointer to it
+        {
+            std::cerr << "[PageList::FirstPage] selected page found" << std::endl;
+            return p;
+        }
     }
-  }
-  std::cerr << "[PageList::FirstPage] no selected page" << std::endl;
-  return nullptr; // No selected page
+    std::cerr << "[PageList::FirstPage] no selected page" << std::endl;
+    return nullptr; // No selected page
 }
 
 TTXPageStream* PageList::LastPage()
 {
-  // Reset the iterators
-  _iterMag=7;
-  _iter=_pageList[_iterMag].end();
-  // Iterate through all the pages
-  for (TTXPageStream* p=&(*_iter); p!=nullptr; p=PrevPage())
-  {
-    if (p->Selected()) // If the page is selected, return a pointer to it
+    // Reset the iterators
+    _iterMag=7;
+    _iter=_pageList[_iterMag].end();
+    // Iterate through all the pages
+    for (TTXPageStream* p=&(*_iter); p!=nullptr; p=PrevPage())
     {
-      return p;
+        if (p->Selected()) // If the page is selected, return a pointer to it
+        {
+            return p;
+        }
     }
-  }
-  return nullptr; // No selected page
+    return nullptr; // No selected page
 }
 
 TTXPageStream* PageList::NextSelectedPage()
 {
-  TTXPageStream* page;
-  for(;;)
-  {
-    // std::cerr << "[PageList::NextSelectedPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
-    page=NextPage();
-    if (page==nullptr || page->Selected())
+    TTXPageStream* page;
+    for(;;)
     {
-      return page;
+        page=NextPage();
+        if (page==nullptr || page->Selected())
+        {
+            return page;
+        }
     }
-  }
 }
 
 // Detect pages that have been deleted from the drive
@@ -366,91 +347,89 @@ TTXPageStream* PageList::NextSelectedPage()
 // As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
 void PageList::ClearFlags()
 {
-  for (int mag=0;mag<8;mag++)
-  {
-    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    for (int mag=0;mag<8;mag++)
     {
-      TTXPageStream* ptr;
-      ptr=&(*p);
-      // Don't unmark a file that was MARKED. Once condemned it won't be pardoned
-      if (ptr->GetStatusFlag()==TTXPageStream::FOUND || ptr->GetStatusFlag()==TTXPageStream::NEW)
-      {
-        ptr->SetState(TTXPageStream::NOTFOUND);
-      }
+        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+        {
+            TTXPageStream* ptr;
+            ptr=&(*p);
+            // Don't unmark a file that was MARKED. Once condemned it won't be pardoned
+            if (ptr->GetStatusFlag()==TTXPageStream::FOUND || ptr->GetStatusFlag()==TTXPageStream::NEW)
+            {
+                ptr->SetState(TTXPageStream::NOTFOUND);
+            }
+        }
     }
-  }
 }
 
 void PageList::DeleteOldPages()
 {
-  // This is called from the FileMonitor thread
-  for (int mag=0;mag<8;mag++)
-  {
-    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    // This is called from the FileMonitor thread
+    for (int mag=0;mag<8;mag++)
     {
-      TTXPageStream* ptr;
-      ptr=&(*p);
-      if (ptr->GetStatusFlag()==TTXPageStream::GONE)
-      {
-        if (ptr->GetPacket29Flag())
+        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
         {
-            // Packet 29 was loaded from this page, so remove it.
-            _mag[mag]->DeletePacket29();
-            std::cerr << "[PageList::DeleteOldPages] Removing packet 29 from magazine " << ((mag == 0)?8:mag) << std::endl;
+            TTXPageStream* ptr;
+            ptr=&(*p);
+            if (ptr->GetStatusFlag()==TTXPageStream::GONE)
+            {
+                if (ptr->GetPacket29Flag())
+                {
+                    // Packet 29 was loaded from this page, so remove it.
+                    _mag[mag]->DeletePacket29();
+                    std::cerr << "[PageList::DeleteOldPages] Removing packet 29 from magazine " << ((mag == 0)?8:mag) << std::endl;
+                }
+                // page has been removed from lists
+                _pageList[mag].remove(*p--);
+
+                if (_iterMag == mag)
+                {
+                    // _iter is iterating _pageList[mag]
+                    _iter=_pageList[_iterMag].begin(); // reset it?
+                }
+            }
+            else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
+            {
+                // Pages marked here get deleted in the Service thread
+                ptr->SetState(TTXPageStream::MARKED);
+            }
         }
-        
-        //std::cerr << "[PageList::DeleteOldPages] Deleted " << ptr->GetSourcePage() << std::endl;
-        // page has been removed from lists
-        _pageList[mag].remove(*p--);
-        
-        if (_iterMag == mag){
-            // _iter is iterating _pageList[mag]
-            _iter=_pageList[_iterMag].begin(); // reset it?
-        }
-      }
-      else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
-      {
-		//std::cerr << "[PageList::DeleteOldPages] Marked for Delete " << ptr->GetSourcePage() << std::endl;
-		// Pages marked here get deleted in the Service thread
-        ptr->SetState(TTXPageStream::MARKED);
-      }
     }
-  }
 }
 
 void PageList::PopulatePageTypeLists()
 {
-  for (int mag=0;mag<8;mag++)
-  {
-    for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    for (int mag=0;mag<8;mag++)
     {
-        TTXPageStream* ptr;
-        ptr=&(*p);
-        if (ptr->Special())
+        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
         {
-            // Page is 'special'
-            ptr->SetSpecialFlag(true);
-            ptr->SetNormalFlag(false);
-            ptr->SetCarouselFlag(false);
-            _mag[mag]->GetSpecialPages()->addPage(ptr);
-        }
-        else
-        {
-            // Page is 'normal'
-            ptr->SetSpecialFlag(false);
-            ptr->SetNormalFlag(true);
-            _mag[mag]->GetNormalPages()->addPage(ptr);
-            
-            if (ptr->IsCarousel())
+            TTXPageStream* ptr;
+            ptr=&(*p);
+            if (ptr->Special())
             {
-                // Page is also 'carousel'
-                ptr->SetCarouselFlag(true);
-                _mag[mag]->GetCarousel()->addPage(ptr);
-                ptr->StepNextSubpage();
+                // Page is 'special'
+                ptr->SetSpecialFlag(true);
+                ptr->SetNormalFlag(false);
+                ptr->SetCarouselFlag(false);
+                _mag[mag]->GetSpecialPages()->addPage(ptr);
             }
             else
-                ptr->SetCarouselFlag(false);
+            {
+                // Page is 'normal'
+                ptr->SetSpecialFlag(false);
+                ptr->SetNormalFlag(true);
+                _mag[mag]->GetNormalPages()->addPage(ptr);
+                
+                if (ptr->IsCarousel())
+                {
+                    // Page is also 'carousel'
+                    ptr->SetCarouselFlag(true);
+                    _mag[mag]->GetCarousel()->addPage(ptr);
+                    ptr->StepNextSubpage();
+                }
+                else
+                    ptr->SetCarouselFlag(false);
+            }
         }
     }
-  }
 }

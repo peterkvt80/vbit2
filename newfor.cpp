@@ -87,7 +87,6 @@ int Newfor::SoftelPageInit(char* cmd)
 
 void Newfor::SubtitleOnair(char* response)
 {
-  // std::cerr << "[Newfor::SubtitleOnair] page=" << std::hex << ttxpage.GetPageNumber() << std::dec << std::endl;
 	strcpy(response,"Response not implemented, sorry\n");
 	// Send the page to the subtitle object in the service thread, then clear the lines.
   _subtitle->SendSubtitle(&ttxpage);
@@ -101,7 +100,6 @@ void Newfor::SubtitleOnair(char* response)
 
 void Newfor::SubtitleOffair()
 {
-	//std::cerr << "[Newfor;:SubtitleOffair]" << std::endl;
   _subtitle->SendSubtitle(&ttxpage);	// OnAir will already have cleared out these lines so just send the page again
 }
 
@@ -129,7 +127,6 @@ void Newfor::saveSubtitleRow(uint8_t mag, uint8_t row, char* cmd)
 {
 	(void)mag; // temporary silence error about unused parameter
 	// What @todo about the mag? This needs to be decoded and passed on
-	// std::cerr << "[Newfor::saveSubtitleRow] cmd=" << cmd << std::endl;
 	if (cmd[0]==0) cmd[0]='?'; // @todo Temporary measure to defeat null strings (this will inevitably multiply problems!)
 	ttxpage.SetRow(row, cmd);
 }

@@ -5,10 +5,6 @@
 using namespace ttx;
 using namespace vbit;
 
-Service::Service()
-{
-}
-
 Service::Service(Configure *configure, PageList *pageList) :
     _configure(configure),
     _pageList(pageList),
@@ -228,20 +224,19 @@ void Service::_updateEvents()
 
 void Service::_packetOutput(vbit::Packet* pkt)
 {
-    char *p = pkt->tx(_configure->GetMasterClock());
+    std::array<uint8_t, PACKETSIZE> *p = pkt->tx(_configure->GetMasterClock());
     
     /* t42 output */
     if (_configure->GetReverseFlag())
     {
-        static char tmp[PACKETSIZE];
-        for (int i=0;i<PACKETSIZE;i++)
+        static std::array<uint8_t, PACKETSIZE> tmp;
+        for (unsigned int i=0;i<(p->size());i++)
         {
-            tmp[i]=_vbi_bit_reverse[(uint8_t)(p[i])];
+            tmp[i]=_vbi_bit_reverse[p->at(i)];
         }
-        std::cout.write(tmp, 42);
+        p = &tmp;
     }
-    else
-    {
-        std::cout.write(p, 42);
-    }
+    
+    std::cout.write((char*)p->data()+3, 42); // have to cast the pointer to char for cout.write()
+
 }
