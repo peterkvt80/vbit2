@@ -169,12 +169,15 @@ void Service::_updateEvents()
         if (masterClock > now + FORWARDSBUFFER) // allow vbit2 to run into the future before limiting packet rate
             std::this_thread::sleep_for(std::chrono::milliseconds(20)); // back off for ≈1 field to limit output to (less than) 50 fields per second
         
+        if (_fieldCounter == 0)
+        {
+            masterClock++; // step the master clock before updating debug packet
+        }
+        
         _debug->TimeAndField(masterClock, _fieldCounter, now); // update the clocks in debugPacket.
         
         if (_fieldCounter == 0)
         {
-            masterClock++; // step the master clock
-            
             // if internal master clock is behind real time, or too far ahead, resynchronise it.
             if (masterClock < now || masterClock > now + FORWARDSBUFFER + 1)
             {
