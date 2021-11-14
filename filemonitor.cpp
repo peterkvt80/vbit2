@@ -77,8 +77,6 @@ int FileMonitor::readDirectory(std::string path)
     struct dirent *dirp;
     struct stat attrib;
     
-    std::stringstream ss;
-    
     DIR *dp;
 
     // Open the directory
@@ -107,6 +105,7 @@ int FileMonitor::readDirectory(std::string path)
             {
                 if (readDirectory(name)) // recurse into directory
                 {
+                    std::stringstream ss;
                     ss << "Error(" << errno << ") recursing into " << name << "\n";
                     std::cerr << ss.str();
                 }
@@ -140,6 +139,7 @@ int FileMonitor::readDirectory(std::string path)
                             // page was not 'special' but now is, add to SpecialPages list
                             q->SetSpecialFlag(true);
                             _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
+                            std::stringstream ss;
                             ss << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber() << "\n";
                             std::cerr << ss.str();
                             // page will be removed from NormalPages list by the service thread
@@ -150,6 +150,7 @@ int FileMonitor::readDirectory(std::string path)
                             // page was 'special' but now isn't, add to NormalPages list
                             _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                             q->SetNormalFlag(true);
+                            std::stringstream ss;
                             ss << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << "\n";
                             std::cerr << ss.str();
                         }
@@ -160,6 +161,7 @@ int FileMonitor::readDirectory(std::string path)
                             q->SetCarouselFlag(true);
                             q->StepNextSubpage(); // ensure we're pointing at a subpage
                             _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
+                            std::stringstream ss;
                             ss << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber() << "\n";
                             std::cerr << ss.str();
                         }
@@ -181,6 +183,7 @@ int FileMonitor::readDirectory(std::string path)
             }
             else
             {
+                std::stringstream ss;
                 ss << "[FileMonitor::run] Adding a new page " << dirp->d_name << "\n";
                 std::cerr << ss.str();
                 // A new file. Create the page object and add it to the page list.
@@ -228,12 +231,14 @@ int FileMonitor::readDirectory(std::string path)
                     }
                     else
                     {
+                        std::stringstream ss;
                         ss << "[FileMonitor::run] Failed to add" << dirp->d_name << "\n"; // should never happen
                         std::cerr << ss.str();
                     }
                 }
                 else
                 {
+                    std::stringstream ss;
                     ss << "[FileMonitor::run] Failed to load" << dirp->d_name << "\n";
                     std::cerr << ss.str();
                 }

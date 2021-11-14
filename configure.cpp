@@ -4,11 +4,11 @@
 
 using namespace ttx;
 
-int Configure::DirExists(char *path)
+int Configure::DirExists(std::string *path)
 {
     struct stat info;
 
-    if(stat(path, &info ) != 0)
+    if(stat(path->c_str(), &info ) != 0)
         return 0;
     else if(info.st_mode & S_IFDIR)
         return 1;
@@ -26,12 +26,12 @@ Configure::Configure(int argc, char** argv) :
     _serviceStatusString(20, ' '),
     _subtitleRepeats(1)
 {
-    std::stringstream ss;
-    strncpy(_configFile,CONFIGFILE,MAXPATH-1);
-#ifdef _WIN32
-    strncpy(_pageDir,"./pages",MAXPATH-1); // a relative path as a sensible default
+    _configFile = CONFIGFILE;
+    
+#ifdef RASPBIAN
+    _pageDir = "/home/pi/teletext";
 #else
-    strcpy(_pageDir,"/home/pi/teletext");
+    _pageDir = "./pages"; // a relative path as a sensible default
 #endif
     // This is where the default header template is defined.
     _headerTemplate = "VBIT2    %%# %%a %d %%b" "\x03" "%H:%M:%S";
@@ -41,7 +41,7 @@ Configure::Configure(int argc, char** argv) :
     _commandPortEnabled = false;
     
     _reverseBits = false;
-    _debug = false;
+    _debugLevel = 0;
 
     _rowAdaptive = false;
     _linesPerField = 16; // default to 16 lines per field
@@ -56,34 +56,63 @@ Configure::Configure(int argc, char** argv) :
     //Scan the command line for overriding the pages file.
     if (argc>1)
     {
-        for (int i=1;i<argc;i++)
+        for (int i=1;i<argc;++i)
         {
-            if (strncmp(argv[i],"--dir",5)==0)
+            std::string arg = argv[i];
+            if (arg == "--dir")
             {
-                i++;
-                strncpy(_pageDir,argv[i],MAXPATH-1);
+                if (i + 1 < argc)
+                    _pageDir = argv[++i];
+                else
+                {
+                    std::cerr << "[Configure::Configure] --dir requires an argument\n";
+                    exit(EXIT_FAILURE);
+                }
             }
-            else if (strncmp(argv[i],"--reverse",9)==0)
+            else if (arg == "--reverse")
             {
                 _reverseBits = true;
             }
-            else if (strncmp(argv[i],"--debug",7)==0)
+            else if (arg == "--debug")
             {
-                _debug = true;
-                std::cerr << "[Configure::Configure] debugging enabled\n";
+                if (i + 1 < argc)
+                {
+                    errno = 0;
+                    char *end_ptr;
+                    const long l = std::strtol(argv[++i], &end_ptr, 10);
+                    if (errno == 0 && *end_ptr == '\0' && l > -1 && l < MAXDEBUGLEVEL)
+                    {
+                        _debugLevel = (int)l;
+                        
+                        std::stringstream ss;
+                        ss << "[Configure::Configure] debugging enabled at level " << _debugLevel << "\n";
+                        std::cerr << ss.str();
+                    }
+                    else
+                    {
+                        std::cerr << "[Configure::Configure] invalid debug level argument\n";
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else
+                {
+                    std::cerr << "[Configure::Configure] --debug requires an argument\n";
+                    exit(EXIT_FAILURE);
+                }
             }
         }
     }
     
-    if (!DirExists(_pageDir))
+    if (!DirExists(&_pageDir))
     {
+        std::stringstream ss;
         ss << "[Configure::Configure] " << _pageDir << " does not exist or is not a directory\n";
         std::cerr << ss.str();
         exit(EXIT_FAILURE);
     }
-
-    // TODO: allow overriding config file from command line
     
+    // TODO: allow overriding config file from command line
+    std::stringstream ss;
     ss << "[Configure::Configure] Pages directory is " << _pageDir << "\n";
     ss << "[Configure::Configure] Config file is " << _configFile << "\n";
     std::cerr << ss.str();
@@ -105,8 +134,6 @@ Configure::~Configure()
 int Configure::LoadConfigFile(std::string filename)
 {
     std::ifstream filein(filename.c_str()); // Open the file
-    
-    std::stringstream ss;
 
     std::vector<std::string>::iterator iter;
     // these are all the valid strings for config lines
@@ -114,6 +141,7 @@ int Configure::LoadConfigFile(std::string filename)
 
     if (filein.is_open())
     {
+        std::stringstream ss;
         ss << "[Configure::LoadConfigFile] opened " << filename << "\n";
         std::cerr << ss.str();
 
@@ -385,6 +413,7 @@ int Configure::LoadConfigFile(std::string filename)
                 }
                 if (error)
                 {
+                    std::stringstream ss;
                     ss << "[Configure::LoadConfigFile] invalid config line: " << line << "\n";
                     std::cerr << ss.str();
                 }

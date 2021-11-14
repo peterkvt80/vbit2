@@ -21,8 +21,6 @@ void UpdatedPages::addPage(TTXPageStream* p)
 
 TTXPageStream* UpdatedPages::NextPage()
 {
-    std::stringstream ss;
-    
     if (_page == nullptr)
     {
         _iter=_UpdatedPagesList.begin();
@@ -45,7 +43,8 @@ loop:
         /* remove pointers from this list if the pages are marked for deletion */
         if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetUpdatedFlag()) // only remove it once
         {
-            ss << "[UpdatedPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
+            std::stringstream ss;
+            ss << "[UpdatedPages::NextPage] Deleted " << _page->GetSourcePage() << "\n";
             std::cerr << ss.str();
             _iter = _UpdatedPagesList.erase(_iter);
             _page->SetUpdatedFlag(false);

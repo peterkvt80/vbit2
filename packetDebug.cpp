@@ -52,7 +52,7 @@ bool PacketDebug::IsReady(bool force)
     (void)force; // silence error about unused parameter
     bool result=false;
     
-    if (_configure->GetDebugFlag())
+    if (_configure->GetDebugLevel())
     {
         if (GetEvent(EVENT_FIELD))
         {

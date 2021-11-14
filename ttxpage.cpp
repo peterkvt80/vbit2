@@ -118,7 +118,6 @@ bool TTXPage::m_LoadTTI(std::string filename)
     int lines=0;
     // Open the file
     std::ifstream filein(filename.c_str());
-    std::stringstream ss;
     TTXPage* p=this;
     p->m_Init(); // reset page
     char * ptr;
@@ -263,7 +262,9 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     {
                         std::getline(filein, line);
                         if (line.length()<3)
-                            ss << "invalid page function/coding " << line << "\n";
+                        {
+                            // invalid page function/coding
+                        }
                         else
                         {
                             SetPageFunctionInt(std::strtol(line.substr(0,1).c_str(), &ptr, 16));
@@ -273,7 +274,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                     }
                     default:
                     {
-                        ss << "Command not understood " << line << "\n";
+                        // line not understood
                     }
                 } // switch
             } // if matched command
@@ -281,7 +282,6 @@ bool TTXPage::m_LoadTTI(std::string filename)
         } // seek command
         if (!found) std::getline(filein, line);
     }
-    std::cerr << ss.str();
     filein.close(); // Not sure that we need to close it
     p->Setm_SubPage(nullptr);
     TTXPage::pageChanged=false;
@@ -505,9 +505,9 @@ int TTXPage::GetLanguage()
 
 void TTXPage::SetPageNumber(int page)
 {
-    std::stringstream ss;
     if ((page<0x10000) || (page>0x8ff99))
     {
+        std::stringstream ss;
         ss << "[TTXPage::SetPageNumber] Page number is out of range: " << std::hex << page << std::endl;
         std::cerr << ss.str();
         page = 0x8FF00;

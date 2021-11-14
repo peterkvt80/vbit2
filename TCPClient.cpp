@@ -269,8 +269,6 @@ void TCPClient::addChar(char ch, char* response)
     static int mode=MODENORMAL;
     static int charCount=0; // Used to accumulate Newfor
 
-    std::stringstream ss;
-
     response[0]=0;
     switch (mode)
     {
@@ -320,6 +318,7 @@ void TCPClient::addChar(char ch, char* response)
             else
             {
                 // Got a complete non-newfor command
+                std::stringstream ss;
                 ss << "[TCPClient::addChar] finished cmd='" << strlen(_cmd) << "\n";
                 std::cerr << ss.str();
                 if (strlen(_cmd))  // Avoid this being called twice by \n\r combinations

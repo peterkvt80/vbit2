@@ -19,7 +19,8 @@
 #include "ttxline.h"
 
 #define CONFIGFILE "vbit.conf" // default config file name
-#define MAXPATH 132
+
+#define MAXDEBUGLEVEL 3
 
 namespace ttx
 
@@ -33,7 +34,7 @@ class Configure
         Configure(int argc=0, char** argv=NULL);
         ~Configure();
         
-        inline char* GetPageDirectory(){return _pageDir;};
+        inline std::string GetPageDirectory(){return _pageDir;};
         
         std::string GetHeaderTemplate(){return _headerTemplate;}
         bool GetRowAdaptive(){return _rowAdaptive;}
@@ -48,7 +49,7 @@ class Configure
         bool GetCommandPortEnabled(){return _commandPortEnabled;}
         uint16_t GetLinesPerField(){return _linesPerField;}
         bool GetReverseFlag(){return _reverseBits;}
-        bool GetDebugFlag(){return _debug;}
+        int GetDebugLevel(){return _debugLevel;}
         int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
         
         /* these don't really belong in configure, but it's the only place that everything can access */
@@ -56,7 +57,7 @@ class Configure
         time_t GetMasterClock(){return _masterClock;}
         
     private:
-        int DirExists(char *path);
+        int DirExists(std::string *path);
         
         int LoadConfigFile(std::string filename);
         
@@ -78,12 +79,12 @@ class Configure
         uint16_t _CountryNetworkIdentificationCode;
         std::string _serviceStatusString; /// 20 characters
         
-        char _configFile[MAXPATH]; /// Configuration file name --config
-        char _pageDir[MAXPATH]; /// Configuration file name --dir
+        std::string _configFile; /// Configuration file name --config
+        std::string _pageDir; /// Configuration file name --dir
         uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
         bool _commandPortEnabled;
         bool _reverseBits;
-        bool _debug;
+        int _debugLevel;
         
         time_t _masterClock;
     };

@@ -191,13 +191,13 @@ int PageList::Match(char* pageNumber)
         for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
         {
             TTXPageStream* ptr;
-            std::stringstream ss;
             char s[6];
             char* ps=s;
             bool match=true;
             for (ptr=&(*p);ptr!=nullptr;ptr=(TTXPageStream*)ptr->Getm_SubPage()) // For all the subpages in a carousel
             {
                 // Convert the page number into a string so we can compare it
+                std::stringstream ss;
                 ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
                 strcpy(ps,ss.str().c_str());
                 // std::cerr << "[PageList::FindPage] matching " << ps << std::endl;
