@@ -89,7 +89,8 @@ Packet* Packet830::GetPacket(Packet* p)
         data.at(14) = (((minute / 10) + 1) << 4) | ((minute % 10) + 1);
         data.at(15) = (((second / 10) + 1) << 4) | ((second % 10) + 1);
         
-        // bytes 22-25 of the packet are marked reserved in the spec. Different broadcasters fill them with different values - we will leave them as hamming coded zero.
+        // bytes 22-25 of the packet are marked reserved in the spec. Different broadcasters fill them with different values
+        std::copy_n(_configure->GetReservedBytes().begin(), 4, data.begin() + 16); // copy from configuration
         
         p->SetPacketRaw(data);
         p->Parity(25); // set correct parity for status display

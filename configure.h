@@ -41,6 +41,7 @@ class Configure
         std::string GetServiceStatusString(){return _serviceStatusString;}
         bool GetMultiplexedSignalFlag(){return _multiplexedSignalFlag;}
         uint16_t GetNetworkIdentificationCode(){return _NetworkIdentificationCode;}
+        std::array<uint8_t, 4> GetReservedBytes(){return _reservedBytes;}
         uint8_t GetInitialMag(){return _initialMag;}
         uint8_t GetInitialPage(){return _initialPage;}
         uint16_t GetInitialSubcode(){return _initialSubcode;}
@@ -77,6 +78,7 @@ class Configure
         uint16_t _initialSubcode;
         uint16_t _NetworkIdentificationCode;
         uint16_t _CountryNetworkIdentificationCode;
+        std::array<uint8_t, 4> _reservedBytes; // four bytes which the teletext specification marks reserved
         std::string _serviceStatusString; /// 20 characters
         
         std::string _configFile; /// Configuration file name --config

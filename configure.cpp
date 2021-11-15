@@ -23,6 +23,7 @@ Configure::Configure(int argc, char** argv) :
     _initialSubcode(0x3F7F),
     _NetworkIdentificationCode(0x0000),
     _CountryNetworkIdentificationCode(0x0000),
+    _reservedBytes{0x15, 0x15, 0x15, 0x15}, // initialise reserved bytes to hamming 8/4 encoded 0
     _serviceStatusString(20, ' '),
     _subtitleRepeats(1)
 {
@@ -73,13 +74,41 @@ Configure::Configure(int argc, char** argv) :
             {
                 _reverseBits = true;
             }
+            else if (arg == "--reserved")
+            {
+                if (i + 1 < argc)
+                {
+                    // Take a 32 bit hexadecimal value to set the four reserved bytes in the BSDP
+                    // Store bytes big endian so that the order digits appear on the command line is the same as they appear in packet
+                    errno = 0;
+                    char *end_ptr;
+                    unsigned long l = std::strtoul(argv[++i], &end_ptr, 16);
+                    if (errno == 0 && *end_ptr == '\0')
+                    {
+                        _reservedBytes[0] = (l >> 24) & 0xff;
+                        _reservedBytes[1] = (l >> 16) & 0xff;
+                        _reservedBytes[2] = (l >> 8) & 0xff;
+                        _reservedBytes[3] = (l >> 0) & 0xff;
+                    }
+                    else
+                    {
+                        std::cerr << "[Configure::Configure] invalid reserved bytes argument\n";
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else
+                {
+                    std::cerr << "[Configure::Configure] --reserved requires an argument\n";
+                    exit(EXIT_FAILURE);
+                }
+            }
             else if (arg == "--debug")
             {
                 if (i + 1 < argc)
                 {
                     errno = 0;
                     char *end_ptr;
-                    const long l = std::strtol(argv[++i], &end_ptr, 10);
+                    long l = std::strtol(argv[++i], &end_ptr, 10);
                     if (errno == 0 && *end_ptr == '\0' && l > -1 && l < MAXDEBUGLEVEL)
                     {
                         _debugLevel = (int)l;
