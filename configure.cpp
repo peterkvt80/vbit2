@@ -49,6 +49,8 @@ Configure::Configure(int argc, char** argv) :
 
     _multiplexedSignalFlag = false; // using this would require changing all the line counting and a way to send full field through raspi-teletext - something for the distant future when everything else is done...
     
+    _OutputFormat = T42; // t42 output is the default behaviour
+    
     uint8_t priority[8]={9,3,3,6,3,3,5,6}; // 1=High priority,9=low. Note: priority[0] is mag 8
     
     for (int i=0; i<8; i++)
@@ -70,9 +72,46 @@ Configure::Configure(int argc, char** argv) :
                     exit(EXIT_FAILURE);
                 }
             }
+            else if (arg == "--format")
+            {
+                if (i + 1 < argc)
+                {
+                    arg = argv[++i];
+                    
+                    if (arg == "t42")
+                    {
+                        _OutputFormat = T42;
+                    }
+                    else if (arg == "raw")
+                    {
+                        _OutputFormat = Raw;
+                    }
+                    else if (arg == "PES")
+                    {
+                        _OutputFormat = PES;
+                    }
+                    
+                    if (_reverseBits && _OutputFormat != T42)
+                    {
+                        std::cerr << "[Configure::Configure] --reverse requires t42 format\n";
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else
+                {
+                    std::cerr << "[Configure::Configure] --format requires an argument\n";
+                    exit(EXIT_FAILURE);
+                }
+            }
             else if (arg == "--reverse")
             {
                 _reverseBits = true;
+                
+                if (_OutputFormat != T42)
+                {
+                    std::cerr << "[Configure::Configure] --reverse requires t42 format\n";
+                    exit(EXIT_FAILURE);
+                }
             }
             else if (arg == "--reserved")
             {

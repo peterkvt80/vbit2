@@ -76,6 +76,9 @@ namespace ttx
             
             /* output a packet in the desired format */
             void _packetOutput(vbit::Packet* pkt);
+            
+            /* queue up packets for outputting as a Packetised Elementary Stream */
+            std::vector<std::vector<uint8_t>> _PESBuffer;
     };
 }
 

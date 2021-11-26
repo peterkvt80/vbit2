@@ -28,6 +28,13 @@ namespace ttx
 class Configure
 {
     public:
+        enum OutputFormat
+        {
+            T42,
+            Raw,
+            PES
+        };
+        
         //Configure();
         /** Constructor can take overrides from the command line
          */
@@ -56,6 +63,8 @@ class Configure
         /* these don't really belong in configure, but it's the only place that everything can access */
         void SetMasterClock(time_t t){_masterClock = t;}
         time_t GetMasterClock(){return _masterClock;}
+        
+        OutputFormat GetOutputFormat(){return _OutputFormat;}
         
     private:
         int DirExists(std::string *path);
@@ -89,6 +98,8 @@ class Configure
         int _debugLevel;
         
         time_t _masterClock;
+        
+        OutputFormat _OutputFormat;
     };
 }
 

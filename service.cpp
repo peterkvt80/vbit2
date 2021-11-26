@@ -240,7 +240,6 @@ void Service::_updateEvents()
             }
         }
         
-        
         std::cout << std::flush;
     }
     
@@ -251,17 +250,118 @@ void Service::_packetOutput(vbit::Packet* pkt)
 {
     std::array<uint8_t, PACKETSIZE> *p = pkt->tx(_configure->GetMasterClock());
     
-    /* t42 output */
-    if (_configure->GetReverseFlag())
-    {
-        static std::array<uint8_t, PACKETSIZE> tmp;
-        for (unsigned int i=0;i<(p->size());i++)
-        {
-            tmp[i]=ReverseByteTab[p->at(i)];
-        }
-        p = &tmp;
-    }
+    Configure::OutputFormat OutputFormat = _configure->GetOutputFormat();
     
-    std::cout.write((char*)p->data()+3, 42); // have to cast the pointer to char for cout.write()
+    switch (OutputFormat)
+    {
+        case Configure::OutputFormat::T42:
+        {
+            /* t42 output */
+            if (_configure->GetReverseFlag())
+            {
+                static std::array<uint8_t, PACKETSIZE> tmp;
+                for (unsigned int i=0;i<(p->size());i++)
+                {
+                    tmp[i]=ReverseByteTab[p->at(i)];
+                }
+                p = &tmp;
+            }
+            
+            std::cout.write((char*)p->data()+3, 42); // have to cast the pointer to char for cout.write()
+            
+            break;
+        }
+        
+        case Configure::OutputFormat::Raw:
+        {
+            /* full 45 byte teletext packets */
+            std::cout.write((char*)p->data(), 45); // have to cast the pointer to char for cout.write()
+            
+            break;
+        }
+        
+        case Configure::OutputFormat::PES:
+        {
+            /* Packetized Elementary Stream for insertion into MPEG-2 transport stream */
+            
+            if (_lineCounter == 0 && (_fieldCounter&1)^1)
+            {
+                // a new frame has started - transmit data for previous frame if there is any
+                if (!(_PESBuffer.empty()))
+                {
+                    std::array<uint8_t, 46> padding;
+                    padding.fill(0xff);
+                    
+                    std::vector<uint8_t> header = {0x00, 0x00, 0x01, 0xBD};
+                    
+                    int numBlocks = _PESBuffer.size() + 1; // header and N lines
+                    int numTSPackets = ((numBlocks * 46) + 183) / 184; // round up
+                    int packetLength = (numTSPackets * 184) - 6;
+                    
+                    header.push_back(packetLength >> 8);
+                    header.push_back(packetLength & 0xff);
+                    
+                    /* bits | 7 | 6 |  5   | 4   |     3    |     2     |     1     |     0    |
+                            | 1 | 0 | Scrambling | Priority | Alignment | Copyright | Original | */
+                    header.push_back(0x85); // Align, Original
+                    
+                    /* bits |  7 | 6  |   5  |    4    |     3     |     2     |    1    |       0       |
+                            | PTS DTS | ESCR | ES rate | DSM trick | copy info | PES CRC | PES extension |*/
+                    header.push_back(0x00); // No PTS
+                    
+                    header.push_back(0x24); // PES header data length
+                    
+                    /* 
+                    uint64_t PTS = 0; // ???
+                    
+                    // append PTS
+                    header.push_back(0x21 | (PTS >> 30));
+                    header.push_back((PTS & 0x3FC00000) >> 22);
+                    header.push_back(0x01 | ((PTS & 0x3F8000) >> 14));
+                    header.push_back((PTS & 0x7F80) >> 7);
+                    header.push_back(0x01 | ((PTS & 0x7F) << 1));
+                    */
+                    
+                    header.resize(0x2D, 0xff); // make PES header up to 45 bytes long with stuffing bytes.
+                    
+                    header.push_back(0x10); // append PES data identifier (EBU data)
+                    
+                    std::cout.write((char*)header.data(), header.size()); // output PES header and data_identifier
+                    
+                    for (unsigned int i = 0; i < _PESBuffer.size(); i++)
+                    {
+                        std::cout.write((char*)_PESBuffer[i].data(), 46);
+                    }
+                    
+                    for (int i = numBlocks; i < numTSPackets * 4; i++)
+                    {
+                        std::cout.write((char*)padding.data(), 46); // pad out remainder of PES packet
+                    }
+                    
+                    _PESBuffer.clear(); // empty buffer ready for next frame's packets
+                }
+            }
+            
+            std::vector<uint8_t> data = {0x02, 0x28}; // data_unit_id and data_unit_length (EBU teletext non-subtitle, 44 bytes)
+            
+            if (_lineCounter > 15)
+            {
+                data.push_back(((_fieldCounter&1)^1) << 5); //field parity, line number undefined
+            }
+            else
+            {
+                data.push_back((((_fieldCounter&1)^1) << 5) | (_lineCounter + 7)); // field parity and line number
+            }
+            
+            for (int i = 2; i < 45; i++)
+            {
+                data.push_back(ReverseByteTab[p->at(i)]); // bits are reversed in PES stream
+            }
+            
+            _PESBuffer.push_back(data);
+            
+            break;
+        }
+    }
 
 }
