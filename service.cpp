@@ -342,7 +342,7 @@ void Service::_packetOutput(vbit::Packet* pkt)
                 }
             }
             
-            std::vector<uint8_t> data = {0x02, 0x28}; // data_unit_id and data_unit_length (EBU teletext non-subtitle, 44 bytes)
+            std::vector<uint8_t> data = {0x02, 0x2c}; // data_unit_id and data_unit_length (EBU teletext non-subtitle, 44 bytes)
             
             if (_lineCounter > 15)
             {
