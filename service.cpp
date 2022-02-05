@@ -284,9 +284,9 @@ void Service::_packetOutput(vbit::Packet* pkt)
         {
             /* Packetized Elementary Stream for insertion into MPEG-2 transport stream */
             
-            if (_lineCounter == 0 && (_fieldCounter&1)^1)
+            if (_lineCounter == 0)
             {
-                // a new frame has started - transmit data for previous frame if there is any
+                // a new field has started - transmit data for previous field if there is any
                 if (!(_PESBuffer.empty()))
                 {
                     std::array<uint8_t, 46> padding;
