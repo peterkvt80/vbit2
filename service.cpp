@@ -1,6 +1,7 @@
 /** Service
  */
 #include "service.h"
+#include "vbit2.h"
 
 using namespace ttx;
 using namespace vbit;
@@ -28,9 +29,6 @@ Service::Service(Configure *configure, PageList *pageList) :
     _linesPerField = _configure->GetLinesPerField();
     
     _lineCounter = _linesPerField - 1; // roll over immediately
-    
-    // initialise master clock to unix epoch, it will be set when run() starts generating packets
-    configure->SetMasterClock(0); // put master clock in configure so that sources can access it. Horrible spaghetti coding
 }
 
 Service::~Service()
@@ -154,7 +152,8 @@ int Service::run()
 
 void Service::_updateEvents()
 {
-    time_t masterClock = _configure->GetMasterClock();
+    vbit::MasterClock *mc = mc->Instance();
+    time_t masterClock = mc->GetMasterClock();
     
     // Step the counters
     _lineCounter = (_lineCounter + 1) % _linesPerField;
@@ -186,7 +185,7 @@ void Service::_updateEvents()
                 std::cerr << "[Service::_updateEvents] Resynchronising master clock" << std::endl; // emit warning on stderr
             }
             
-            _configure->SetMasterClock(masterClock); // update 
+            mc->SetMasterClock(masterClock); // update the master clock singleton
             
             if (masterClock%15==0) // TODO: how often do we want to trigger sending special packets?
             {
@@ -248,7 +247,7 @@ void Service::_updateEvents()
 
 void Service::_packetOutput(vbit::Packet* pkt)
 {
-    std::array<uint8_t, PACKETSIZE> *p = pkt->tx(_configure->GetMasterClock());
+    std::array<uint8_t, PACKETSIZE> *p = pkt->tx();
     
     Configure::OutputFormat OutputFormat = _configure->GetOutputFormat();
     

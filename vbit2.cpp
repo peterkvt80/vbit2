@@ -38,6 +38,8 @@
 using namespace vbit;
 using namespace ttx;
 
+MasterClock *MasterClock::instance = 0; // initialise MasterClock singleton
+
 /* Options
  * --dir <path to pages>
  * Sets the pages directory and the location of vbit.conf.

@@ -20,7 +20,8 @@ Packet830::~Packet830()
 
 Packet* Packet830::GetPacket(Packet* p)
 {
-    time_t timeRaw = _configure->GetMasterClock();
+    vbit::MasterClock *mc = mc->Instance();
+    time_t timeRaw = mc->GetMasterClock();
     time_t timeLocal;
     struct tm *tmLocal;
     struct tm *tmGMT;

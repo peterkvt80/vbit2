@@ -60,10 +60,6 @@ class Configure
         int GetDebugLevel(){return _debugLevel;}
         int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
         
-        /* these don't really belong in configure, but it's the only place that everything can access */
-        void SetMasterClock(time_t t){_masterClock = t;}
-        time_t GetMasterClock(){return _masterClock;}
-        
         OutputFormat GetOutputFormat(){return _OutputFormat;}
         
     private:
@@ -96,8 +92,6 @@ class Configure
         bool _commandPortEnabled;
         bool _reverseBits;
         int _debugLevel;
-        
-        time_t _masterClock;
         
         OutputFormat _OutputFormat;
     };

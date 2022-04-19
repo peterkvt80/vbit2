@@ -5,6 +5,7 @@
 
 #include "packetsource.h"
 #include "configure.h"
+#include "vbit2.h"
 
 namespace vbit
 {

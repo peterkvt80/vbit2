@@ -1,5 +1,6 @@
 #include "packet.h"
 #include "version.h"
+#include "vbit2.h"
 
 using namespace vbit;
 
@@ -183,8 +184,12 @@ int Packet::GetOffsetOfSubstition(std::string string)
 /* Perform translations on packet for header substitution etc.
  * return pointer to 45 byte packet data vector
  */
-std::array<uint8_t, PACKETSIZE>* Packet::tx(time_t t)
+std::array<uint8_t, PACKETSIZE>* Packet::tx()
 {
+    // get master clock singleton
+    vbit::MasterClock *mc = mc->Instance();
+    time_t t = mc->GetMasterClock();
+    
     // Get local time
     struct tm * timeinfo;
     timeinfo=localtime(&t);

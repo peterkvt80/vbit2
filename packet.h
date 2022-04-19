@@ -46,9 +46,8 @@ namespace vbit
             /** tx
              * @return pointer to packet data vector
              * We create transmission ready packets of 45 bytes.
-             * @param t internal masterClock time
              */
-            std::array<uint8_t, PACKETSIZE>* tx(time_t t);
+            std::array<uint8_t, PACKETSIZE>* tx();
 
             /** SetMRAG
              * Sets the first five bytes of the packet

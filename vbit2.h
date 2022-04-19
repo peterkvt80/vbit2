@@ -13,8 +13,24 @@
 #include "fcntl.h"
 #endif
 
-namespace ttx
+namespace vbit
 {
+    class MasterClock {
+        public:
+            static MasterClock *Instance(){
+                if (!instance)
+                    instance = new MasterClock;
+                return instance;
+            }
+            
+            void SetMasterClock(time_t t){_masterClock = t;}
+            time_t GetMasterClock(){return _masterClock;}
+            
+        private:
+            MasterClock(){_masterClock = 0;}; // initialise master clock to unix epoch, it will be set when run() starts generating packets
+            static MasterClock *instance;
+            time_t _masterClock;
+    };
 }
 
 #endif
