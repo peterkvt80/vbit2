@@ -162,17 +162,17 @@ Packet* PacketMag::GetPacket(Packet* p)
                 
                 if (_page->IsCarousel())
                 {
-                    if (_page->Expired())
+                    if (_page->Expired(true))
                     {
                         // cycle if timer has expired
                         _page->StepNextSubpage();
                         _page->SetTransitionTime(_page->GetCarouselPage()->GetCycleTime());
                         _status=_page->GetCarouselPage()->GetPageStatus();
-                    } 
+                    }
                     else
                     {
-                        // clear any ERASE bit if page hasn't cycled to minimise flicker
-                        _status=_page->GetCarouselPage()->GetPageStatus() & ~(PAGESTATUS_C4_ERASEPAGE);
+                        // clear any ERASE bit if page hasn't cycled to minimise flicker, and the interrupted status bit
+                        _status=_page->GetCarouselPage()->GetPageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
                     }
                     thisSubcode=_page->GetCarouselPage()->GetSubCode();
                     _region=_page->GetCarouselPage()->GetRegion();

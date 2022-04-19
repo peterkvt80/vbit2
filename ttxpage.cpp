@@ -79,8 +79,8 @@ void TTXPage::m_Init()
     // Member variables
     m_destination="inserter";
     m_description="Description goes here";
-    m_cycletimeseconds=8;
-    m_cycletimetype='T';
+    m_cycletimeseconds=1; /* default to cycling carousels every page cycle */
+    m_cycletimetype='C';
     m_pagestatus=0; /* default to not sending page to ignore malformed/blank tti files */
     m_lastpacket=0;
     m_pagecoding=CODING_7BIT_TEXT;
@@ -163,7 +163,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                         p->SetCycleTime(atoi(line.c_str()));
                         std::getline(filein, line);
                         m_cycletimetype=line[0]=='T'?'T':'C';
-                        // TODO: CT is not decoded correctly
+                        p->SetCycleTimeMode(m_cycletimetype);
                         break;
                     }
                     case 4 : // "PN" - Page Number mppss
@@ -307,6 +307,7 @@ TTXPage::TTXPage(const TTXPage& other)
     m_sourcepage=other.m_sourcepage;   // SP
     m_description=other.m_description;  // DE
     m_cycletimeseconds=other.m_cycletimeseconds;
+    m_cycletimetype=other.m_cycletimetype;
     m_subcode=other.m_subcode;              // SC
     m_pagestatus=other.m_pagestatus;           // PS
     m_lastpacket=other.m_lastpacket;

@@ -55,17 +55,19 @@ class TTXPageStream : public TTXPage
          *  Don't confuse this with the _isCarousel flag which is used to mark when a page changes between single/carousel
          * \return True if there are subpages
          */
-        inline bool IsCarousel(){return Getm_SubPage()!=NULL;};
+        bool IsCarousel();
 
         /** Set the time when this carousel expires
-         *  ...which is the current time plus the cycle time
+         *  which is the current time plus the cycle time
+         *  or the number of page cycles remaining
          */
-        inline void SetTransitionTime(int cycleTime){_transitionTime=time(nullptr) + cycleTime;};
+        void SetTransitionTime(int cycleTime);
 
         /** Used to time carousels
+         *  If StepCycles is set, decrement page cycle count
          *  @return true if it is time to change carousel page
          */
-        inline bool Expired(){return _transitionTime<=time(nullptr);};
+        bool Expired(bool StepCycles=false);
 
         /** Step to the next page in a carousel
          *  Updates _CarouselPage;
@@ -119,6 +121,7 @@ class TTXPageStream : public TTXPage
         // TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
 
         time_t _transitionTime; // Records when the next carousel transition is due
+        int _cyclesRemaining; // As above for cycle mode
 
         TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
 

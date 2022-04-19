@@ -92,3 +92,45 @@ void TTXPageStream::IncrementUpdateCount()
 {
     _updateCount = (_updateCount + 1) % 8;
 }
+
+void TTXPageStream::SetTransitionTime(int cycleTime)
+{
+    if (GetCycleTimeMode() == 'T')
+        _transitionTime=time(nullptr) + cycleTime; // TODO: Uh-oh, this should be using the master clock
+    else
+        _cyclesRemaining=cycleTime;
+}
+
+bool TTXPageStream::Expired(bool StepCycles)
+{
+    // Has carousel timer expired
+    if (GetCycleTimeMode() == 'T')
+    {
+        return _transitionTime<=time(nullptr); // TODO: Uh-oh, this should be using the master clock
+    }
+    else
+    {
+        if (StepCycles)
+        {
+            _cyclesRemaining--;
+            _cyclesRemaining = (_cyclesRemaining<0)?0:_cyclesRemaining;
+        }
+        return _cyclesRemaining == 0;
+    }
+}
+
+bool TTXPageStream::IsCarousel()
+{
+    if (Getm_SubPage()!=NULL) // has subpages
+    {
+        return true;
+    }
+    
+    if (GetCycleTimeMode() == 'T' && GetPageStatus() & PAGESTATUS_C9_INTERRUPTED)
+    {
+        // no subpages, but interrupted sequence flag is set, and page is in timed mode, so treat as a 1 page carousel
+        return true;
+    }
+
+    return false;
+}

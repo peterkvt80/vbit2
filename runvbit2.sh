@@ -39,7 +39,7 @@ if [ ! -z "$lpf" ]; then
   if [ "$lpf" -ge 1 ] && [ "$lpf" -le 15 ]; then
     num=65535
     for ((i=0;i<lpf;i++)); do
-      num=$((num>>1))
+      num=$((num<<1))
     done
   fi
 fi
