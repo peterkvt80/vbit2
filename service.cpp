@@ -166,7 +166,7 @@ void Service::_updateEvents()
         time(&now);
         
         if (masterClock > now + FORWARDSBUFFER) // allow vbit2 to run into the future before limiting packet rate
-            std::this_thread::sleep_for(std::chrono::milliseconds(20)); // back off for ≈1 field to limit output to (less than) 50 fields per second
+            std::this_thread::sleep_for(std::chrono::milliseconds(40)); // back off for ≈2 fields to limit output to (less than) 50 fields per second
         
         if (_fieldCounter == 0)
         {

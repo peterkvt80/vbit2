@@ -13,6 +13,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <stdexcept>
 
