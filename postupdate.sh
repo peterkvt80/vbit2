@@ -15,9 +15,11 @@ main(){
 
   # offer to upgrade old installs to new scripts (runs getvbit2)
   migrate
-
+  
   # recompile vbit2
   make
+  
+  sudo apt -y install python3-dialog
   
   # create links
   mkdir -p $HOME/.local/bin

@@ -2,7 +2,7 @@
 
 # install required packages
 sudo apt update
-sudo apt -y install git subversion dialog
+sudo apt -y install git subversion dialog python3-dialog
 
 # download the raspi-teletext git repository and compile it
 git clone https://github.com/ali1234/raspi-teletext.git $HOME/raspi-teletext
@@ -11,6 +11,9 @@ make
 
 # System sets SD video on bootup 
 sudo sed -i s/#sdtv_mode/sdtv_mode/ /boot/config.txt
+
+# Disable the new KMS graphics driver in bullseye
+sudo sed -i s/dtoverlay=vc4-kms-v3d/#dtoverlay=vc4-kms-v3d /boot/config.txt
 
 # download the vbit2 git repository
 git clone https://github.com/peterkvt80/vbit2.git $HOME/vbit2
