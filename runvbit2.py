@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # run vbit2 using configuration from config.json
 
+import config
 import os
-import json
 import subprocess
 import signal
 
@@ -10,52 +10,19 @@ def signalHandler(_signo, _stack_frame):
     # send TERM signal to vbit2 process
     vbit.terminate()
 
-# absolute path of installed services
-SERVICESDIR = os.path.join(os.getenv('HOME'), ".teletext-services")
-
-if not os.path.exists(SERVICESDIR):
-    quit()
+configData = config.load()
 
 try:
-    with open(os.path.join(SERVICESDIR,"config.json")) as configFile:
-        configData = json.load(configFile)
-except:
-    # opening file failed
-    print("Failed to open config.json in services directory")
-    quit()
-
-installed = configData.get("installed")
-
-if not installed:
-    installed = []
-
-settings = configData.get("settings")
-
-if not settings:
-    settings = {}
-
-selected = settings.get("selected")
-
-if not selected:
-    print("No service is selected")
-    quit()
-    
-for service in installed:
-    name = service.get("name")
-    path = service.get("path")
-    if name == selected:
-        servicePath = path
-        break
-
-if not servicePath:
-    print("error: selected service not found")
+    service = config.getSelectedService(configData)
+except Exception as e:
+    print(e)
     quit()
 
 linesPerField = 16 # vbit2 defaults to 16 lpf
 
 # try to get lines_per_field setting from config files
 for conffile in ["vbit.conf", "vbit.conf.override"]:
-    confpath = os.path.join(servicePath, conffile)
+    confpath = os.path.join(service["path"], conffile)
     if os.path.exists(confpath):
         with open(confpath, "r") as conf:
             for line in conf:
@@ -69,7 +36,7 @@ for conffile in ["vbit.conf", "vbit.conf.override"]:
 
 # could check for overrides in the json config here too if vbit2 gains a command argument to override lines per field
 
-output = settings.get("output")
+output = configData["settings"].get("output")
 if not output:
     print("no output type selected")
     quit()
@@ -91,7 +58,7 @@ if output == "raspi-teletext":
 if prerun:
     subprocess.run(prerun)
 
-vbit = subprocess.Popen([os.path.join(os.getenv('HOME'), ".local/bin/vbit2"), "--dir", servicePath], stdout=subprocess.PIPE)
+vbit = subprocess.Popen([os.path.join(os.getenv('HOME'), ".local/bin/vbit2"), "--dir", service["path"]], stdout=subprocess.PIPE)
 
 signal.signal(signal.SIGTERM, signalHandler)
 signal.signal(signal.SIGINT, signalHandler)

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
-import sys
+import config
 import json
+import sys
 import os
 import shutil
 import subprocess
@@ -13,14 +14,6 @@ SCRIPTDIR = os.path.dirname(os.path.realpath(__file__))
 
 # absolute path of installed services
 SERVICESDIR = os.path.join(os.getenv('HOME'), ".teletext-services")
-
-if not os.path.exists(SERVICESDIR):
-    os.makedirs(SERVICESDIR)
-    with open(os.path.join(SERVICESDIR,"IMPORTANT"), 'w') as importantFile:
-        importantFile.write("IMPORTANT:\nThese directories were created by vbit-config.\nIf a service is uninstalled the directory will be deleted.")
-
-if not os.path.exists(os.path.join(SERVICESDIR, "custom_services")):
-    os.makedirs(os.path.join(SERVICESDIR, "custom_services"))
 
 d = Dialog(dialog="dialog", autowidgetsize=True)
 d.set_background_title("VBIT2 Config")
@@ -42,7 +35,7 @@ def selectService(configData):
     if code == "ok":
         configData["settings"]["selected"] = dict(choices)[tag]
         
-        writeConfig(configData)
+        config.save(configData)
         
         if subprocess.run(["systemctl", "--user", "is-active", "vbit2.service"], capture_output=True, text=True).stdout == "active\n":
             # service is running so restart it
@@ -125,7 +118,7 @@ def installService(configData, servicesData, isGroup=False):
                     if not configData["settings"].get("selected"):
                         configData["settings"]["selected"] = name
                         
-                    writeConfig(configData)
+                    config.save(configData)
                     
                     chooseSubservices(subservices, fullpath)
                 except:
@@ -184,7 +177,7 @@ def customMenu(configData):
                                     if not configData["settings"].get("selected"):
                                         configData["settings"]["selected"] = name
                                     
-                                    writeConfig(configData)
+                                    config.save(configData)
                                     break
                             else:
                                 break
@@ -230,7 +223,7 @@ def customMenu(configData):
                                 if not configData["settings"].get("selected"):
                                     configData["settings"]["selected"] = name
                                 
-                                writeConfig(configData)
+                                config.save(configData)
                             except:
                                 d.msgbox("Installing service \""+name+"\" failed")
                                 if os.path.commonpath([os.path.abspath(SERVICESDIR)]) == os.path.commonpath([os.path.abspath(SERVICESDIR), os.path.abspath(fullpath)]): # only delete service if installed under SERVICESDIR
@@ -293,37 +286,9 @@ def uninstallService(configData):
                         shutil.rmtree(service["path"], ignore_errors=True) # delete directory
                         
                     configData["installed"].remove(service) # remove from list
-                    writeConfig(configData)
+                    config.save(configData)
                 
                 break
-
-def importConfig():
-    try:
-        with open(os.path.join(SERVICESDIR,"config.json")) as configFile:
-            configData = json.load(configFile)
-    except:
-        # opening file failed
-        configData = {}
-    
-    if not configData.get("installed"):
-        configData["installed"] = []
-        
-    if not configData.get("settings"):
-        configData["settings"] = {}
-    
-    # no ui to set desired output yet so tell runvbit2 to use raspi-teletext
-    if not configData["settings"].get("output"):
-        configData["settings"]["output"] = "raspi-teletext"
-    
-    return configData
-
-def writeConfig(configData):
-    try:
-        with open(os.path.join(SERVICESDIR,"config.json"), 'w') as configFile:
-            json.dump(configData, configFile, indent=2)
-    except:
-        print("ERROR: updating config file failed")
-        quit()
 
 def optionsMenu():
     updateEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "teletext-update.timer"], capture_output=True, text=True).stdout == "enabled\n"
@@ -361,7 +326,7 @@ def optionsMenu():
 
 def mainMenu():
     while True:
-        configData = importConfig()
+        configData = config.load()
         
         options = [("I","Install service")]
         
