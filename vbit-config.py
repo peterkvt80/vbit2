@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import subprocess
+import re
 from dialog import Dialog
 
 # get absolute path of vbit2 install
@@ -17,6 +18,9 @@ if not os.path.exists(SERVICESDIR):
     os.makedirs(SERVICESDIR)
     with open(os.path.join(SERVICESDIR,"IMPORTANT"), 'w') as importantFile:
         importantFile.write("IMPORTANT:\nThese directories were created by vbit-config.\nIf a service is uninstalled the directory will be deleted.")
+
+if not os.path.exists(os.path.join(SERVICESDIR, "custom_services")):
+    os.makedirs(os.path.join(SERVICESDIR, "custom_services"))
 
 d = Dialog(dialog="dialog", autowidgetsize=True)
 d.set_background_title("VBIT2 Config")
@@ -52,7 +56,6 @@ def installService(configData, servicesData, isGroup=False):
     installable = []
     choices = []
     i = 0
-    
     for service in sorted(servicesData,key=lambda x: x["name"]):
         installable += [service]
         choices += [(str(i), service["name"])]
@@ -66,7 +69,7 @@ def installService(configData, servicesData, isGroup=False):
     if code == "ok":
         if tag == "C":
             # custom service
-            customMenu()
+            customMenu(configData)
             
         else:
             service = installable[int(tag)]
@@ -116,8 +119,12 @@ def installService(configData, servicesData, isGroup=False):
                 
                     # add service to config
                     configData["installed"] += [{"name":name, "type":service["type"], "path":fullpath}]
-                    
                     configData["installed"].sort(key=lambda x: x["name"])
+                    
+                    # if no service is selected, select it
+                    if not configData["settings"].get("selected"):
+                        configData["settings"]["selected"] = name
+                        
                     writeConfig(configData)
                     
                     chooseSubservices(subservices, fullpath)
@@ -143,17 +150,99 @@ def chooseSubservices(subservices, fullpath):
         if code == "ok" and tags:
             d.msgbox("Optional subservices not yet implemented")
 
-def customMenu():
+def customMenu(configData):
     choices = [("S", "Subversion repository"),("G", "Git repository"),("D", "Directory")]
     
     code, tag = d.menu("Select service type",choices=choices,title="Install custom service",cancel_label="Back")
     
-    d.msgbox("Custom services not yet implemented")
+    if code == "ok":
+        if tag == "D":
+            # local directory
+            
+            while True: # select directory loop
+                code, string = d.dselect(os.getenv('HOME')+"/", title="Enter teletext service directory:", height=7)
+                if code == "ok":
+                    path = os.path.normpath(string)
+                    code = d.yesno("Selected directory "+string, yes_label="OK", no_label="Back")
+                    if code == "ok":
+                        # confirmed directory
+                        while True: # name input loop
+                            code, string = d.inputbox("Enter service name:", cancel_label="Back")
+                            if code == "ok":
+                                installed = []
+                                for s in configData["installed"]:
+                                    installed += [s["name"]]
+                                
+                                if string in installed:
+                                    d.msgbox("Service name already in use", cancel_label="Back")
+                                else:
+                                    # selected a name so add service to config
+                                    configData["installed"] += [{"name":name, "type":"dir", "path":path}]
+                                    configData["installed"].sort(key=lambda x: x["name"])
+                                    
+                                    # if no service is selected, select it
+                                    if not configData["settings"].get("selected"):
+                                        configData["settings"]["selected"] = name
+                                    
+                                    writeConfig(configData)
+                                    break
+                            else:
+                                break
+                else:
+                    break # aborted so break out of select directory loop
+        
+        else:
+            # remote service
+            if tag == "S":
+                # subversion
+                type = "svn"
+                
+            if tag == "G":
+                # git
+                type = "git"
+            
+            code, string = d.inputbox("Enter repository URL:")
+            
+            if code == "ok":
+                url = string
+                
+                while True: # name input loop
+                    code, string = d.inputbox("Enter service name:")
+                    if code == "ok":
+                        installed = []
+                        for s in configData["installed"]:
+                            installed += [s["name"]]
+                        
+                        name = re.sub('(^\s*)|([./\\\"\'])|(\s*$)', '', string) # strip whitespace and illegal characters
+                        
+                        if name in installed:
+                            d.msgbox("Service name already in use", cancel_label="Back")
+                        else:
+                            fullpath = os.path.join(SERVICESDIR, "custom_services", name) # create a path from the service name
+                            try:
+                                doServiceInstall(type, fullpath, url)
+                                
+                                # add service to config
+                                configData["installed"] += [{"name":name, "type":type, "path":fullpath}]
+                                configData["installed"].sort(key=lambda x: x["name"])
+                                
+                                # if no service is selected, select it
+                                if not configData["settings"].get("selected"):
+                                    configData["settings"]["selected"] = name
+                                
+                                writeConfig(configData)
+                            except:
+                                d.msgbox("Installing service \""+name+"\" failed")
+                                if os.path.commonpath([os.path.abspath(SERVICESDIR)]) == os.path.commonpath([os.path.abspath(SERVICESDIR), os.path.abspath(fullpath)]): # only delete service if installed under SERVICESDIR
+                                    shutil.rmtree(fullpath, ignore_errors=True) # delete directory
+                                    break
+                            break
+                    else:
+                        break
 
 def doServiceInstall(type,path,url):
-    # todo actually install service
+    d.infobox("Installing. Please wait...")
     os.mkdir(path)
-    
     if type == "svn":
         process = subprocess.run(["svn", "checkout", "--quiet", url, path], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         
@@ -186,6 +275,7 @@ def uninstallService(configData):
     if code == "ok":
         for service in configData["installed"]:
             name = service.get("name")
+            type = service.get("type")
             
             if name == dict(choices)[tag]:
                 text = "Are you sure you want to remove this service:\n "+name
@@ -199,7 +289,7 @@ def uninstallService(configData):
                         subprocess.run(["systemctl", "--user", "stop", "vbit2.service"])
                         configData["settings"].pop("selected")
                     
-                    if os.path.commonpath([os.path.abspath(SERVICESDIR)]) == os.path.commonpath([os.path.abspath(SERVICESDIR), os.path.abspath(service["path"])]): # only delete service if installed under SERVICESDIR
+                    if os.path.commonpath([os.path.abspath(SERVICESDIR)]) == os.path.commonpath([os.path.abspath(SERVICESDIR), os.path.abspath(service["path"])]) and type != "dir": # only delete service if installed under SERVICESDIR and not custom dir type
                         shutil.rmtree(service["path"], ignore_errors=True) # delete directory
                         
                     configData["installed"].remove(service) # remove from list
@@ -239,14 +329,14 @@ def optionsMenu():
     updateEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "teletext-update.timer"], capture_output=True, text=True).stdout == "enabled\n"
     bootEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "vbit2.service"], capture_output=True, text=True).stdout == "enabled\n"
     
-    options = [("U", "Update services")]
+    options = [("U", "Automatically update selected service")]
     
     if updateEnabled:
         options[0] += ("on",)
     else:
         options[0] += ("off",)
     
-    options += [("B", "Run VBIT2 at boot")]
+    options += [("B", "Run VBIT2 automatically at boot")]
     
     if bootEnabled:
         options[1] += ("on",)
@@ -281,7 +371,7 @@ def mainMenu():
             if subprocess.run(["systemctl", "--user", "is-active", "vbit2.service"], capture_output=True, text=True).stdout == "active\n":
                 options += [("V","Stop VBIT2")]
                 command = "stop"
-            else:
+            elif configData["settings"].get("selected"):
                 options += [("V","Start VBIT2")]
                 command = "start"
         

@@ -6,8 +6,8 @@ import json
 import subprocess
 import signal
 
-def sigterm_handler(_signo, _stack_frame):
-    # forward TERM signal to vbit2 process
+def signalHandler(_signo, _stack_frame):
+    # send TERM signal to vbit2 process
     vbit.terminate()
 
 # absolute path of installed services
@@ -93,7 +93,8 @@ if prerun:
 
 vbit = subprocess.Popen([os.path.join(os.getenv('HOME'), ".local/bin/vbit2"), "--dir", servicePath], stdout=subprocess.PIPE)
 
-signal.signal(signal.SIGTERM, sigterm_handler)
+signal.signal(signal.SIGTERM, signalHandler)
+signal.signal(signal.SIGINT, signalHandler)
 
 subprocess.Popen(destproc, stdin=vbit.stdout)
 vbit.wait()
