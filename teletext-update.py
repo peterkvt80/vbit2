@@ -13,14 +13,29 @@ except Exception as e:
     print(e)
     quit()
 
-if service["type"] == "svn":
-    process = subprocess.run(["svn", "up", service["path"]], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+def updateService(service):
+    # update the service
+    if service["type"] == "svn":
+        process = subprocess.run(["svn", "up", service["path"]], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        
+        if process.returncode:
+            print("svn update failed with: "+process.stdout.decode("utf8"))
+        
+        process = subprocess.run(["svn", "cleanup", service["path"]], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        if process.returncode:
+            print("svn cleanup failed with: "+process.stdout.decode("utf8"))
+        
+        
+    elif service["type"] == "git":
+        process = subprocess.run(["git", "-C", service["path"], "pull"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        
+        if process.returncode:
+            print("git pull failed with: "+process.stdout.decode("utf8"))
     
-    if process.returncode:
-        print("svn update failed with: "+process.stdout.decode("utf8"))
-    
-elif service["type"] == "git":
-    process = subprocess.run(["git", "-C", service["path"], "pull"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    
-    if process.returncode:
-        print("git pull failed with: "+process.stdout.decode("utf8"))
+    subservices = service.get("subservices")
+    if subservices:
+        for subservice in subservices:
+            updateService(subservice) # recurse into subservices
+
+updateService(service)
+

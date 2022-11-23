@@ -109,29 +109,36 @@ def installService(configData, servicesData, isGroup=False):
                 
                 try:
                     doServiceInstall(service["type"],fullpath, service["url"])
-                
+                    
+                    serviceConfigObject = {"name":name, "type":service["type"], "path":fullpath}
+                    
+                    installedSubservices = chooseSubservices(subservices, fullpath)
+                    
+                    if installedSubservices:
+                        serviceConfigObject["subservices"] = installedSubservices
+                    
                     # add service to config
-                    configData["installed"] += [{"name":name, "type":service["type"], "path":fullpath}]
+                    configData["installed"] += [serviceConfigObject]
                     configData["installed"].sort(key=lambda x: x["name"])
                     
                     # if no service is selected, select it
                     if not configData["settings"].get("selected"):
                         configData["settings"]["selected"] = name
-                        
-                    config.save(configData)
                     
-                    chooseSubservices(subservices, fullpath)
+                    config.save(configData)
                 except:
                     d.msgbox("Installing service \""+service["name"]+"\" failed")
                     if os.path.commonpath([os.path.abspath(SERVICESDIR)]) == os.path.commonpath([os.path.abspath(SERVICESDIR), os.path.abspath(fullpath)]): # only delete service if installed under SERVICESDIR
                         shutil.rmtree(fullpath, ignore_errors=True) # delete directory
 
 def chooseSubservices(subservices, fullpath):
+    installedSubservices = []
     choices = []
     i = 0
     for subservice in subservices:
         if subservice.get("required"):
             doServiceInstall(subservice["type"], os.path.join(fullpath,subservice["path"]), subservice["url"])
+            installedSubservices += [{"name":subservice["name"], "type":subservice["type"], "path":os.path.join(fullpath,subservice["path"]), "required":"True"}]
         else:
             # optional ancillary services
             choices += [(str(i), subservice["name"], "off",)]
@@ -142,6 +149,8 @@ def chooseSubservices(subservices, fullpath):
         
         if code == "ok" and tags:
             d.msgbox("Optional subservices not yet implemented")
+    
+    return installedSubservices
 
 def customMenu(configData):
     choices = [("S", "Subversion repository"),("G", "Git repository"),("D", "Directory")]
