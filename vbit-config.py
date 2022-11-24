@@ -12,40 +12,29 @@ from dialog import Dialog
 # get absolute path of vbit2 install
 SCRIPTDIR = os.path.dirname(os.path.realpath(__file__))
 
+# absolute path of known services file
+KNOWNSERVICES = os.path.join(SCRIPTDIR,"known_services.json")
+
 # absolute path of installed services
 SERVICESDIR = os.path.join(os.getenv('HOME'), ".teletext-services")
 
 d = Dialog(dialog="dialog", autowidgetsize=True)
 d.set_background_title("VBIT2 Config")
 
-with open(os.path.join(SCRIPTDIR,"known_services.json")) as servicesFile:
-    data = json.load(servicesFile)
-    servicesData = data["services"]
-
-def selectService(configData):
+def selectServiceMenu():
     choices = []
     i = 0
     
-    for service in configData["installed"]:
+    for service in config.getInstalledServices():
         choices += [(str(i), service["name"])]
         i += 1
     
     code, tag = d.menu("Choose service to generate",choices=choices,title="Select",cancel_label="Back")
     
     if code == "ok":
-        configData["settings"]["selected"] = dict(choices)[tag]
-        
-        config.save(configData)
-        
-        if subprocess.run(["systemctl", "--user", "is-active", "vbit2.service"], capture_output=True, text=True).stdout == "active\n":
-            # service is running so restart it
-            subprocess.run(["systemctl", "--user", "restart", "vbit2.service"])
+        config.selectService(dict(choices)[tag])
 
-def installService(configData, servicesData, isGroup=False):
-    installed = []
-    for s in configData["installed"]:
-        installed += [s["name"]]
-
+def installServiceMenu(servicesData, isGroup=False):
     installable = []
     choices = []
     i = 0
@@ -62,97 +51,72 @@ def installService(configData, servicesData, isGroup=False):
     if code == "ok":
         if tag == "C":
             # custom service
-            customMenu(configData)
-            
+            customServiceMenu()
+        
         else:
             service = installable[int(tag)]
             if service["type"] == "group":
-                installService(configData, service["services"], True)
+                # iterate into subgroup with new menu
+                installServiceMenu(service["services"], True)
             else:
-                name = service["name"]
-                path = service["path"]
-                
-                subservices = service.get("subservices")
-                if not subservices:
-                    subservices = []
-
-                options = []
-                for subservice in subservices:
-                    if not subservice.get("required"):
-                        options += subservice
+                name = service.get("name")
+                path = service.get("path")
                 
                 # check if already installed
-                if service["name"] in installed:
+                installedNames = []
+                for s in config.getInstalledServices():
+                    installedNames += [s["name"]]
+                if service["name"] in installedNames:
                     n = 2
-                    while service["name"]+"-"+str(n) in installed:
+                    while service["name"]+"-"+str(n) in installedNames:
                         n += 1
                     
                     name += "-"+str(n)
                     path += "-"+str(n)
                     
-                    if options:
-                        choices = [("A","Select ancillary service"),("N","Install again as "+name)]
-                        code, tag = d.menu("Service is already installed.",choices=choices,title="Install")
-                        if code == "ok":
-                            if tag == "A":
-                                chooseSubservices(subservices, os.path.join(SERVICESDIR,path))
-                                return
-                        else:
-                            return
-                    else:
-                        text = "Service is already installed.\nInstall anyway as "+name+"?\n"
-                        code = d.yesno(text)
-                        if code != "ok":
-                            return
+                    text = "Service is already installed.\nInstall anyway as "+name+"?\n"
+                    code = d.yesno(text)
+                    if code != "ok":
+                        return
                 
-                fullpath = os.path.join(SERVICESDIR,path)
+                serviceConfigObject = {"name":name, "type":service.get("type"), "path":os.path.join(SERVICESDIR,path), "url":service.get("url")}
+                
+                if service.get("subservices"):
+                    selectedSubservices = chooseSubservicesMenu(service["subservices"])
+                    if selectedSubservices:
+                        serviceConfigObject["subservices"] = selectedSubservices
                 
                 try:
-                    doServiceInstall(service["type"],fullpath, service["url"])
-                    
-                    serviceConfigObject = {"name":name, "type":service["type"], "path":fullpath}
-                    
-                    installedSubservices = chooseSubservices(subservices, fullpath)
-                    
-                    if installedSubservices:
-                        serviceConfigObject["subservices"] = installedSubservices
-                    
-                    # add service to config
-                    configData["installed"] += [serviceConfigObject]
-                    configData["installed"].sort(key=lambda x: x["name"])
-                    
-                    # if no service is selected, select it
-                    if not configData["settings"].get("selected"):
-                        configData["settings"]["selected"] = name
-                    
-                    config.save(configData)
-                except:
-                    d.msgbox("Installing service \""+service["name"]+"\" failed")
-                    if os.path.commonpath([os.path.abspath(SERVICESDIR)]) == os.path.commonpath([os.path.abspath(SERVICESDIR), os.path.abspath(fullpath)]): # only delete service if installed under SERVICESDIR
-                        shutil.rmtree(fullpath, ignore_errors=True) # delete directory
+                    # selected a name so add service to config
+                    d.infobox("Installing. Please wait...")
+                    config.installService(serviceConfigObject)
+                except Exception as e:
+                    d.msgbox("Installation failed: {0}".format(e), cancel_label="Back")
 
-def chooseSubservices(subservices, fullpath):
-    installedSubservices = []
+def chooseSubservicesMenu(subservices):
+    selectedSubservices = []
+    optionalSubservices = []
     choices = []
     i = 0
     for subservice in subservices:
         if subservice.get("required"):
-            doServiceInstall(subservice["type"], os.path.join(fullpath,subservice["path"]), subservice["url"])
-            installedSubservices += [{"name":subservice["name"], "type":subservice["type"], "path":os.path.join(fullpath,subservice["path"]), "required":"True"}]
+            selectedSubservices += [subservice]
         else:
             # optional ancillary services
+            optionalSubservices += [subservice]
             choices += [(str(i), subservice["name"], "off",)]
             i += 1
     
     if choices:
-        code, tags = d.checklist("",choices=choices, title="Select optional sub-services to install", no_tags=True)
+        choices = [("none", "None", "on",)] + choices
+        code, tag = d.radiolist("",choices=choices, title="Select optional sub-service to install", no_tags=True, no_cancel=True)
         
-        if code == "ok" and tags:
-            d.msgbox("Optional subservices not yet implemented")
+        if code == "ok" and tag != "none":
+            selectedSubservices += [optionalSubservices[int(tag)]]
     
-    return installedSubservices
+    return selectedSubservices
 
-def customMenu(configData):
+def customServiceMenu():
     choices = [("S", "Subversion repository"),("G", "Git repository"),("D", "Directory")]
     
     code, tag = d.menu("Select service type",choices=choices,title="Install custom service",cancel_label="Back")
@@ -171,25 +135,13 @@ def customMenu(configData):
                         while True: # name input loop
                             code, string = d.inputbox("Enter service name:", cancel_label="Back")
                             if code == "ok":
-                                installed = []
-                                for s in configData["installed"]:
-                                    installed += [s["name"]]
-                                
-                                if string in installed:
-                                    d.msgbox("Service name already in use", cancel_label="Back")
-                                else:
+                                try:
                                     # selected a name so add service to config
-                                    configData["installed"] += [{"name":name, "type":"dir", "path":path}]
-                                    configData["installed"].sort(key=lambda x: x["name"])
-                                    
-                                    # if no service is selected, select it
-                                    if not configData["settings"].get("selected"):
-                                        configData["settings"]["selected"] = name
-                                    
-                                    config.save(configData)
-                                    break
-                            else:
+                                    config.installService({"name":string, "type":"dir", "path":path})
+                                except Exception as e:
+                                    d.msgbox("Installation failed: {0}".format(e), cancel_label="Back")
                                 break
+                        break
                 else:
                     break # aborted so break out of select directory loop
         
@@ -211,94 +163,51 @@ def customMenu(configData):
                 while True: # name input loop
                     code, string = d.inputbox("Enter service name:")
                     if code == "ok":
-                        installed = []
-                        for s in configData["installed"]:
-                            installed += [s["name"]]
+                        # strip whitespace and illegal characters
+                        name = re.sub('(^\s*)|([./\\\"\'])|(\s*$)', '', string)
                         
-                        name = re.sub('(^\s*)|([./\\\"\'])|(\s*$)', '', string) # strip whitespace and illegal characters
-                        
-                        if name in installed:
+                        installedNames = []
+                        for s in config.getInstalledServices():
+                            installedNames += [s["name"]]
+                            
+                        if name in installedNames:
                             d.msgbox("Service name already in use", cancel_label="Back")
+                            
                         else:
+                            if not os.path.exists(os.path.join(SERVICESDIR, "custom_services")):
+                                os.makedirs(os.path.join(SERVICESDIR, "custom_services"))
+                            
                             fullpath = os.path.join(SERVICESDIR, "custom_services", name) # create a path from the service name
+                            
                             try:
-                                doServiceInstall(type, fullpath, url)
-                                
-                                # add service to config
-                                configData["installed"] += [{"name":name, "type":type, "path":fullpath}]
-                                configData["installed"].sort(key=lambda x: x["name"])
-                                
-                                # if no service is selected, select it
-                                if not configData["settings"].get("selected"):
-                                    configData["settings"]["selected"] = name
-                                
-                                config.save(configData)
-                            except:
-                                d.msgbox("Installing service \""+name+"\" failed")
-                                if os.path.commonpath([os.path.abspath(SERVICESDIR)]) == os.path.commonpath([os.path.abspath(SERVICESDIR), os.path.abspath(fullpath)]): # only delete service if installed under SERVICESDIR
-                                    shutil.rmtree(fullpath, ignore_errors=True) # delete directory
-                                    break
+                                # selected a name so add service to config
+                                d.infobox("Installing. Please wait...")
+                                config.installService({"name":name, "type":type, "path":fullpath, "url":url})
+                            except Exception as e:
+                                d.msgbox("Installation failed: {0}".format(e), cancel_label="Back")
                             break
                     else:
                         break
 
-def doServiceInstall(type,path,url):
-    d.infobox("Installing. Please wait...")
-    os.mkdir(path)
-    if type == "svn":
-        process = subprocess.run(["svn", "checkout", "--quiet", url, path], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        
-        if process.returncode:
-            text = "Subversion checkout failed with the following error:\n"
-            text += process.stdout.decode("utf8")
-            d.msgbox(text)
-            raise RuntimeError("svn checkout failed")
-    elif type == "git":
-        process = subprocess.run(["git", "clone", "--quiet", "--depth", "1", url, path], stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        
-        if process.returncode:
-            text = "Git clone failed with the following error:\n"
-            text += process.stdout.decode("utf8")
-            d.msgbox(text)
-            raise RuntimeError("git clone failed")
-    else:
-        print ("TODO: other types")
-
-def uninstallService(configData):
+def uninstallService():
     choices = []
     i = 0
     
-    for service in configData["installed"]:
+    for service in config.getInstalledServices():
         choices += [(str(i), service["name"])]
         i += 1
     
     code, tag = d.menu("Choose service to uninstall",choices=choices,title="Uninstall",cancel_label="Back")
     
     if code == "ok":
-        for service in configData["installed"]:
-            name = service.get("name")
-            type = service.get("type")
+        name = dict(choices)[tag]
+        text = "Are you sure you want to remove this service:\n "+name
+        code = d.yesno(text)
+        
+        if code == "ok":
+            d.infobox("Uninstalling. Please wait...")
             
-            if name == dict(choices)[tag]:
-                text = "Are you sure you want to remove this service:\n "+name
-                
-                code = d.yesno(text)
-                
-                if code == "ok":
-                    d.infobox("Uninstalling. Please wait...")
-                    if dict(configData["settings"]).get("selected") == dict(choices)[tag]:
-                        # stop vbit2 before deleting an active service
-                        subprocess.run(["systemctl", "--user", "stop", "vbit2.service"])
-                        configData["settings"].pop("selected")
-                    
-                    if os.path.commonpath([os.path.abspath(SERVICESDIR)]) == os.path.commonpath([os.path.abspath(SERVICESDIR), os.path.abspath(service["path"])]) and type != "dir": # only delete service if installed under SERVICESDIR and not custom dir type
-                        shutil.rmtree(service["path"], ignore_errors=True) # delete directory
-                        
-                    configData["installed"].remove(service) # remove from list
-                    config.save(configData)
-                
-                break
-
+            config.uninstallService(name)
 def optionsMenu():
     updateEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "teletext-update.timer"], capture_output=True, text=True).stdout == "enabled\n"
     bootEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "vbit2.service"], capture_output=True, text=True).stdout == "enabled\n"
@@ -335,17 +244,15 @@ def optionsMenu():
 
 def mainMenu():
     while True:
-        configData = config.load()
-        
         options = [("I","Install service")]
         
-        if configData["installed"]:
+        if config.getInstalledServices():
             options += [("S","Select service"), ("R","Remove service"), ("O","Options"), ("U","Update VBIT2")]
         
             if subprocess.run(["systemctl", "--user", "is-active", "vbit2.service"], capture_output=True, text=True).stdout == "active\n":
                 options += [("V","Stop VBIT2")]
                 command = "stop"
-            elif configData["settings"].get("selected"):
+            elif config.getSelectedService():
                 options += [("V","Start VBIT2")]
                 command = "start"
         
@@ -353,11 +260,19 @@ def mainMenu():
         
         if code == "ok":
             if tag == "S":
-                selectService(configData)
+                selectServiceMenu()
             elif tag == "I":
-                installService(configData, servicesData)
+                # reload known services
+                with open(KNOWNSERVICES) as servicesFile:
+                    data = json.load(servicesFile)
+                    servicesData = data["services"]
+                
+                for service in servicesData:
+                    if not service.get("name") or not service.get("type"):
+                        d.msgbox("Fatal error: invalid service configuration data in {0}\n{1}".format(KNOWNSERVICES, service), cancel_label="Back")
+                installServiceMenu(servicesData)
             elif tag == "R":
-                uninstallService(configData)
+                uninstallService()
             elif tag == "O":
                 optionsMenu()
             elif tag == "V":

@@ -5,10 +5,8 @@ import config
 import os
 import subprocess
 
-configData = config.load()
-
 try:
-    service = config.getSelectedService(configData)
+    service = config.getSelectedService()
 except Exception as e:
     print(e)
     quit()
