@@ -27,8 +27,9 @@ make
 # create links
 mkdir -p $HOME/.local/bin
 ln -s -f `pwd`/vbit2 $HOME/.local/bin/
-ln -s -f `pwd`/runvbit2.sh $HOME/.local/bin/
-ln -s -f `pwd`/vbit-config $HOME/.local/bin/
+ln -s -f `pwd`/scripts/runvbit2.py $HOME/.local/bin/runvbit2
+ln -s -f `pwd`/scripts/teletext-update.py $HOME/.local/bin/teletext-update
+ln -s -f `pwd`/scripts/vbit-config.py $HOME/.local/bin/vbit-config
 
 # install systemd user scripts
 mkdir -p $HOME/.local/share/systemd/user

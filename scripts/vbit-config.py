@@ -9,7 +9,7 @@ import subprocess
 import re
 from dialog import Dialog
 
-# get absolute path of vbit2 install
+# get absolute path of vbit2 scripts directory
 SCRIPTDIR = os.path.dirname(os.path.realpath(__file__))
 
 # absolute path of known services file
@@ -279,7 +279,7 @@ def mainMenu():
                 subprocess.run(["systemctl", "--user", command, "vbit2.service"])
             elif tag == "U":
                 os.system('clear')
-                subprocess.run(os.path.join(SCRIPTDIR,"update.sh")) # run the update script
+                subprocess.run(os.path.join(SCRIPTDIR,"../update.sh")) # run the update script
                 break # exit vbit-config
         
         else:

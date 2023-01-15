@@ -88,7 +88,7 @@ def uninstallService(name):
 def installService(service):
     configData = load()
     
-    if not service.get("name") or not service.get("type") or not service.get("url") or not service.get("path"):
+    if not service.get("name") or not service.get("type") or not service.get("path"):
         raise RuntimeError("invalid service configuration data\n{0}".format(service))
     
     installedNames = []
@@ -103,6 +103,8 @@ def installService(service):
         if not os.path.exists(service["path"]):
             raise RuntimeError("Directory does not exist")
     else:
+        if not service.get("url"):
+            raise RuntimeError("invalid service configuration data\n{0}".format(service))
         doServiceInstall(service["type"], service["path"], service["url"])
     
     serviceConfigObject = {"name":service["name"], "type":service["type"], "path":service["path"]}

@@ -1,0 +1,20 @@
+{
+    "services":[
+        {"name":"Teefax","type":"svn","url":"http://teastop.plus.com/svn/teletext/","path":"Teefax"},
+        {"name":"Ceefax","type":"group","services":[
+            {"name":"Ceefax (East)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/East","path":"CeefaxEast", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (East Midlands)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/EastMidlands","path":"CeefaxEastMids", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (London)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/London","path":"CeefaxLondon", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (Northern Ireland)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/NorthernIreland","path":"CeefaxNI", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (Scotland)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/Scotland","path":"CeefaxScotland", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (South)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/South","path":"CeefaxSouth", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (South West)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/SouthWest","path":"CeefaxSouthWest", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (Wales)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/Wales","path":"CeefaxWales", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (West)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/West","path":"CeefaxWest", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (Worldwide)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/Worldwide","path":"CeefaxWorldwide", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]},
+            {"name":"Ceefax (Yorks and Lincs)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/Yorks&Lincs","path":"CeefaxYorksAndLincs", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]}
+        ]},
+        {"name":"Chunkytext","type":"git","url":"https://zxnet.co.uk/git/cf.git","path":"Chunkytext"},
+        {"name":"SPARK","type":"git","url":"https://github.com/ZXGuesser/spark-teletext.git","path":"SPARK"}
+    ]
+}

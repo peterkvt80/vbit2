@@ -12,10 +12,10 @@ def signalHandler(_signo, _stack_frame):
 
 configData = config.load()
 
-try:
-    service = config.getSelectedService(configData)
-except Exception as e:
-    print(e)
+service = config.getSelectedService()
+
+if not service:
+    print("No service selected")
     quit()
 
 linesPerField = 16 # vbit2 defaults to 16 lpf

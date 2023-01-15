@@ -19,13 +19,17 @@ main(){
   # recompile vbit2
   make
   
-  sudo apt -y install python3-dialog
+  sudo apt -qq -y install python3-dialog
+  
+  # remove old symlink
+  rm $HOME/.local/bin/runvbit2.sh 2>/dev/null
   
   # create links
   mkdir -p $HOME/.local/bin
   ln -s -f `pwd`/vbit2 $HOME/.local/bin/
-  ln -s -f `pwd`/runvbit2.sh $HOME/.local/bin/
-  ln -s -f `pwd`/vbit-config $HOME/.local/bin/
+  ln -s -f `pwd`/scripts/runvbit2.py $HOME/.local/bin/runvbit2
+  ln -s -f `pwd`/scripts/teletext-update.py $HOME/.local/bin/teletext-update
+  ln -s -f `pwd`/scripts/vbit-config.py $HOME/.local/bin/vbit-config
   
   # install systemd user scripts
   mkdir -p $HOME/.local/share/systemd/user
@@ -36,6 +40,9 @@ main(){
   systemctl --user daemon-reload
   
   cleanoldunits
+  
+  # warn about removing old services
+  migratejson
   
   # restart vbit if service is active
   if [[ `systemctl --user is-active vbit2.service` == "active" ]]; then
@@ -93,6 +100,23 @@ migrate(){
       fi
     fi
     exit
+  fi
+}
+
+migratejson(){
+  if [ -f $HOME/.teletext-services/config ]; then
+    printf 'This version of VBIT2 uses a new config format and directory scheme.\nServices will not be automatically migrated so must be reinstalled.\nThe following services were found:\n'
+    ls -d1 ~/.teletext-services/*/
+    
+    read -n 1 -s -r -p "Do you wish to create a backup of these services? (y/N)"
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+      printf '\nbacking up old services to %s\n' "$HOME/teletext-services.bak"
+      mv $HOME/.teletext-services $HOME/teletext-services.bak
+    else
+      rm -rf $HOME/.teletext-services/ 2>/dev/null
+    fi
+    
+    vbit-config
   fi
 }
 
