@@ -105,10 +105,13 @@ migrate(){
 
 migratejson(){
   if [ -f $HOME/.teletext-services/config ]; then
+    systemctl --user stop vbit2.service
+    
     printf 'This version of VBIT2 uses a new config format and directory scheme.\nServices will not be automatically migrated so must be reinstalled.\nThe following services were found:\n'
     ls -d1 ~/.teletext-services/*/
     
     read -n 1 -s -r -p "Do you wish to create a backup of these services? (y/N)"
+    
     if [[ $REPLY =~ ^[Yy]$ ]]; then
       printf '\nbacking up old services to %s\n' "$HOME/teletext-services.bak"
       mv $HOME/.teletext-services $HOME/teletext-services.bak
