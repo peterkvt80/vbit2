@@ -46,6 +46,10 @@ namespace vbit
             void SetPacket29(int i, TTXLine *line);
             bool GetPacket29Flag() { return _hasPacket29; };
             void DeletePacket29();
+            
+            void SetCustomHeader(std::string row) {_headerTemplate = row; _hasCustomHeader = true;}
+            bool GetCustomHeaderFlag() { return _hasCustomHeader; };
+            void DeleteCustomHeader();
 
         protected:
 
@@ -71,6 +75,9 @@ namespace vbit
             TTXLine* _nextPacket29;
             bool _hasPacket29;
             std::mutex _mtx; // Mutex to interlock packet 29 from filemonitor
+            
+            std::string _headerTemplate;
+            bool _hasCustomHeader;
 
             int _magRegion;
             int _status;

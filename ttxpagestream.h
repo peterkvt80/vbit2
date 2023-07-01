@@ -111,8 +111,11 @@ class TTXPageStream : public TTXPage
         void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
         bool Selected(){return _Selected;}; /// Return the selected state
         
-        void SetPacket29Flag(bool value){_loadedPacket29=value;}; // Used by PageList::CheckForPacket29
+        void SetPacket29Flag(bool value){_loadedPacket29=value;}; // Used by PageList::CheckForPacket29OrCustomHeader
         bool GetPacket29Flag(){return _loadedPacket29;}; // Used by PageList::DeleteOldPages
+        
+        void SetCustomHeaderFlag(bool value){_loadedCustomHeader=value;}; // Used by PageList::CheckForPacket29OrCustomHeader
+        bool GetCustomHeaderFlag(){return _loadedCustomHeader;};
 
     protected:
 
@@ -130,6 +133,8 @@ class TTXPageStream : public TTXPage
         Status _fileStatus; /// Used to mark if we found the file. (Used to detect deletions)
         
         bool _loadedPacket29; // Packet 29 for magazine was loaded from this page. Should only be set on one page in each magazine.
+        
+        bool _loadedCustomHeader; // Custom header was loaded from this page. Should only be set on one page in each magazine.
         
         bool _Selected;   /// Marked as selected by the inserter P command
 

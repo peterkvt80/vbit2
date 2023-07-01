@@ -17,6 +17,7 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _lastTxt(nullptr),
     _nextPacket29DC(0),
     _hasPacket29(false),
+    _hasCustomHeader(false),
     _magRegion(0),
     _specialPagesFlipFlop(false),
     _waitingForField(0)
@@ -24,6 +25,7 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     //ctor
     for (int i=0;i<MAXPACKET29TYPES;i++)
     {
+        _headerTemplate = configure->GetHeaderTemplate();
         _packet29[i]=nullptr;
     }
 
@@ -153,7 +155,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     // couldn't get a page to send so sent a time filling header
                     p->Header(_magNumber,0xFF,0x0000,0x8010);
-                    p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
+                    p->HeaderText(_headerTemplate); // Placeholder 32 characters. This gets replaced later
                     _waitingForField = 2; // enforce 20ms page erasure interval
                     return p;
                 }
@@ -218,7 +220,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             _hasX28Region = false;
             p->Header(_magNumber,thisPageNum,thisSubcode,_status);// loads of stuff to do here!
             
-            p->HeaderText(_configure->GetHeaderTemplate()); // Placeholder 32 characters. This gets replaced later
+            p->HeaderText(_headerTemplate); // Placeholder 32 characters. This gets replaced later
             
             // don't apply parity here it will screw up the template. parity for the header is done by tx() later
             assert(p!=NULL);
@@ -460,4 +462,11 @@ void PacketMag::DeletePacket29()
     }
     _hasPacket29 = false;
     _mtx.unlock();
+}
+
+void PacketMag::DeleteCustomHeader()
+{
+    _headerTemplate = _configure->GetHeaderTemplate(); // revert to service default template
+    _hasCustomHeader = false;
+     std::cerr << "[PacketMag::DeleteCustomHeader] Removing custom header from magazine " << _magNumber << std::endl;
 }

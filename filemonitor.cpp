@@ -173,7 +173,7 @@ int FileMonitor::readDirectory(std::string path)
                             q->SetUpdatedFlag(true);
                         }
                         
-                        _pageList->CheckForPacket29(q);
+                        _pageList->CheckForPacket29OrCustomHeader(q);
                         
                         q->SetModifiedTime(attrib.st_mtime);
                         // unlock
@@ -227,7 +227,7 @@ int FileMonitor::readDirectory(std::string path)
                             }
                         }
                         
-                        _pageList->CheckForPacket29(q);
+                        _pageList->CheckForPacket29OrCustomHeader(q);
                     }
                     else
                     {

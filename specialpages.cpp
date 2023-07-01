@@ -77,6 +77,12 @@ loop:
             _page = *_iter;
             goto loop;
         }
+        
+        if (((_page->GetPageNumber()>>8) & 0xFF) == 0xFF){ // never return page mFF from the page list
+            ++_iter;
+            _page = *_iter;
+            goto loop; // jump back to try for the next page
+        }
     }
     
     return _page;

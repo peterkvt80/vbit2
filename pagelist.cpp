@@ -90,7 +90,7 @@ int PageList::ReadDirectory(std::string filepath)
             {
                 q->GetPageCount(); // Use for the side effect of renumbering the subcodes
                 
-                CheckForPacket29(q);
+                CheckForPacket29OrCustomHeader(q);
             }
             
             int mag=(q->GetPageNumber() >> 16) & 0x7;
@@ -110,17 +110,39 @@ void PageList::AddPage(TTXPageStream* page)
     _pageList[mag].push_back(*page);
 }
 
-void PageList::CheckForPacket29(TTXPageStream* page)
+void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
 {
     if (page->IsCarousel()) // page mFF should never be a carousel and this code leads to a crash if it is so bail out now
         return;
-        
-    bool Packet29Flag = false;
+    
     int mag=(page->GetPageNumber() >> 16) & 0x7;
-    if (((page->GetPageNumber() >> 8) & 0xFF) == 0xFF) // Only read packet 29 from page mFF
+    if (((page->GetPageNumber() >> 8) & 0xFF) == 0xFF) // Only read from page mFF
     {
-        if (_mag[mag]->GetPacket29Flag() == false) // Only allow one file to set packet29 per magazine
+        /* attempt to load custom header from the page */
+        if ((!_mag[mag]->GetCustomHeaderFlag()) || page->GetCustomHeaderFlag()) // Only allow one file to set header per magazine
         {
+            if (page->GetTxRow(0)){
+                _mag[mag]->SetCustomHeader(page->GetTxRow(0)->GetLine().substr(8,32)); // set custom headers
+                
+                if (!page->GetCustomHeaderFlag())
+                    std::cerr << "[PageList::CheckForPacket29OrCustomHeader] Added custom header for magazine " << ((mag == 0)?8:mag) << std::endl;
+                page->SetCustomHeaderFlag(true); // mark the page
+            }
+            else if (page->GetCustomHeaderFlag()) // page previously had custom header
+            {
+                _mag[mag]->DeleteCustomHeader();
+                page->SetCustomHeaderFlag(false);
+            }
+        }
+        
+        /* attempt to load packet M/29 data from the page */
+        if ((!_mag[mag]->GetPacket29Flag()) || page->GetPacket29Flag()) // Only allow one file to set packet29 per magazine
+        {
+            bool Packet29Flag = false;
+            
+            if (page->GetPacket29Flag())
+                _mag[mag]->DeletePacket29(); // clear previous packet 29
+            
             TTXLine* tempLine = page->GetTxRow(29);
             
             while (tempLine != nullptr)
@@ -150,11 +172,13 @@ void PageList::CheckForPacket29(TTXPageStream* page)
                 tempLine = tempLine->GetNextLine();
                 // loop until every row 29 is copied
             }
+            if (Packet29Flag && !page->GetPacket29Flag())
+                std::cerr << "[PageList::CheckForPacket29OrCustomHeader] Added packet 29 for magazine " << ((mag == 0)?8:mag) << std::endl;
+            
             page->SetPacket29Flag(Packet29Flag); // mark the page
+            
+            
         }
-        
-        if (Packet29Flag)
-            std::cerr << "[PageList::CheckForPacket29] Added packet 29 for magazine " << ((mag == 0)?8:mag) << std::endl;
     }
 }
 
@@ -385,6 +409,12 @@ void PageList::DeleteOldPages()
                     _mag[mag]->DeletePacket29();
                     std::cerr << "[PageList::DeleteOldPages] Removing packet 29 from magazine " << ((mag == 0)?8:mag) << std::endl;
                 }
+                if (ptr->GetCustomHeaderFlag())
+                {
+                    // Custom header was loaded from this page, so remove it.
+                    _mag[mag]->DeleteCustomHeader();
+                }
+                
                 // page has been removed from lists
                 _pageList[mag].remove(*p--);
 

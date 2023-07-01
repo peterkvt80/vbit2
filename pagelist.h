@@ -88,7 +88,7 @@ namespace ttx
             */
             TTXPageStream* FirstPage();
 
-            void CheckForPacket29(TTXPageStream* page);
+            void CheckForPacket29OrCustomHeader(TTXPageStream* page);
 
         private:
             Configure* _configure; // The configuration object
