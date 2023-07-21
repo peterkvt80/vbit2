@@ -44,9 +44,8 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
                     status|=PAGESTATUS_C8_UPDATE;
                     _C8Flag=false;
                 }
-                p->Header(mag, page, 0, status); // Create the header
+                p->Header(mag, page, 0, status, "XENOXXX INDUSTRIES         CLOCK"); // Create the header
             }
-            p->HeaderText("XENOXXX INDUSTRIES         CLOCK"); // Only Jason will see this if he decodes a tape.
             ClearEvent(EVENT_FIELD);
             _state=SUBTITLE_STATE_TEXT_ROW;
             _rowCount=1; // Set up iterator for page rows

@@ -203,6 +203,11 @@ class TTXPage
         void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
         bool Selected(){return _Selected;}; /// Return the selected state
         
+        bool HasHeaderChanged(uint16_t crc);
+        
+        void SetPageCRC(uint16_t crc){_pageCRC = crc;}; // update the stored crc
+        uint16_t GetPageCRC(){return _pageCRC;}; // retrieve the stored crc
+        
     protected:
         bool m_LoadTTI(std::string filename);
         int m_cycletimeseconds;     // CT
@@ -226,6 +231,9 @@ class TTXPage
         bool m_Loaded;
         bool _Selected; /// True if this page has been selected.
         bool _fileChanged; // page was reloaded by the filemonitor
+        
+        uint16_t _headerCRC; // holds the last calculated CRC of the page header
+        uint16_t _pageCRC; // holds the calculated CRC of the page
         
         // Private functions
         void m_Init();

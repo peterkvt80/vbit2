@@ -33,7 +33,9 @@ TTXPage::TTXPage() :
     m_sourcepage("none"),   //ctor
     m_subcode(0),
     m_Loaded(false),
-    _Selected(false)
+    _Selected(false),
+    _headerCRC(0),
+    _pageCRC(0)
 {
     m_Init();
 }
@@ -50,7 +52,9 @@ TTXPage::TTXPage(std::string filename) :
     m_sourcepage(filename),
     m_subcode(0),
     m_Loaded(false),
-    _Selected(false)
+    _Selected(false),
+    _headerCRC(0),
+    _pageCRC(0)
 {
     m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
 
@@ -345,7 +349,7 @@ TTXLine* TTXPage::GetRow(unsigned int row)
     }
     TTXLine* line=m_pLine[row];
     // Don't create row 0, or enhancement rows as they are special.
-    if (line==nullptr && row>0 && row<25)
+    if (line==nullptr && row>0 && row<26)
         line=m_pLine[row]=new TTXLine("                                        ");
     return line;
 }
@@ -644,4 +648,16 @@ PageCoding TTXPage::ReturnPageCoding(int pageCoding)
         case 5:
             return CODING_PER_PACKET;
     }
+}
+
+bool TTXPage::HasHeaderChanged(uint16_t crc)
+{
+    if (_headerCRC != crc)
+    {
+        // update stored CRC and signal change
+        _headerCRC = crc;
+        return true;
+    }
+    
+    return false; // no change
 }

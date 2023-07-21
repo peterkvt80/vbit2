@@ -57,6 +57,7 @@ namespace vbit
             std::list<TTXPageStream>*  _pageSet; //!< Member variable "_pageSet"
             ttx::Configure* _configure;
             TTXPageStream* _page; //!< The current page being output
+            TTXPage* _subpage; // pointer to the actual subpage
             int _magNumber; //!< The number of this magazine. (where 0 is mag 8)
             uint8_t _priority; //!< Priority of transmission where 1 is highest
 

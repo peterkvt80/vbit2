@@ -9,6 +9,7 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _pageSet(pageSet),
     _configure(configure),
     _page(nullptr),
+    _subpage(nullptr),
     _magNumber(mag),
     _priority(priority),
     _priorityCount(priority),
@@ -50,6 +51,8 @@ Packet* PacketMag::GetPacket(Packet* p)
     unsigned int thisSubcode;
     int* links=NULL;
     bool updatedFlag=false;
+    
+    static vbit::Packet* TempPacket=new vbit::Packet(8,25,"                                        "); // a temporary packet for checksum calculation
 
     // We should only call GetPacket if IsReady has returned true
 
@@ -103,17 +106,13 @@ Packet* PacketMag::GetPacket(Packet* p)
                     }
                     
                     if (_page->IsCarousel())
-                    {
-                        _status = _page->GetCarouselPage()->GetPageStatus() & 0x8000; // get transmit flag
-                        _region = _page->GetCarouselPage()->GetRegion();
-                        thisSubcode = (_page->GetCarouselPage()->GetSubCode() & 0x000F) | (_page->GetCarouselPage()->GetLastPacket() << 8);
-                    }
+                        _subpage = _page->GetCarouselPage();
                     else
-                    {
-                        _status = _page->GetPageStatus() & 0x8000; // get transmit flag
-                        _region = _page->GetRegion();
-                        thisSubcode = (_page->GetSubCode() & 0x000F) | (_page->GetLastPacket() << 8);
-                    }
+                        _subpage = _page;
+                    
+                    _status = _subpage->GetPageStatus() & 0x8000; // get transmit flag
+                    _region = _subpage->GetRegion();
+                    thisSubcode = (_subpage->GetSubCode() & 0x000F) | (_subpage->GetLastPacket() << 8);
                     
                     thisSubcode |= _page->GetUpdateCount() << 4;
                     
@@ -154,8 +153,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 if (_page == nullptr)
                 {
                     // couldn't get a page to send so sent a time filling header
-                    p->Header(_magNumber,0xFF,0x0000,0x8010);
-                    p->HeaderText(_headerTemplate); // Placeholder 32 characters. This gets replaced later
+                    p->Header(_magNumber,0xFF,0x0000,0x8010,_headerTemplate);
                     _waitingForField = 2; // enforce 20ms page erasure interval
                     return p;
                 }
@@ -176,14 +174,19 @@ Packet* PacketMag::GetPacket(Packet* p)
                         // clear any ERASE bit if page hasn't cycled to minimise flicker, and the interrupted status bit
                         _status=_page->GetCarouselPage()->GetPageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
                     }
-                    thisSubcode=_page->GetCarouselPage()->GetSubCode();
-                    _region=_page->GetCarouselPage()->GetRegion();
+                    
+                    _subpage = _page->GetCarouselPage();
+                    
+                    thisSubcode=_subpage->GetSubCode();
+                    _region=_subpage->GetRegion();
                 }
                 else
                 {
-                    thisSubcode=_page->GetSubCode();
-                    _status=_page->GetPageStatus();
-                    _region=_page->GetRegion();
+                    _subpage = _page;
+                    
+                    thisSubcode=_subpage->GetSubCode();
+                    _status=_subpage->GetPageStatus();
+                    _region=_subpage->GetRegion();
                 }
                 
                 // Handle pages with update bit set in a useful way.
@@ -191,7 +194,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 if (_status & PAGESTATUS_C8_UPDATE)
                 {
                     // Clear update bit in stored page so that update flag is only transmitted once
-                    _page->SetPageStatus(_status & ~PAGESTATUS_C8_UPDATE);
+                    _subpage->SetPageStatus(_status & ~PAGESTATUS_C8_UPDATE);
                     
                     // Also set the erase flag in output. This will allow left over rows in adaptive transmission to be cleared without leaving the erase flag set causing flickering.
                     _status|=PAGESTATUS_C4_ERASEPAGE;
@@ -218,21 +221,31 @@ Packet* PacketMag::GetPacket(Packet* p)
             
             // clear a flag we use to prevent duplicated X/28/0 packets
             _hasX28Region = false;
-            p->Header(_magNumber,thisPageNum,thisSubcode,_status);// loads of stuff to do here!
+            p->Header(_magNumber,thisPageNum,thisSubcode,_status,_headerTemplate);// loads of stuff to do here!
             
-            p->HeaderText(_headerTemplate); // Placeholder 32 characters. This gets replaced later
+            uint16_t tempCRC = p->PacketCRC(0); // calculate the crc of the new header
             
-            // don't apply parity here it will screw up the template. parity for the header is done by tx() later
+            if (_subpage->HasHeaderChanged(tempCRC) || updatedFlag)
+            {
+                // the content of the header has changed or the page has been reloaded
+                // we must now CRC the whole page
+                
+                for (int i=1; i<26; i++)
+                {
+                    TempPacket->SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _subpage->GetPageCoding());
+                    tempCRC = TempPacket->PacketCRC(tempCRC);
+                }
+                
+                _subpage->SetPageCRC(tempCRC);
+                
+                // TODO: the page content may get modified by substitutions in Packet::tx() which will result in an invalid checksum
+                
+                //std::cerr << "[PacketMag::GetPacket] Calculated page CRC " << std::hex << tempCRC << " for page " << std::hex << _subpage->GetPageNumber() << std::endl;
+            }
+            
             assert(p!=NULL);
 
-            if (_page->IsCarousel())
-            {
-                links=_page->GetCarouselPage()->GetLinkSet();
-            }
-            else
-            {
-                links=_page->GetLinkSet();
-            }
+            links=_subpage->GetLinkSet();
             if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF) // only create if links were initialised
             {
                 _state=PACKETSTATE_FASTEXT;
@@ -252,7 +265,10 @@ Packet* PacketMag::GetPacket(Packet* p)
                 if ((_lastTxt->GetLine()[0] & 0xF) > 3) // designation codes > 3
                     p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_13_TRIPLETS); // enhancement linking
                 else
-                    p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_HAMMING_8_4); // navigation packets (TODO: CRC in DC=0 is wrong)
+                {
+                    p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_HAMMING_8_4); // navigation packets
+                    p->SetX27CRC(_subpage->GetPageCRC());
+                }
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
             }
@@ -371,15 +387,9 @@ Packet* PacketMag::GetPacket(Packet* p)
         case PACKETSTATE_FASTEXT:
         {
             p->SetMRAG(_magNumber,27);
-            if (_page->IsCarousel())
-            {
-                links=_page->GetCarouselPage()->GetLinkSet();
-            }
-            else
-            {
-                links=_page->GetLinkSet();
-            }
+            links=_subpage->GetLinkSet();
             p->Fastext(links,_magNumber);
+            p->SetX27CRC(_subpage->GetPageCRC());
             _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
             _state=PACKETSTATE_PACKET27; // makes no attempt to prevent an FL row and an X/27/0 both being sent
             break;

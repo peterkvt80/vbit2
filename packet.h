@@ -58,19 +58,13 @@ namespace vbit
             void SetMRAG(uint8_t mag, uint8_t row);
 
             /** Header
-             * Sets everything except the caption
              * @param mag 0..7 (where 0 is mag 8)
              * @param page number 00..ff
              * @param subcode (16 bit hex code as in tti file)
              * @param control C bits
+             * @param text header template
              */
-            void Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t control);
-
-            /** HeaderText
-             * Sets last 32 bytes. This is the caption part
-             * @param val String of exactly 32 characters.
-             */
-            void HeaderText(std::string val);
+            void Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t control, std::string text);
 
             /** Parity
              * Sets the parity of the bytes starting from offset
@@ -120,6 +114,18 @@ namespace vbit
              * @param coding -
              */
             void SetRow(int mag, int row, std::string val, PageCoding coding);
+            
+            /** PacketCRC
+             * Set the 16 byte CRC in X/27/0 packets
+             * @param crc intial crc value
+             */
+            void SetX27CRC(uint16_t crc);
+            
+            /** PacketCRC
+             * @return result of applying teletext page CRC to packet
+             * @param crc intial crc value
+             */
+            uint16_t PacketCRC(uint16_t crc);
 
         protected:
         
@@ -127,7 +133,6 @@ namespace vbit
             std::array<uint8_t, PACKETSIZE> _packet; // 45 byte packet
             bool _isHeader; //<! True if the packet is a header
             uint8_t _mag;//<! The magazine number this packet belongs to 0..7 where 0 is maazine 8
-            uint32_t _page;//<! The page number this packet belongs to 00 to ff
             uint8_t _row; //<! Row number 0 to 31
             PageCoding _coding; // packet coding
             
@@ -145,6 +150,8 @@ namespace vbit
              * The triplet is repacked with parity bits
              */
             void Hamming24EncodeTriplet(uint8_t index, uint32_t triplet);
+            
+            void PageCRC(uint16_t *crc, uint8_t byte); // calculate a CRC checksum for one byte
             
             #ifdef RASPBIAN
             bool get_temp(char* str);

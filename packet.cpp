@@ -4,7 +4,7 @@
 
 using namespace vbit;
 
-Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _page(0x8ff), _coding(CODING_7BIT_TEXT)
+Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _coding(CODING_7BIT_TEXT)
 {
     //ctor
     SetMRAG(mag, row);
@@ -53,6 +53,14 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
         default: // treat an invalid coding as 7-bit text
         case CODING_7BIT_TEXT:
         {
+            // Perform substitution of version number string
+            // %%%%%V version number eg. v2.0.0
+            int off = Packet::GetOffsetOfSubstition("%%%%%V");
+            if (off > -1)
+            {
+                std::copy_n(VBIT2_VERSION,6,_packet.begin() + off);
+            }
+            
             // first byte parity already set by first switch statement
             Parity(6);
             break;
@@ -110,6 +118,15 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
             // do nothing to 8-bit data
             break;
         }
+    }
+}
+
+void Packet::SetX27CRC(uint16_t crc)
+{
+    if (Hamming8DecodeTable[_packet[5] & 0xF] == 0) // only set CRC bytes for packet X/27/0
+    {
+        _packet[43]=crc >> 8;
+        _packet[44]=crc & 0xFF;
     }
 }
 
@@ -174,15 +191,17 @@ bool Packet::get_offset_time(time_t t, uint8_t* str)
 
 int Packet::GetOffsetOfSubstition(std::string string)
 {
-    auto it = std::search(_packet.begin(), _packet.end(), string.begin(), string.end());
+    auto it = std::search(_packet.begin()+1, _packet.end(), string.begin(), string.end());
     if (it != _packet.end())
         return std::distance(_packet.begin(), it);
     else
         return -1;
 }
 
-/* Perform translations on packet for header substitution etc.
+/* Perform translations on packet.
  * return pointer to 45 byte packet data vector
+ *
+ * *** Any substitutions applied by this function will break the checksum that has already been calculated and broadcast ***
  */
 std::array<uint8_t, PACKETSIZE>* Packet::tx()
 {
@@ -197,119 +216,11 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx()
     char tmpstr[] = "                    ";
     int off;
     
-    if (_isHeader) // We can do header substitutions
+    if (_isHeader)
     {
-        // mpp page number - %%#
-        off = Packet::GetOffsetOfSubstition("%%#");
-        if (off > -1)
-        {
-            if (_mag==0)
-                _packet[off]='8';
-            else
-                _packet[off]=_mag+'0';
-            _packet[off+1]=_page/0x10+'0';
-            if (_packet[off+1]>'9')
-                _packet[off+1]=_packet[off+1]-'0'-10+'A'; // Particularly poor hex conversion algorithm
-
-            _packet[off+2]=_page%0x10+'0';
-            if (_packet[off+2]>'9')
-                _packet[off+2]=_packet[off+2]-'0'-10+'A'; // Particularly poor hex conversion algorithm
-        }
-        
-        // day name - %%a
-        off = Packet::GetOffsetOfSubstition("%%a");
-        if (off > -1)
-        {
-            strftime(tmpstr,10,"%a",timeinfo);
-            _packet[off]=tmpstr[0];
-            _packet[off+1]=tmpstr[1];
-            _packet[off+2]=tmpstr[2];
-        }
-
-        // month name - %%b
-        off = Packet::GetOffsetOfSubstition("%%b");
-        if (off > -1)
-        {
-            strftime(tmpstr,10,"%b",timeinfo);
-            _packet[off]=tmpstr[0];
-            _packet[off+1]=tmpstr[1];
-            _packet[off+2]=tmpstr[2];
-        }
-        
-        // day of month with leading zero - %d
-        off = Packet::GetOffsetOfSubstition("%d");
-        if (off > -1)
-        {
-            strftime(tmpstr,10,"%d",timeinfo);
-            _packet[off]=tmpstr[0];
-            _packet[off+1]=tmpstr[1];
-        }
-        
-        // day of month with no leading zero - %e
-        off = Packet::GetOffsetOfSubstition("%e");
-        if (off > -1)
-        {
-            #ifndef WIN32
-            strftime(tmpstr,10,"%e",timeinfo);
-            _packet[off]=tmpstr[0];
-            #else
-            strftime(tmpstr,10,"%d",timeinfo);
-            if (tmpstr[0] == '0')
-                _packet[off]=' ';
-            else
-                _packet[off]=tmpstr[0];
-            #endif
-            _packet[off+1]=tmpstr[1];
-        }
-        
-        // month number with leading 0 - %m
-        off = Packet::GetOffsetOfSubstition("%m");
-        if (off > -1)
-        {
-            strftime(tmpstr,10,"%m",timeinfo);
-            _packet[off]=tmpstr[0];
-            _packet[off+1]=tmpstr[1];
-        }
-        
-        // 2 digit year - %y
-        off = Packet::GetOffsetOfSubstition("%y");
-        if (off > -1)
-        {
-            strftime(tmpstr,10,"%y",timeinfo);
-            _packet[off]=tmpstr[0];
-            _packet[off+1]=tmpstr[1];
-        }
-        
-        // hours - %H
-        off = Packet::GetOffsetOfSubstition("%H");
-        if (off > -1)
-        {
-            strftime(tmpstr,10,"%H",timeinfo);
-            _packet[off]=tmpstr[0];
-            _packet[off+1]=tmpstr[1];
-        }
-        
-        // minutes - %M
-        off = Packet::GetOffsetOfSubstition("%M");
-        if (off > -1)
-        {
-            strftime(tmpstr,10,"%M",timeinfo);
-            _packet[off]=tmpstr[0];
-            _packet[off+1]=tmpstr[1];
-        }
-        
-        // seconds - %S
-        off = Packet::GetOffsetOfSubstition("%S");
-        if (off > -1)
-        {
-            strftime(tmpstr,10,"%S",timeinfo);
-            _packet[off]=tmpstr[0];
-            _packet[off+1]=tmpstr[1];
-        }
-        
-        Parity(13); // apply parity to the text of the header
+        // substitutions already done in HeaderText
     }
-    else if (_coding == CODING_7BIT_TEXT) // Other text rows
+    else if (_row < 26 && _coding == CODING_7BIT_TEXT) // Other text rows
     {
         for (int i=5;i<45;i++) _packet[i] &= 0x7f; // strip parity bits off
         // ======= TEMPERATURE ========
@@ -363,13 +274,7 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx()
             strftime(tmpstr, 21, "\x02%a %d %b\x03%H:%M/%S", timeinfo);
             std::copy_n(tmpstr,20,_packet.begin() + off);
         }
-        // ======= VERSION ========
-        // %%%%%V version number eg. v2.0.0
-        off = Packet::GetOffsetOfSubstition("%%%%%V");
-        if (off > -1)
-        {
-            std::copy_n(VBIT2_VERSION,6,_packet.begin() + off);
-        }
+        
         Parity(5); // redo the parity because substitutions will need processing
     }
     
@@ -378,7 +283,7 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx()
 
 /** A header has mag, row=0, page, flags, caption and time
  */
-void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t control)
+void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t control, std::string text)
 {
     uint8_t cbit;
     SetMRAG(mag,0);
@@ -415,14 +320,132 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     // if (control & 0x0040) cbit|=0x01;                    // C11 serial/parallel *** We only work in parallel mode, Serial would mean a different packet ordering.
     _packet[12]=Hamming8EncodeTable[cbit];                  // C11 to C14 (C11=0 is parallel, C12,C13,C14 language)
 
-    _page=page;
-}
-
-void Packet::HeaderText(std::string val)
-{
     _isHeader=true; // Because it must be a header
-    val.resize(32);
-    std::copy_n(val.begin(),32,_packet.begin() + 13);
+    text.resize(32);
+    std::copy_n(text.begin(),32,_packet.begin() + 13);
+    
+    // perform the header template substitutions for page number, date, etc.
+    
+    // get master clock singleton
+    vbit::MasterClock *mc = mc->Instance();
+    time_t t = mc->GetMasterClock();
+    
+    // Get local time
+    struct tm * timeinfo;
+    timeinfo=localtime(&t);
+    
+    char tmpstr[] = "   ";
+    int off;
+    
+    // mpp page number - %%#
+    off = Packet::GetOffsetOfSubstition("%%#");
+    if (off > -1)
+    {
+        if (_mag==0)
+            _packet[off]='8';
+        else
+            _packet[off]=_mag+'0';
+        _packet[off+1]=page/0x10+'0';
+        if (_packet[off+1]>'9')
+            _packet[off+1]=_packet[off+1]-'0'-10+'A'; // Particularly poor hex conversion algorithm
+
+        _packet[off+2]=page%0x10+'0';
+        if (_packet[off+2]>'9')
+            _packet[off+2]=_packet[off+2]-'0'-10+'A'; // Particularly poor hex conversion algorithm
+    }
+    
+    // day name - %%a
+    off = Packet::GetOffsetOfSubstition("%%a");
+    if (off > -1)
+    {
+        strftime(tmpstr,10,"%a",timeinfo);
+        _packet[off]=tmpstr[0];
+        _packet[off+1]=tmpstr[1];
+        _packet[off+2]=tmpstr[2];
+    }
+
+    // month name - %%b
+    off = Packet::GetOffsetOfSubstition("%%b");
+    if (off > -1)
+    {
+        strftime(tmpstr,10,"%b",timeinfo);
+        _packet[off]=tmpstr[0];
+        _packet[off+1]=tmpstr[1];
+        _packet[off+2]=tmpstr[2];
+    }
+    
+    // day of month with leading zero - %d
+    off = Packet::GetOffsetOfSubstition("%d");
+    if (off > -1)
+    {
+        strftime(tmpstr,10,"%d",timeinfo);
+        _packet[off]=tmpstr[0];
+        _packet[off+1]=tmpstr[1];
+    }
+    
+    // day of month with no leading zero - %e
+    off = Packet::GetOffsetOfSubstition("%e");
+    if (off > -1)
+    {
+        #ifndef WIN32
+        strftime(tmpstr,10,"%e",timeinfo);
+        _packet[off]=tmpstr[0];
+        #else
+        strftime(tmpstr,10,"%d",timeinfo);
+        if (tmpstr[0] == '0')
+            _packet[off]=' ';
+        else
+            _packet[off]=tmpstr[0];
+        #endif
+        _packet[off+1]=tmpstr[1];
+    }
+    
+    // month number with leading 0 - %m
+    off = Packet::GetOffsetOfSubstition("%m");
+    if (off > -1)
+    {
+        strftime(tmpstr,10,"%m",timeinfo);
+        _packet[off]=tmpstr[0];
+        _packet[off+1]=tmpstr[1];
+    }
+    
+    // 2 digit year - %y
+    off = Packet::GetOffsetOfSubstition("%y");
+    if (off > -1)
+    {
+        strftime(tmpstr,10,"%y",timeinfo);
+        _packet[off]=tmpstr[0];
+        _packet[off+1]=tmpstr[1];
+    }
+    
+    // hours - %H
+    off = Packet::GetOffsetOfSubstition("%H");
+    if (off > -1)
+    {
+        strftime(tmpstr,10,"%H",timeinfo);
+        _packet[off]=tmpstr[0];
+        _packet[off+1]=tmpstr[1];
+    }
+    
+    // minutes - %M
+    off = Packet::GetOffsetOfSubstition("%M");
+    if (off > -1)
+    {
+        strftime(tmpstr,10,"%M",timeinfo);
+        _packet[off]=tmpstr[0];
+        _packet[off+1]=tmpstr[1];
+    }
+    
+    // seconds - %S
+    off = Packet::GetOffsetOfSubstition("%S");
+    if (off > -1)
+    {
+        strftime(tmpstr,10,"%S",timeinfo);
+        _packet[off]=tmpstr[0];
+        _packet[off+1]=tmpstr[1];
+    }
+    
+    Parity(13); // apply parity to the text of the header
 }
 
 /**
@@ -443,15 +466,16 @@ void Packet::Fastext(int* links, int mag)
 {
     unsigned long nLink;
     uint8_t p=5;
+    
     _packet[p++]=Hamming8EncodeTable[0]; // Designation code 0
     mag&=0x07; // Mask the mag just in case. Keep it valid
 
     // add the link control byte. This will allow row 24 to show.
     _packet[42]=Hamming8EncodeTable[0x0f];
 
-    // and the page CRC
-    _packet[43]=Hamming8EncodeTable[0]; // can't calculate this correctly while we have the substitutions in tx()
-    _packet[44]=Hamming8EncodeTable[0];
+    // and a blank page CRC - this is set later by Packet::SetX27CRC
+    _packet[43]=0x00;
+    _packet[44]=0x00;
 
     // for each of the six links
     for (uint8_t i=0; i<6; i++)
@@ -571,6 +595,7 @@ int Packet::IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, 
 
 void Packet::IDLcrc(uint16_t *crc, uint8_t data)
 {
+    // Perform the IDL A crc
     *crc ^= data;
     
     for (uint8_t i = 0; i < 8; i++)
@@ -664,4 +689,35 @@ void Packet::Hamming24EncodeTriplet(uint8_t index, uint32_t triplet)
 
     P6 = 0x80 & ((Hamming24ParityTable[0][Byte_0] ^ Hamming24ParityTable[0][D5_D11]) << 2);
     _packet[index*3+5] = D12_D18 | P6;
+}
+
+uint16_t Packet::PacketCRC(uint16_t crc)
+{
+    int i;
+    uint16_t tempcrc = crc;
+    
+    if (_isHeader)
+    {
+        for (i=13; i<37; i++)
+            PageCRC(&tempcrc, _packet[i]); // calculate CRC for header text
+    }
+    else if (_row < 26)
+    {
+        for (i=5; i<45; i++)
+            PageCRC(&tempcrc, _packet[i]); // calculate CRC for text rows
+    }
+    
+    return tempcrc;
+}
+
+void Packet::PageCRC(uint16_t *crc, uint8_t byte)
+{
+    // perform the teletext page CRC
+    uint8_t b;
+    
+    for (int i = 0; i < 8; i++)
+    {
+        b = ((byte >> (7-i)) & 1) ^ ((*crc>>6) & 1) ^ ((*crc>>8) & 1) ^ ((*crc>>11) & 1) ^ ((*crc>>15) & 1);
+        *crc = b | ((*crc&0x7FFF)<<1);
+    }
 }
