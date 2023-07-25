@@ -123,7 +123,7 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
 
 void Packet::SetX27CRC(uint16_t crc)
 {
-    if (Hamming8DecodeTable[_packet[5] & 0xF] == 0) // only set CRC bytes for packet X/27/0
+    if (Hamming8DecodeTable[_packet[5]] == 0) // only set CRC bytes for packet X/27/0
     {
         _packet[43]=crc >> 8;
         _packet[44]=crc & 0xFF;
