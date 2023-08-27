@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import re
 from dialog import Dialog
+from dialog import DialogBackendVersion
 
 # get absolute path of vbit2 scripts directory
 SCRIPTDIR = os.path.dirname(os.path.realpath(__file__))
@@ -124,9 +125,13 @@ def customServiceMenu():
     if code == "ok":
         if tag == "D":
             # local directory
-            
+            if DialogBackendVersion.fromstring(d.backend_version()) < DialogBackendVersion.fromstring("1.3-20201126"):
+                h = 10
+            else:
+                h = 20
+
             while True: # select directory loop
-                code, string = d.dselect(os.getenv('HOME')+"/", title="Enter teletext service directory:", height=7)
+                code, string = d.dselect(os.getenv('HOME')+"/", title="Enter teletext service directory:", height=h)
                 if code == "ok":
                     path = os.path.normpath(string)
                     code = d.yesno("Selected directory "+string, yes_label="OK", no_label="Back")
