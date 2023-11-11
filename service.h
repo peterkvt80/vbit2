@@ -59,6 +59,8 @@ namespace ttx
             uint16_t _lineCounter; // Which VBI line are we on? Used to signal a new field.
             uint8_t _fieldCounter; // Which field? Used to time packet 8/30
             
+            uint64_t _PTS; // presentation timestamp counter
+            
             std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
 
             vbit::PacketSubtitle* _subtitle; // Newfor needs to know which packet source is doing subtitles

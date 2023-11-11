@@ -29,6 +29,8 @@ Service::Service(Configure *configure, PageList *pageList) :
     _linesPerField = _configure->GetLinesPerField();
     
     _lineCounter = _linesPerField - 1; // roll over immediately
+    
+    _PTS = 0;
 }
 
 Service::~Service()
@@ -283,9 +285,9 @@ void Service::_packetOutput(vbit::Packet* pkt)
         {
             /* Packetized Elementary Stream for insertion into MPEG-2 transport stream */
             
-            if (_lineCounter == 0)
+            if (_lineCounter == 0 && !(_fieldCounter&1))
             {
-                // a new field has started - transmit data for previous field if there is any
+                // a new frame has started - transmit data for previous frame if there is any
                 if (!(_PESBuffer.empty()))
                 {
                     std::array<uint8_t, 46> padding;
@@ -306,20 +308,20 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     
                     /* bits |  7 | 6  |   5  |    4    |     3     |     2     |    1    |       0       |
                             | PTS DTS | ESCR | ES rate | DSM trick | copy info | PES CRC | PES extension |*/
-                    header.push_back(0x00); // No PTS
+                    header.push_back(0x80); // PTS no DTS
                     
                     header.push_back(0x24); // PES header data length
                     
-                    /* 
-                    uint64_t PTS = 0; // ???
-                    
                     // append PTS
-                    header.push_back(0x21 | (PTS >> 30));
-                    header.push_back((PTS & 0x3FC00000) >> 22);
-                    header.push_back(0x01 | ((PTS & 0x3F8000) >> 14));
-                    header.push_back((PTS & 0x7F80) >> 7);
-                    header.push_back(0x01 | ((PTS & 0x7F) << 1));
-                    */
+                    header.push_back(0x21 | ((_PTS & 0x1C0000000) >> 29));
+                    header.push_back((_PTS & 0x3FC00000) >> 22);
+                    header.push_back(0x01 | ((_PTS & 0x3F8000) >> 14));
+                    header.push_back((_PTS & 0x7F80) >> 7);
+                    header.push_back(0x01 | ((_PTS & 0x7F) << 1));
+                    
+                    _PTS += 3600;
+                    if (_PTS >= 0x200000000)
+                        _PTS = 0;
                     
                     header.resize(0x2D, 0xff); // make PES header up to 45 bytes long with stuffing bytes.
                     
@@ -337,7 +339,7 @@ void Service::_packetOutput(vbit::Packet* pkt)
                         std::cout.write((char*)padding.data(), 46); // pad out remainder of PES packet
                     }
                     
-                    _PESBuffer.clear(); // empty buffer ready for next frame's packets
+                    _PESBuffer.clear(); // empty buffer ready for next field's packets
                 }
             }
             
