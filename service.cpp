@@ -31,6 +31,8 @@ Service::Service(Configure *configure, PageList *pageList) :
     _lineCounter = _linesPerField - 1; // roll over immediately
     
     _PTS = 0;
+    _PID = 0x400;
+    _tscontinuity = 0;
 }
 
 Service::~Service()
@@ -293,6 +295,25 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     std::array<uint8_t, 46> padding;
                     padding.fill(0xff);
                     
+                    std::array<uint8_t, 188> ts;
+                    ts.fill(0xff);
+
+                    ts[0] = 0x47;
+                    ts[1] = (uint8_t)((_PID >> 8) | 0x40);
+                    ts[2] = (uint8_t)(_PID & 0xFF);
+                    ts[3] = 0x20 | _tscontinuity; // adaption field no payload
+                    _tscontinuity = (_tscontinuity+1)&0xf;
+                    ts[4] = 0x07; // 7 bytes in adaption field
+                    ts[5] = 0x10; // PCR flag
+                    // make PCR from our PTS
+                    ts[6] = _PTS >> 25;
+                    ts[7] = (_PTS >> 17) & 0xFF;
+                    ts[8] = (_PTS >> 9) & 0xFF;
+                    ts[9] = (_PTS >> 1) & 0xFF;
+                    ts[10] = (_PTS & 1) << 7;
+                    ts[11] = 0x00;
+                    std::cout.write((char*)ts.data(), 188); // write out transport stream packet
+                    
                     std::vector<uint8_t> header = {0x00, 0x00, 0x01, 0xBD};
                     
                     int numBlocks = _PESBuffer.size() + 1; // header and N lines
@@ -327,10 +348,21 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     
                     header.push_back(0x10); // append PES data identifier (EBU data)
                     
+                    ts[3] = 0x10 | _tscontinuity; // no adaption field payload only
+                    _tscontinuity = (_tscontinuity+1)&0xf;
+                    std::cout.write((char*)ts.data(), 4); // transport stream header
+                    
                     std::cout.write((char*)header.data(), header.size()); // output PES header and data_identifier
                     
                     for (unsigned int i = 0; i < _PESBuffer.size(); i++)
                     {
+                        if (((i % 184) % 4) == 3) // new ts packet
+                        {
+                            ts[1] = (uint8_t)(_PID >> 8);
+                            ts[3] = 0x10 | _tscontinuity;
+                            _tscontinuity = (_tscontinuity+1)&0xf;
+                            std::cout.write((char*)ts.data(), 4); // transport stream header
+                        }
                         std::cout.write((char*)_PESBuffer[i].data(), 46);
                     }
                     
