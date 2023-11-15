@@ -51,6 +51,8 @@ Configure::Configure(int argc, char** argv) :
     
     _OutputFormat = T42; // t42 output is the default behaviour
     
+    _PID = 0x20; // default PID is 0x20
+    
     uint8_t priority[8]={9,3,3,6,3,3,5,6}; // 1=High priority,9=low. Note: priority[0] is mag 8
     
     for (int i=0; i<8; i++)
@@ -86,9 +88,14 @@ Configure::Configure(int argc, char** argv) :
                     {
                         _OutputFormat = Raw;
                     }
-                    else if (arg == "PES")
+                    else if (arg == "ts")
                     {
-                        _OutputFormat = PES;
+                        _OutputFormat = TS;
+                    }
+                    else
+                    {
+                        std::cerr << "[Configure::Configure] invalid --format type\n";
+                        exit(EXIT_FAILURE);
                     }
                     
                     if (_reverseBits && _OutputFormat != T42)
@@ -110,6 +117,24 @@ Configure::Configure(int argc, char** argv) :
                 if (_OutputFormat != T42)
                 {
                     std::cerr << "[Configure::Configure] --reverse requires t42 format\n";
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else if (arg == "--pid")
+            {
+                if (i + 1 < argc)
+                {
+                    std::istringstream ss(argv[++i]);
+                    ss >> _PID;
+                    if (_PID < 0x20 || _PID >= 0x1FFF || !ss.eof())
+                    {
+                        std::cerr << "[Configure::Configure] invalid PID\n";
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else
+                {
+                    std::cerr << "[Configure::Configure] --pid requires an argument\n";
                     exit(EXIT_FAILURE);
                 }
             }

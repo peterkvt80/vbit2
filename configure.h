@@ -33,7 +33,7 @@ class Configure
         {
             T42,
             Raw,
-            PES
+            TS
         };
         
         //Configure();
@@ -62,6 +62,7 @@ class Configure
         int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
         
         OutputFormat GetOutputFormat(){return _OutputFormat;}
+        uint16_t GetTSPID(){return _PID;}
         
     private:
         int DirExists(std::string *path);
@@ -95,6 +96,7 @@ class Configure
         int _debugLevel;
         
         OutputFormat _OutputFormat;
+        uint16_t _PID;
     };
 }
 

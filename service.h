@@ -82,6 +82,7 @@ namespace ttx
             /* queue up packets for outputting as a Packetised Elementary Stream */
             std::vector<std::vector<uint8_t>> _PESBuffer;
             
+            Configure::OutputFormat _OutputFormat;
             uint16_t _PID;
             uint8_t _tscontinuity;
     };

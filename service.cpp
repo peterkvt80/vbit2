@@ -30,8 +30,9 @@ Service::Service(Configure *configure, PageList *pageList) :
     
     _lineCounter = _linesPerField - 1; // roll over immediately
     
+    _OutputFormat = _configure->GetOutputFormat();
     _PTS = 0;
-    _PID = 0x400;
+    _PID = _configure->GetTSPID();
     _tscontinuity = 0;
 }
 
@@ -253,9 +254,7 @@ void Service::_packetOutput(vbit::Packet* pkt)
 {
     std::array<uint8_t, PACKETSIZE> *p = pkt->tx();
     
-    Configure::OutputFormat OutputFormat = _configure->GetOutputFormat();
-    
-    switch (OutputFormat)
+    switch (_OutputFormat)
     {
         case Configure::OutputFormat::T42:
         {
@@ -283,9 +282,9 @@ void Service::_packetOutput(vbit::Packet* pkt)
             break;
         }
         
-        case Configure::OutputFormat::PES:
+        case Configure::OutputFormat::TS:
         {
-            /* Packetized Elementary Stream for insertion into MPEG-2 transport stream */
+            /* MPEG-2 transport stream holding a DVB-TXT Packetized Elementary Stream */
             
             if (_lineCounter == 0 && !(_fieldCounter&1))
             {
@@ -297,7 +296,7 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     
                     std::array<uint8_t, 188> ts;
                     ts.fill(0xff);
-
+                    
                     ts[0] = 0x47;
                     ts[1] = (uint8_t)((_PID >> 8) | 0x40);
                     ts[2] = (uint8_t)(_PID & 0xFF);
