@@ -298,10 +298,9 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     ts.fill(0xff);
                     
                     ts[0] = 0x47;
-                    ts[1] = (uint8_t)((_PID >> 8) | 0x40);
+                    ts[1] = (uint8_t)(_PID >> 8);
                     ts[2] = (uint8_t)(_PID & 0xFF);
                     ts[3] = 0x20 | _tscontinuity; // adaption field no payload
-                    _tscontinuity = (_tscontinuity+1)&0xf;
                     ts[4] = 0x07; // 7 bytes in adaption field
                     ts[5] = 0x10; // PCR flag
                     // make PCR from our PTS
@@ -313,7 +312,7 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     ts[11] = 0x00;
                     std::cout.write((char*)ts.data(), 188); // write out transport stream packet
                     
-                    std::vector<uint8_t> header = {0x00, 0x00, 0x01, 0xBD};
+                    std::vector<uint8_t> header = {0x00, 0x00, 0x01, 0xBD}; // PES start code
                     
                     int numBlocks = _PESBuffer.size() + 1; // header and N lines
                     int numTSPackets = ((numBlocks * 46) + 183) / 184; // round up
@@ -347,8 +346,11 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     
                     header.push_back(0x10); // append PES data identifier (EBU data)
                     
-                    ts[3] = 0x10 | _tscontinuity; // no adaption field payload only
+                    ts[1] = (uint8_t)((_PID >> 8) | 0x40);
+                    
                     _tscontinuity = (_tscontinuity+1)&0xf;
+                    ts[3] = 0x10 | _tscontinuity; // no adaption field payload only
+                    
                     std::cout.write((char*)ts.data(), 4); // transport stream header
                     
                     std::cout.write((char*)header.data(), header.size()); // output PES header and data_identifier
@@ -358,8 +360,8 @@ void Service::_packetOutput(vbit::Packet* pkt)
                         if (((i % 184) % 4) == 3) // new ts packet
                         {
                             ts[1] = (uint8_t)(_PID >> 8);
-                            ts[3] = 0x10 | _tscontinuity;
                             _tscontinuity = (_tscontinuity+1)&0xf;
+                            ts[3] = 0x10 | _tscontinuity;
                             std::cout.write((char*)ts.data(), 4); // transport stream header
                         }
                         std::cout.write((char*)_PESBuffer[i].data(), 46);
