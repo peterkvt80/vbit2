@@ -32,6 +32,7 @@ Service::Service(Configure *configure, PageList *pageList) :
     
     _OutputFormat = _configure->GetOutputFormat();
     _PTS = 0;
+    _PTSFlag = true;
     _PID = _configure->GetTSPID();
     _tscontinuity = 0;
 }
@@ -282,6 +283,8 @@ void Service::_packetOutput(vbit::Packet* pkt)
             break;
         }
         
+        case Configure::OutputFormat::TSNPTS:
+            _PTSFlag = false; // Don't generate PCR and PTS in output stream
         case Configure::OutputFormat::TS:
         {
             /* MPEG-2 transport stream holding a DVB-TXT Packetized Elementary Stream */
@@ -300,17 +303,20 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     ts[0] = 0x47;
                     ts[1] = (uint8_t)(_PID >> 8);
                     ts[2] = (uint8_t)(_PID & 0xFF);
-                    ts[3] = 0x20 | _tscontinuity; // adaption field no payload
-                    ts[4] = 0x07; // 7 bytes in adaption field
-                    ts[5] = 0x10; // PCR flag
-                    // make PCR from our PTS
-                    ts[6] = _PTS >> 25;
-                    ts[7] = (_PTS >> 17) & 0xFF;
-                    ts[8] = (_PTS >> 9) & 0xFF;
-                    ts[9] = (_PTS >> 1) & 0xFF;
-                    ts[10] = (_PTS & 1) << 7;
-                    ts[11] = 0x00;
-                    std::cout.write((char*)ts.data(), 188); // write out transport stream packet
+                    
+                    if (_PTSFlag){
+                        ts[3] = 0x20 | _tscontinuity; // adaption field no payload
+                        ts[4] = 0x07; // 7 bytes in adaption field
+                        ts[5] = 0x10; // PCR flag
+                        // make PCR from our PTS
+                        ts[6] = _PTS >> 25;
+                        ts[7] = (_PTS >> 17) & 0xFF;
+                        ts[8] = (_PTS >> 9) & 0xFF;
+                        ts[9] = (_PTS >> 1) & 0xFF;
+                        ts[10] = (_PTS & 1) << 7;
+                        ts[11] = 0x00;
+                        std::cout.write((char*)ts.data(), 188); // write out transport stream packet
+                    }
                     
                     std::vector<uint8_t> header = {0x00, 0x00, 0x01, 0xBD}; // PES start code
                     
@@ -327,20 +333,23 @@ void Service::_packetOutput(vbit::Packet* pkt)
                     
                     /* bits |  7 | 6  |   5  |    4    |     3     |     2     |    1    |       0       |
                             | PTS DTS | ESCR | ES rate | DSM trick | copy info | PES CRC | PES extension |*/
-                    header.push_back(0x80); // PTS no DTS
+                    header.push_back(_PTSFlag?0x80:0x00); // if _PTSFlag, PTS no DTS follows
                     
                     header.push_back(0x24); // PES header data length
                     
-                    // append PTS
-                    header.push_back(0x21 | ((_PTS & 0x1C0000000) >> 29));
-                    header.push_back((_PTS & 0x3FC00000) >> 22);
-                    header.push_back(0x01 | ((_PTS & 0x3F8000) >> 14));
-                    header.push_back((_PTS & 0x7F80) >> 7);
-                    header.push_back(0x01 | ((_PTS & 0x7F) << 1));
-                    
-                    _PTS += 3600;
-                    if (_PTS >= 0x200000000)
-                        _PTS = 0;
+                    if (_PTSFlag)
+                    {
+                        // append PTS
+                        header.push_back(0x21 | ((_PTS & 0x1C0000000) >> 29));
+                        header.push_back((_PTS & 0x3FC00000) >> 22);
+                        header.push_back(0x01 | ((_PTS & 0x3F8000) >> 14));
+                        header.push_back((_PTS & 0x7F80) >> 7);
+                        header.push_back(0x01 | ((_PTS & 0x7F) << 1));
+                        
+                        _PTS += 3600;
+                        if (_PTS >= 0x200000000)
+                            _PTS = 0;
+                    }
                     
                     header.resize(0x2D, 0xff); // make PES header up to 45 bytes long with stuffing bytes.
                     

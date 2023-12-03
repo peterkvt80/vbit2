@@ -60,6 +60,7 @@ namespace ttx
             uint8_t _fieldCounter; // Which field? Used to time packet 8/30
             
             uint64_t _PTS; // presentation timestamp counter
+            bool _PTSFlag; // generate PCR and PTS
             
             std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
 

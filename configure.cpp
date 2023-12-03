@@ -92,6 +92,10 @@ Configure::Configure(int argc, char** argv) :
                     {
                         _OutputFormat = TS;
                     }
+                    else if (arg == "tsnpts")
+                    {
+                        _OutputFormat = TSNPTS;
+                    }
                     else
                     {
                         std::cerr << "[Configure::Configure] invalid --format type\n";

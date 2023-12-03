@@ -33,7 +33,8 @@ class Configure
         {
             T42,
             Raw,
-            TS
+            TS,
+            TSNPTS
         };
         
         //Configure();
