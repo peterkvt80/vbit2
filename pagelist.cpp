@@ -205,7 +205,7 @@ int PageList::Match(char* pageNumber)
 {
     int matchCount=0;
 
-    std::cerr << "[PageList::FindPage] Selecting " << pageNumber << std::endl;
+    std::cerr << "[PageList::Match] Selecting " << pageNumber << std::endl;
     int begin=0;
     int end=7;
 
@@ -224,7 +224,7 @@ int PageList::Match(char* pageNumber)
                 std::stringstream ss;
                 ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
                 strcpy(ps,ss.str().c_str());
-                // std::cerr << "[PageList::FindPage] matching " << ps << std::endl;
+                // std::cerr << "[PageList::Match] matching " << ps << std::endl;
 
                 for (int i=0;i<5;i++)
                 {
@@ -236,12 +236,14 @@ int PageList::Match(char* pageNumber)
                         }
                     }
                 }
+                
+                if (match)
+                {
+                    matchCount++;
+                }
+                
+                ptr->SetSelected(match);
             }
-            if (match)
-            {
-                matchCount++;
-            }
-            ptr->SetSelected(match);
         }
     }
     // Set up the iterator for commands that use pages selected by the Page Identity
