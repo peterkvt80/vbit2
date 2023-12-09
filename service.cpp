@@ -285,6 +285,8 @@ void Service::_packetOutput(vbit::Packet* pkt)
         
         case Configure::OutputFormat::TSNPTS:
             _PTSFlag = false; // Don't generate PCR and PTS in output stream
+            /* fallthrough */
+            [[gnu::fallthrough]];
         case Configure::OutputFormat::TS:
         {
             /* MPEG-2 transport stream holding a DVB-TXT Packetized Elementary Stream */

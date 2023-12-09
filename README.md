@@ -11,7 +11,7 @@ It is a console application that can be compiled for Raspberry Pi or Windows.
 
 It generates a T42 teletext stream that can be piped to [raspi-teletext](https://github.com/ali1234/raspi-teletext) to add a teletext signal to the Raspberry Pi composite output, [vbit-py](https://github.com/peterkvt80/vbit-py) to drive a Vbit teletext inserter board, or into the [vbit-iv](https://github.com/peterkvt80/vbit-iv) in-vision renderer.
 
-VBIT2 can also optionally generate output a Packetized Elementary Stream for insertion into an MPEG transport stream for DVB teletext.
+VBIT2 can also optionally generate output an mpeg transport stream containing DVB-TXT for merging into a digital television stream.
 
 ## Features
 
