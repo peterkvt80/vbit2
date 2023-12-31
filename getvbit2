@@ -1,9 +1,9 @@
 #!/bin/bash
 
-if ! lsb_release -i | grep -q 'Raspbian'; then 
-    echo "This installer is intended for Raspberry Pi OS only"
-    exit 1
-fi
+#if ! lsb_release -i | grep -q 'Raspbian'; then 
+#    echo "This installer is intended for Raspberry Pi OS only"
+#    exit 1
+#fi
 
 # install required packages
 sudo apt update
