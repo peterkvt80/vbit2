@@ -1,32 +1,40 @@
 #!/bin/bash
 
-#if ! lsb_release -i | grep -q 'Raspbian'; then 
-#    echo "This installer is intended for Raspberry Pi OS only"
-#    exit 1
-#fi
+if [ ! -f /etc/rpi-issue ]; then
+    echo "This installer is intended for Raspberry Pi OS only"
+    exit 1
+fi
 
 # install required packages
 sudo apt update
 sudo apt -y install git subversion dialog python3-dialog
 
 if (( $(lsb_release -r | tr -dc '0-9') > 11 )); then
-    echo "Teletext signal output is not available with this version of Raspberry Pi OS"
-    read -p "Install VBIT2 anyway? (y/N) " -n 1 -r
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
+    # bookworm
+    sudo apt -y install libraspberrypi-dev
+    
+    # Disable the KMS graphics driver
+    sudo sed -i s/dtoverlay=vc4-kms-v3d/#dtoverlay=vc4-kms-v3d/ /boot/firmware/config.txt
+    
+    if ! grep -q "sdtv_mode" /boot/firmware/config.txt; then
+        sudo sed -i -e $'$a\\\nsdtv_mode=2' /boot/firmware/config.txt
+    fi
+    
+    if ! grep -q "enable_tvout" /boot/firmware/config.txt; then
+        sudo sed -i -e $'$a\\\nenable_tvout=1' /boot/firmware/config.txt
     fi
 else
-    # download the raspi-teletext git repository and compile it
-    git clone https://github.com/ali1234/raspi-teletext.git $HOME/raspi-teletext
-    cd $HOME/raspi-teletext
-    make
-
     # System sets SD video on bootup 
     sudo sed -i s/#sdtv_mode/sdtv_mode/ /boot/config.txt
 
     # Disable the new KMS graphics driver in bullseye
     sudo sed -i s/dtoverlay=vc4-kms-v3d/#dtoverlay=vc4-kms-v3d/ /boot/config.txt
 fi
+
+# download the raspi-teletext git repository and compile it
+git clone https://github.com/ali1234/raspi-teletext.git $HOME/raspi-teletext
+cd $HOME/raspi-teletext
+make
 
 # download the vbit2 git repository
 git clone https://github.com/peterkvt80/vbit2.git $HOME/vbit2
