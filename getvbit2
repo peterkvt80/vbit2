@@ -17,7 +17,7 @@ if (( $(lsb_release -r | tr -dc '0-9') > 11 )); then
     fi
 else
     # install required packages to compile raspi-teletext
-    sudo apt -y install raspberrypi-dev raspberrypi-kernel-headers
+    sudo apt -y install libraspberrypi-dev raspberrypi-kernel-headers
 
     # download the raspi-teletext git repository and compile it
     git clone https://github.com/ali1234/raspi-teletext.git $HOME/raspi-teletext
