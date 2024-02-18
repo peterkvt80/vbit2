@@ -53,8 +53,9 @@ int main(int argc, char** argv)
     /// @todo option of adding a non standard config path
     Configure *configure=new Configure(argc, argv);
     PageList *pageList=new PageList(configure);
+    PacketServer *packetServer=new PacketServer(configure);
 
-    Service* svc=new Service(configure, pageList); // Need to copy the subtitle packet source for Newfor
+    Service* svc=new Service(configure, pageList, packetServer); // Need to copy the subtitle packet source for Newfor
 
     std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
     std::thread serviceThread(&Service::run, svc);
@@ -63,7 +64,14 @@ int main(int argc, char** argv)
     {
         // only start command thread if required
         std::thread commandThread(&Command::run, Command(configure, svc->GetSubtitle(), pageList) );
-        commandThread.join();
+        commandThread.detach();
+    }
+
+    if (configure->GetPacketServerEnabled())
+    {
+        // only start packet server thread if required
+        std::thread packetServerThread(&PacketServer::run, packetServer );
+        packetServerThread.detach();
     }
 
     // The threads should never stop, but just in case...

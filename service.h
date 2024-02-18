@@ -9,6 +9,7 @@
 
 #include "configure.h"
 #include "pagelist.h"
+#include "packetServer.h"
 #include "packet.h"
 #include <packetsource.h>
 #include <packetmag.h>
@@ -34,7 +35,7 @@ namespace ttx
              * @param configure A Configure object with all the settings
              * @param pageList A pageList object already loaded with pages
              */
-            Service(Configure* configure, PageList* pageList);
+            Service(Configure* configure, PageList* pageList, PacketServer* packetServer);
             
             ~Service();
             
@@ -53,6 +54,7 @@ namespace ttx
             // Member variables that define the service
             Configure* _configure; /// Member reference to the configuration settings
             PageList* _pageList; /// Member reference to the pages list
+            PacketServer* _packetServer;
 
             // Member variables for event management
             uint16_t _linesPerField;
@@ -86,6 +88,9 @@ namespace ttx
             Configure::OutputFormat _OutputFormat;
             uint16_t _PID;
             uint8_t _tscontinuity;
+            
+            /* queue up a frame of packets for the packet server */
+            std::vector<std::vector<uint8_t>> _FrameBuffer;
     };
 }
 

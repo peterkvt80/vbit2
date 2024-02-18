@@ -8,6 +8,7 @@
 #include "pagelist.h"
 #include "filemonitor.h"
 #include "command.h"
+#include "packetServer.h"
 
 #ifdef WIN32
 #include "fcntl.h"

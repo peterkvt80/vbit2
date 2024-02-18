@@ -31,6 +31,7 @@ class Configure
     public:
         enum OutputFormat
         {
+            None,
             T42,
             Raw,
             TS,
@@ -65,6 +66,9 @@ class Configure
         OutputFormat GetOutputFormat(){return _OutputFormat;}
         uint16_t GetTSPID(){return _PID;}
         
+        uint16_t GetPacketServerPort(){return _packetServerPort;}
+        bool GetPacketServerEnabled(){return _packetServerEnabled;}
+        
     private:
         int DirExists(std::string *path);
         
@@ -98,6 +102,9 @@ class Configure
         
         OutputFormat _OutputFormat;
         uint16_t _PID;
+        
+        int _packetServerPort;
+        bool _packetServerEnabled;
     };
 }
 

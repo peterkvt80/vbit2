@@ -6,9 +6,10 @@
 using namespace ttx;
 using namespace vbit;
 
-Service::Service(Configure *configure, PageList *pageList) :
+Service::Service(Configure *configure, PageList *pageList, PacketServer *packetServer) :
     _configure(configure),
     _pageList(pageList),
+    _packetServer(packetServer),
     _fieldCounter(49) // roll over immediately
 {
     vbit::PacketMag **magList=_pageList->GetMagazines();
@@ -57,8 +58,10 @@ int Service::run()
 
     static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // A pre-prepared quiet packet to avoid eating the heap
 
-    std::cerr << "[Service::run] Loop starts" << std::endl;
-    std::cerr << "[Service::run] Lines per field: " << (int)_linesPerField << std::endl;
+    //std::cerr << "[Service::run] Loop starts" << std::endl;
+    std::stringstream ss;
+    ss << "[Service::run] Lines per field: " << (int)_linesPerField << "\n";
+    std::cerr << ss.str();
     while(1)
     {
         //std::cerr << "[Service::run]iterates. VBI line=" << (int) _lineCounter << " (int) field=" << (int) _fieldCounter << std::endl;
@@ -257,6 +260,12 @@ void Service::_packetOutput(vbit::Packet* pkt)
     
     switch (_OutputFormat)
     {
+        case Configure::OutputFormat::None:
+        {
+            /* disable stdout */
+            break;
+        }
+        
         case Configure::OutputFormat::T42:
         {
             /* t42 output */
@@ -408,5 +417,28 @@ void Service::_packetOutput(vbit::Packet* pkt)
             break;
         }
     }
-
+    
+    if (_packetServer->GetIsActive())
+    {
+        // packet server needs feeding
+        
+        if (_lineCounter == 0 && !(_fieldCounter&1))
+        {
+            // a new field has started 
+            
+            _packetServer->SendField(_FrameBuffer);
+            
+            _FrameBuffer.clear(); // empty buffer ready for next frame's packets
+        }
+        
+        /* internal format only: 45 bytes in the form field count, line high byte, line low byte, 42 payload bytes */
+        std::vector<uint8_t> data = {_fieldCounter, (uint8_t)(_lineCounter >> 8), (uint8_t)(_lineCounter & 0xFF)};
+        
+        for (int i = 3; i < 45; i++)
+        {
+            data.push_back(p->at(i));
+        }
+        
+        _FrameBuffer.push_back(data);
+    }
 }

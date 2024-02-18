@@ -53,6 +53,9 @@ Configure::Configure(int argc, char** argv) :
     
     _PID = 0x20; // default PID is 0x20
     
+    _packetServerPort = 19761; // default packet server port
+    _packetServerEnabled = false;
+    
     uint8_t priority[8]={9,3,3,6,3,3,5,6}; // 1=High priority,9=low. Note: priority[0] is mag 8
     
     for (int i=0; i<8; i++)
@@ -80,7 +83,11 @@ Configure::Configure(int argc, char** argv) :
                 {
                     arg = argv[++i];
                     
-                    if (arg == "t42")
+                    if (arg == "none")
+                    {
+                        _OutputFormat = None;
+                    }
+                    else if (arg == "t42")
                     {
                         _OutputFormat = T42;
                     }
@@ -194,6 +201,35 @@ Configure::Configure(int argc, char** argv) :
                 else
                 {
                     std::cerr << "[Configure::Configure] --debug requires an argument\n";
+                    exit(EXIT_FAILURE);
+                }
+            }
+            else if (arg == "--server")
+            {
+                _packetServerEnabled = true;
+            }
+            else if (arg == "--port")
+            {
+                if (i + 1 < argc)
+                {
+                    errno = 0;
+                    char *end_ptr;
+                    long l = std::strtol(argv[++i], &end_ptr, 10);
+                    if (errno == 0 && *end_ptr == '\0' && l > 0 && l < 65536)
+                    {
+                        _packetServerPort = (int)l;
+                        
+                        _packetServerEnabled = true; // implies --server
+                    }
+                    else
+                    {
+                        std::cerr << "[Configure::Configure] invalid server port number\n";
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                else
+                {
+                    std::cerr << "[Configure::Configure] --port requires a port number\n";
                     exit(EXIT_FAILURE);
                 }
             }
