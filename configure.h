@@ -67,7 +67,7 @@ class Configure
         uint16_t GetTSPID(){return _PID;}
         
         uint16_t GetPacketServerPort(){return _packetServerPort;}
-        bool GetPacketServerEnabled(){return _packetServerEnabled;}
+        bool GetPacketServerEnabled(){return _packetServerPort != 0;}
         
     private:
         int DirExists(std::string *path);
@@ -103,8 +103,7 @@ class Configure
         OutputFormat _OutputFormat;
         uint16_t _PID;
         
-        int _packetServerPort;
-        bool _packetServerEnabled;
+        uint16_t _packetServerPort;
     };
 }
 

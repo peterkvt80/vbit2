@@ -53,8 +53,7 @@ Configure::Configure(int argc, char** argv) :
     
     _PID = 0x20; // default PID is 0x20
     
-    _packetServerPort = 19761; // default packet server port
-    _packetServerEnabled = false;
+    _packetServerPort = 0; // port 0 disables packet server
     
     uint8_t priority[8]={9,3,3,6,3,3,5,6}; // 1=High priority,9=low. Note: priority[0] is mag 8
     
@@ -204,11 +203,7 @@ Configure::Configure(int argc, char** argv) :
                     exit(EXIT_FAILURE);
                 }
             }
-            else if (arg == "--server")
-            {
-                _packetServerEnabled = true;
-            }
-            else if (arg == "--port")
+            else if (arg == "--packetserver")
             {
                 if (i + 1 < argc)
                 {
@@ -218,8 +213,6 @@ Configure::Configure(int argc, char** argv) :
                     if (errno == 0 && *end_ptr == '\0' && l > 0 && l < 65536)
                     {
                         _packetServerPort = (int)l;
-                        
-                        _packetServerEnabled = true; // implies --server
                     }
                     else
                     {
@@ -229,9 +222,14 @@ Configure::Configure(int argc, char** argv) :
                 }
                 else
                 {
-                    std::cerr << "[Configure::Configure] --port requires a port number\n";
+                    std::cerr << "[Configure::Configure] --packetserver requires a port number\n";
                     exit(EXIT_FAILURE);
                 }
+            }
+            else
+            {
+                std::cerr << "[Configure::Configure] unrecognised argument: " << arg << std::endl;
+                exit(EXIT_FAILURE);
             }
         }
     }
