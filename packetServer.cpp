@@ -75,6 +75,12 @@ void PacketServer::SendField(std::vector<std::vector<uint8_t>> FrameBuffer)
                 ret = send(sock, (char*)RawFrameBuffer.data(), RawFrameBuffer.size(), 0);
                 if (ret != RawFrameBuffer.size())
                 {
+                    /*
+                        We were unable to send a whole frame to the client. We either sent a partial frame or the send failed entirely.
+                        This probably means that either there are network issues, or the client is not consuming data fast enough.
+                        Either way trying to handle this adds a lot of complexity and risks getting the client desynchronised or blocking the thread trying to sort it out, so the best thing to do is probably just boot the client off and let it reconnect.
+                    */
+                    
                     #ifdef WIN32
                         int e = WSAGetLastError();
                     #else
@@ -151,7 +157,7 @@ void PacketServer::run()
     
     addrlen = sizeof(address);
     
-    int iopt = 42*32*4; /* 4 frames worth of t42 */
+    int iopt = 42*32*25; /* 25 frames worth of t42 */
     
     while(true)
     {
@@ -213,7 +219,7 @@ void PacketServer::run()
                 {
                     /* add to active sockets */
                     _clientSocks[i] = newSock;
-                    std::cerr << "[PacketServer::run] new connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << std::endl;
+                    std::cerr << "[PacketServer::run] new connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << " as socket " << newSock << std::endl;
                     break;
                 }
             }
@@ -235,7 +241,7 @@ void PacketServer::run()
                         /* client disconnected */
                         getpeername(sock, (struct sockaddr*)&address, &addrlen);
                         
-                        std::cerr << "[PacketServer::run] closing connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << std::endl;
+                        std::cerr << "[PacketServer::run] closing connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << " on socket " << sock << std::endl;
                         
                         _mtx[i].lock();
                         _clientSocks[i] = -1; /* free slot */
@@ -261,7 +267,7 @@ void PacketServer::run()
                         
                         getpeername(sock, (struct sockaddr*)&address, &addrlen);
                         
-                        std::cerr << "[PacketServer::run] closing connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << " recv error " << e << std::endl;
+                        std::cerr << "[PacketServer::run] closing connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << " recv error " << e << " on socket " << sock << std::endl;
                         
                         /* close the socket when any error occurs */
                         _mtx[i].lock();
