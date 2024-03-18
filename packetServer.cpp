@@ -63,15 +63,34 @@ void PacketServer::SendField(std::vector<std::vector<uint8_t>> FrameBuffer)
         }
     }
     
+    int sock;
     int ret;
     for (i = 0; i < MAXCLIENTS; i++)
     {
         if (_mtx[i].try_lock()) // skip this socket if unable to lock mutex as it's in the process of being closed
         {
-            if (_clientSocks[i] >= 0)
+            sock = _clientSocks[i];
+            if (sock >= 0)
             {
-                ret = send(_clientSocks[i], (char*)RawFrameBuffer.data(), RawFrameBuffer.size(), 0);
-                // should do something here if send ever fails like close the socket
+                ret = send(sock, (char*)RawFrameBuffer.data(), RawFrameBuffer.size(), 0);
+                if (ret != RawFrameBuffer.size())
+                {
+                    #ifdef WIN32
+                        int e = WSAGetLastError();
+                    #else
+                        int e = errno;
+                    #endif
+                    
+                    std::cerr << "[PacketServer::SendField] send() failed. Closing socket " << sock << " send error " << e << std::endl;
+                    
+                    _clientSocks[i] = -1; /* free slot */
+                    
+                    #ifdef WIN32
+                        closesocket(sock);
+                    #else
+                        close(sock);
+                    #endif
+                }
             }
             _mtx[i].unlock();
         }

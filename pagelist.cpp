@@ -307,7 +307,7 @@ TTXPageStream* PageList::PrevPage()
 
     if (_iter==_pageList[_iterMag].begin()) // beginning of mag?
     {
-        if (_iterMag<=0)
+        if (_iterMag>0)
         {
             _iterMag--; // previous mag
             _iter=_pageList[_iterMag].end();
