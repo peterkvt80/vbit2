@@ -214,8 +214,10 @@ def uninstallService():
             
             config.uninstallService(name)
 def optionsMenu():
+    configData = config.load()
     updateEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "teletext-update.timer"], capture_output=True, text=True).stdout == "enabled\n"
     bootEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "vbit2.service"], capture_output=True, text=True).stdout == "enabled\n"
+    serverEnabled = configData["settings"].get("packetServer")
     
     options = [("U", "Automatically update selected service")]
     
@@ -230,6 +232,13 @@ def optionsMenu():
         options[1] += ("on",)
     else:
         options[1] += ("off",)
+    
+    options += [("S", "Enable teletext packet server")]
+    
+    if serverEnabled:
+        options[2] += ("on",)
+    else:
+        options[2] += ("off",)
     
     code, tags = d.checklist("",choices=options, title="Options", no_tags=True, no_cancel=True)
 
@@ -246,6 +255,14 @@ def optionsMenu():
         if "B" in tags and not bootEnabled:
             # run at boot was clear, now enabled
             subprocess.run(["systemctl", "--user", "enable", "vbit2.service"], stderr=subprocess.DEVNULL)
+        if not "S" in tags and serverEnabled:
+            # server was enabled, now clear
+            configData["settings"]["packetServer"] = False
+            config.save(configData)
+        if "S" in tags and not serverEnabled:
+            # server was clear, now enabled
+            configData["settings"]["packetServer"] = True
+            config.save(configData)
 
 def mainMenu():
     while True:

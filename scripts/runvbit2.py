@@ -36,12 +36,16 @@ for conffile in ["vbit.conf", "vbit.conf.override"]:
 
 # could check for overrides in the json config here too if vbit2 gains a command argument to override lines per field
 
-output = configData["settings"].get("output")
-if not output:
-    print("no output type selected")
-    quit()
+cmdline = [os.path.join(os.getenv('HOME'), ".local/bin/vbit2"), "--dir", service["path"]]
+prerun = []
+postrun = []
 
-if output == "raspi-teletext":
+output = configData["settings"].get("output")
+if output == "none":
+    # disables piped output!
+    cmdline.append("--format")
+    cmdline.append("none")
+elif output == "raspi-teletext":
     prerun = ["sudo", os.path.join(os.getenv('HOME'), "raspi-teletext/tvctl"), "on"]
     postrun = ["sudo", os.path.join(os.getenv('HOME'), "raspi-teletext/tvctl"), "off"]
     
@@ -58,12 +62,19 @@ if output == "raspi-teletext":
 if prerun:
     subprocess.run(prerun)
 
-vbit = subprocess.Popen([os.path.join(os.getenv('HOME'), ".local/bin/vbit2"), "--dir", service["path"]], stdout=subprocess.PIPE)
+packetServerPort = configData["settings"].get("packetServerPort")
+if configData["settings"].get("packetServer") and packetServerPort:
+    cmdline.append("--packetserver")
+    cmdline.append(str(packetServerPort))
+
+vbit = subprocess.Popen(cmdline, stdout=subprocess.PIPE)
 
 signal.signal(signal.SIGTERM, signalHandler)
 signal.signal(signal.SIGINT, signalHandler)
 
-subprocess.Popen(destproc, stdin=vbit.stdout)
+if not output == "none":
+    subprocess.Popen(destproc, stdin=vbit.stdout)
+
 vbit.wait()
 
 if postrun:

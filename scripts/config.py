@@ -29,6 +29,12 @@ def load():
     if not configData["settings"].get("output"):
         configData["settings"]["output"] = "raspi-teletext"
     
+    if not configData["settings"].get("packetServer"):
+        configData["settings"]["packetServer"] = False
+    
+    if not configData["settings"].get("packetServerPort"):
+        configData["settings"]["packetServerPort"] = 19761
+    
     return configData
 
 def save(configData):
