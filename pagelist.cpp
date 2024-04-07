@@ -88,7 +88,7 @@ int PageList::ReadDirectory(std::string filepath)
             // If the page loaded, then push it into the appropriate magazine
             if (q->Loaded())
             {
-                q->GetPageCount(); // Use for the side effect of renumbering the subcodes
+                q->RenumberSubpages();
                 
                 CheckForPacket29OrCustomHeader(q);
             }

@@ -130,8 +130,7 @@ int FileMonitor::readDirectory(std::string path)
                         // lock
                         q->LoadPage(name); // What if this fails? We can see the bool. What to do ?
                         q->IncrementUpdateCount();
-                        q->SetFileChangedFlag();
-                        q->GetPageCount(); // renumber the subpages
+                        q->RenumberSubpages();
                         int mag=(q->GetPageNumber() >> 16) & 0x7;
                         
                         if ((!(q->GetSpecialFlag())) && (q->Special()))
@@ -193,7 +192,7 @@ int FileMonitor::readDirectory(std::string path)
                     _pageList->AddPage(q);
                     if((q=_pageList->Locate(name))) // get pointer to copy in list
                     {
-                        q->GetPageCount(); // renumber the subpages
+                        q->RenumberSubpages();
                         int mag=(q->GetPageNumber() >> 16) & 0x7;
                         if (q->Special())
                         {

@@ -25,8 +25,6 @@
  #include "ttxpage.h"
 
 
-bool TTXPage::pageChanged=false;
-
 TTXPage::TTXPage() :
     m_PageNumber(FIRSTPAGE),
     m_SubPage(nullptr),
@@ -63,10 +61,6 @@ TTXPage::TTXPage(std::string filename) :
         {
             m_Loaded=true;
         }
-    
-    // Other file formats support removed from here
-    
-    TTXPage::pageChanged=false;
 }
 
 void TTXPage::m_Init()
@@ -89,7 +83,6 @@ void TTXPage::m_Init()
     m_lastpacket=0;
     m_pagecoding=CODING_7BIT_TEXT;
     m_pagefunction=LOP;
-    TTXPage::pageChanged=false;
 }
 
 TTXPage::~TTXPage()
@@ -203,6 +196,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                             p->SetCycleTime(m_cycletimeseconds);
                         }
                         p->SetPageNumber(pageNumber);
+                        p->SetFileChangedFlag();
 
                         break;
                     }
@@ -288,11 +282,8 @@ bool TTXPage::m_LoadTTI(std::string filename)
     }
     filein.close(); // Not sure that we need to close it
     p->Setm_SubPage(nullptr);
-    TTXPage::pageChanged=false;
     return (lines>0);
 }
-
-
 
 TTXPage::TTXPage(const TTXPage& other)
 {
@@ -404,7 +395,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
     }
 }
 
-int TTXPage::GetPageCount()
+void TTXPage::RenumberSubpages()
 {
     int count=0;
     unsigned int subcode;
@@ -421,8 +412,6 @@ int TTXPage::GetPageCount()
             // "Special" pages (e.g. MOT, POP, GPOP, DRCS, GDRCS, MIP) should be coded sequentially in hexadecimal 0000-000F
             this->SetSubCode(0);
         }
-        
-        count = 1;
     }
     else
     {
@@ -473,8 +462,6 @@ int TTXPage::GetPageCount()
             count++;
         }
     }
-    
-    return count;
 }
 
 void TTXPage::CopyMetaData(TTXPage* page)

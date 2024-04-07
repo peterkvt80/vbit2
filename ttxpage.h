@@ -100,12 +100,7 @@ class TTXPage
          std::string GetSourcePage() const {return m_sourcepage;}
          void SetSourcePage(std::string fname){m_sourcepage=fname;}
 
-         /** Get the page count
-         *  It also replaces the subcode sequence. (Is this a good idea?)
-         * Must only call this in the root page.
-         * \return Number of subpages.
-         */
-        int GetPageCount();
+        void RenumberSubpages();
 
         /** Get a row of text
          * \return The TTXLine object of the required row. Check result for NULL if there isn't an actual row.
@@ -173,11 +168,6 @@ class TTXPage
         /** Get the array of 6 fastext links */
         int* GetLinkSet(){return m_fastextlinks;};
 
-        /** @brief Should check this before closing a page
-         */
-        inline bool PageChanged(){return pageChanged;};
-        static bool pageChanged;         // / True if we have done some edits
-
         inline bool Loaded() const {return m_Loaded;};
         
         unsigned int GetLastPacket() {return m_lastpacket;};
@@ -198,12 +188,12 @@ class TTXPage
          */
         void Copy(TTXPage* src);
         
-        void SetFileChangedFlag(){_fileChanged=true;};
+        bool HasFileChanged(){bool t = _fileChanged; _fileChanged = false; return t; }; // clears the flag for this subpage
 
         void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
         bool Selected(){return _Selected;}; /// Return the selected state
         
-        bool HasHeaderChanged(uint16_t crc);
+        bool HasHeaderChanged(uint16_t crc); // updates the header crc for this subpage
         
         void SetPageCRC(uint16_t crc){_pageCRC = crc;}; // update the stored crc
         uint16_t GetPageCRC(){return _pageCRC;}; // retrieve the stored crc
@@ -213,6 +203,7 @@ class TTXPage
         int m_cycletimeseconds;     // CT
         int m_fastextlinks[6];      // FL
         int m_PageNumber;           // PN
+        
     private:
         // Private variables
         // Private objects
@@ -230,13 +221,14 @@ class TTXPage
         PageFunction m_pagefunction;
         bool m_Loaded;
         bool _Selected; /// True if this page has been selected.
-        bool _fileChanged; // page was reloaded by the filemonitor
+        bool _fileChanged; // page was reloaded
         
         uint16_t _headerCRC; // holds the last calculated CRC of the page header
         uint16_t _pageCRC; // holds the calculated CRC of the page
         
         // Private functions
         void m_Init();
+        void SetFileChangedFlag(){_fileChanged = true;};
 
 };
 

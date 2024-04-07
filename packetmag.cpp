@@ -202,7 +202,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 
                 if (updatedFlag)
                 {
-                    // page is updated set interrupted sequence flag and clear UpdatedFlag
+                    // page is updated set interrupted sequence flag
                     _status|=PAGESTATUS_C9_INTERRUPTED;
                 }
             }
@@ -225,7 +225,9 @@ Packet* PacketMag::GetPacket(Packet* p)
             
             uint16_t tempCRC = p->PacketCRC(0); // calculate the crc of the new header
             
-            if (_subpage->HasHeaderChanged(tempCRC) || updatedFlag)
+            bool headerChanged = _subpage->HasHeaderChanged(tempCRC);
+            bool fileChanged = _subpage->HasFileChanged();
+            if (headerChanged || fileChanged)
             {
                 // the content of the header has changed or the page has been reloaded
                 // we must now CRC the whole page
