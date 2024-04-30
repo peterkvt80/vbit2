@@ -1,5 +1,6 @@
 #ifndef TTXLINE_H
 #define TTXLINE_H
+#include <cstdint>
 #include <iostream>
 #include <iomanip>
 #include <string>

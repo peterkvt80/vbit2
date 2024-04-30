@@ -8,6 +8,7 @@
 #include <fstream>
 #include <string>
 
+#include <cstdint>
 #include <cstdlib>
 #include <iomanip>
 

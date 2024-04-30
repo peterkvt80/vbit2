@@ -29,6 +29,6 @@ vbit2: $(objs)
 .PHONY: clean
 
 clean:
-	rm -f $(objs) $(deps)
+	rm -f $(objs) $(deps) vbit2
 
 -include $(deps)

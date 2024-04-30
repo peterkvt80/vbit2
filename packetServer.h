@@ -9,6 +9,7 @@
 #else
 #include <fcntl.h>
 #include <sys/socket.h> /* for socket(), bind(), and connect() */
+#include <sys/select.h> /* for fd_set() */
 #include <arpa/inet.h>  /* for sockaddr_in and inet_ntoa() */
 #include <unistd.h>     /* for close() */
 #endif

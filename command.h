@@ -45,7 +45,6 @@
 #include <winsock2.h>
 #else
 #include <sys/ioctl.h>
-#include <linux/spi/spidev.h>
 
 #include <sys/socket.h> /* for socket(), bind(), and connect() */
 #include <arpa/inet.h>  /* for sockaddr_in and inet_ntoa() */
