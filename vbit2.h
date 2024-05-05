@@ -5,6 +5,7 @@
 #include <thread>
 #include "service.h"
 #include "configure.h"
+#include "debug.h"
 #include "pagelist.h"
 #include "filemonitor.h"
 #include "command.h"

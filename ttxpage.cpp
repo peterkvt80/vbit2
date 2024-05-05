@@ -499,9 +499,6 @@ void TTXPage::SetPageNumber(int page)
 {
     if ((page<0x10000) || (page>0x8ff99))
     {
-        std::stringstream ss;
-        ss << "[TTXPage::SetPageNumber] Page number is out of range: " << std::hex << page << std::endl;
-        std::cerr << ss.str();
         page = 0x8FF00;
     }
     m_PageNumber=page;

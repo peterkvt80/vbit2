@@ -23,7 +23,7 @@ namespace vbit
         public:
             /** Default constructor */
             FileMonitor();
-            FileMonitor(ttx::Configure *configure, ttx::PageList *pageList);
+            FileMonitor(ttx::Configure *configure, Debug *debug, ttx::PageList *pageList);
             /** Default destructor */
             virtual ~FileMonitor();
 
@@ -37,6 +37,7 @@ namespace vbit
 
         private:
             ttx::Configure* _configure; /// Member reference to the configuration settings
+            Debug* _debug;
             ttx::PageList* _pageList;
             int readDirectory(std::string path);
     };

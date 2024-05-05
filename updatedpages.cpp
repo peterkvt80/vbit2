@@ -3,7 +3,8 @@
 
 using namespace vbit;
 
-UpdatedPages::UpdatedPages()
+UpdatedPages::UpdatedPages(Debug *debug) :
+    _debug(debug)
 {
     _iter=_UpdatedPagesList.begin();
     _page=nullptr;
@@ -43,9 +44,7 @@ loop:
         /* remove pointers from this list if the pages are marked for deletion */
         if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetUpdatedFlag()) // only remove it once
         {
-            std::stringstream ss;
-            ss << "[UpdatedPages::NextPage] Deleted " << _page->GetSourcePage() << "\n";
-            std::cerr << ss.str();
+            _debug->Log(Debug::LogLevels::logINFO,"[UpdatedPages::NextPage] Deleted " + _page->GetSourcePage());
             _iter = _UpdatedPagesList.erase(_iter);
             _page->SetUpdatedFlag(false);
             if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetNormalFlag()))

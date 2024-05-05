@@ -4,7 +4,8 @@
 
 using namespace ttx;
 
-PacketServer::PacketServer(ttx::Configure *configure) :
+PacketServer::PacketServer(ttx::Configure *configure, vbit::Debug *debug) :
+    _debug(debug),
     _portNumber(configure->GetPacketServerPort()),
     _isActive(false)
 {
@@ -87,7 +88,7 @@ void PacketServer::SendField(std::vector<std::vector<uint8_t>> FrameBuffer)
                         int e = errno;
                     #endif
                     
-                    std::cerr << "[PacketServer::SendField] send() failed. Closing socket " << sock << " send error " << e << std::endl;
+                    _debug->Log(vbit::Debug::LogLevels::logWARN,"[PacketServer::SendField] send() failed. Closing socket " + std::to_string(sock) + " send error " + std::to_string(e));
                     
                     _clientSocks[i] = -1; /* free slot */
                     
@@ -105,7 +106,7 @@ void PacketServer::SendField(std::vector<std::vector<uint8_t>> FrameBuffer)
 
 void PacketServer::run()
 {
-    std::cerr << "[PacketServer::run] TCP packet server thread started" << std::endl;
+    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PacketServer::run] TCP packet server thread started");
     
     int newSock;
     int sock;
@@ -210,7 +211,7 @@ void PacketServer::run()
                     #else
                         close(newSock);
                     #endif
-                    std::cerr << "[PacketServer::run] reject new connection from " << inet_ntoa(address.sin_addr) << " (too many connections)" << std::endl;
+                    _debug->Log(vbit::Debug::LogLevels::logWARN,"[PacketServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
                     break;
                 }
                 
@@ -219,7 +220,7 @@ void PacketServer::run()
                 {
                     /* add to active sockets */
                     _clientSocks[i] = newSock;
-                    std::cerr << "[PacketServer::run] new connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << " as socket " << newSock << std::endl;
+                    _debug->Log(vbit::Debug::LogLevels::logINFO,"[PacketServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
                     break;
                 }
             }
@@ -241,7 +242,7 @@ void PacketServer::run()
                         /* client disconnected */
                         getpeername(sock, (struct sockaddr*)&address, &addrlen);
                         
-                        std::cerr << "[PacketServer::run] closing connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << " on socket " << sock << std::endl;
+                        _debug->Log(vbit::Debug::LogLevels::logINFO,"[PacketServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " on socket " + std::to_string(sock));
                         
                         _mtx[i].lock();
                         _clientSocks[i] = -1; /* free slot */
@@ -267,7 +268,7 @@ void PacketServer::run()
                         
                         getpeername(sock, (struct sockaddr*)&address, &addrlen);
                         
-                        std::cerr << "[PacketServer::run] closing connection from " << inet_ntoa(address.sin_addr) << ":" << ntohs(address.sin_port) << " recv error " << e << " on socket " << sock << std::endl;
+                        _debug->Log(vbit::Debug::LogLevels::logWARN,"[PacketServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " recv error " + std::to_string(e) + " on socket " + std::to_string(sock));
                         
                         /* close the socket when any error occurs */
                         _mtx[i].lock();

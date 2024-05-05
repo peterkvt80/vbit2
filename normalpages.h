@@ -3,6 +3,7 @@
 
 #include <list>
 
+#include "debug.h"
 #include "ttxpagestream.h"
 
 // list of normal pages
@@ -14,7 +15,7 @@ class NormalPages
 {
     public:
         /** Default constructor */
-        NormalPages();
+        NormalPages(Debug *debug);
         /** Default destructor */
         virtual ~NormalPages();
 
@@ -25,6 +26,7 @@ class NormalPages
     protected:
 
     private:
+        Debug* _debug;
         std::list<TTXPageStream*> _NormalPagesList;
         std::list<TTXPageStream*>::iterator _iter;
         TTXPageStream* _page;

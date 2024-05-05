@@ -3,6 +3,7 @@
 
 #include <list>
 
+#include "debug.h"
 #include "ttxpagestream.h"
 
 // list of updated pages
@@ -14,7 +15,7 @@ class UpdatedPages
 {
     public:
         /** Default constructor */
-        UpdatedPages();
+        UpdatedPages(Debug *debug);
         /** Default destructor */
         virtual ~UpdatedPages();
 
@@ -27,6 +28,7 @@ class UpdatedPages
     protected:
 
     private:
+        Debug* _debug;
         std::list<TTXPageStream*> _UpdatedPagesList;
         std::list<TTXPageStream*>::iterator _iter;
         TTXPageStream* _page;

@@ -2,12 +2,14 @@
  */
 
 #include "packetmag.h"
+#include "vbit2.h"
 
 using namespace vbit;
 
-PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, uint8_t priority) :
+PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, Debug *debug, uint8_t priority) :
     _pageSet(pageSet),
     _configure(configure),
+    _debug(debug),
     _page(nullptr),
     _subpage(nullptr),
     _magNumber(mag),
@@ -21,7 +23,9 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _hasCustomHeader(false),
     _magRegion(0),
     _specialPagesFlipFlop(false),
-    _waitingForField(0)
+    _waitingForField(0),
+    _lastCycle(0),
+    _cycleDuration(-1)
 {
     //ctor
     for (int i=0;i<MAXPACKET29TYPES;i++)
@@ -30,10 +34,10 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
         _packet29[i]=nullptr;
     }
 
-    _carousel=new vbit::Carousel();
-    _specialPages=new vbit::SpecialPages();
-    _normalPages=new vbit::NormalPages();
-    _updatedPages=new vbit::UpdatedPages();
+    _carousel=new vbit::Carousel(_debug);
+    _specialPages=new vbit::SpecialPages(_debug);
+    _normalPages=new vbit::NormalPages(_debug);
+    _updatedPages=new vbit::UpdatedPages(_debug);
 }
 
 PacketMag::~PacketMag()
@@ -152,6 +156,16 @@ Packet* PacketMag::GetPacket(Packet* p)
                 
                 if (_page == nullptr)
                 {
+                    // reached the end of a magazine cycle
+                    // get master clock singleton
+                    vbit::MasterClock *mc = mc->Instance();
+                    time_t t = mc->GetMasterClock();
+                    if (_lastCycle){ // wait for real timestamps
+                        _cycleDuration = difftime(t, _lastCycle); // truncates double to int
+                        _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
+                    }
+                    _lastCycle = t; // update timestamp
+                    
                     // couldn't get a page to send so sent a time filling header
                     p->Header(_magNumber,0xFF,0x0000,0x8010,_headerTemplate);
                     _waitingForField = 2; // enforce 20ms page erasure interval
@@ -241,8 +255,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                 _subpage->SetPageCRC(tempCRC);
                 
                 // TODO: the page content may get modified by substitutions in Packet::tx() which will result in an invalid checksum
-                
-                //std::cerr << "[PacketMag::GetPacket] Calculated page CRC " << std::hex << tempCRC << " for page " << std::hex << _subpage->GetPageNumber() << std::endl;
             }
             
             assert(p!=NULL);
@@ -480,5 +492,5 @@ void PacketMag::DeleteCustomHeader()
 {
     _headerTemplate = _configure->GetHeaderTemplate(); // revert to service default template
     _hasCustomHeader = false;
-     std::cerr << "[PacketMag::DeleteCustomHeader] Removing custom header from magazine " << _magNumber << std::endl;
+     _debug->Log(Debug::LogLevels::logINFO,"[PacketMag::DeleteCustomHeader] Removing custom header from magazine " + std::to_string(_magNumber));
 }

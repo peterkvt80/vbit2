@@ -17,11 +17,10 @@
 #include <algorithm>
 #include <stdexcept>
 
+#include "debug.h"
 #include "ttxline.h"
 
 #define CONFIGFILE "vbit.conf" // default config file name
-
-#define MAXDEBUGLEVEL 3
 
 namespace ttx
 
@@ -41,7 +40,7 @@ class Configure
         //Configure();
         /** Constructor can take overrides from the command line
          */
-        Configure(int argc=0, char** argv=NULL);
+        Configure(vbit::Debug *debug, int argc=0, char** argv=NULL);
         ~Configure();
         
         inline std::string GetPageDirectory(){return _pageDir;};
@@ -70,6 +69,7 @@ class Configure
         bool GetPacketServerEnabled(){return _packetServerPort != 0;}
         
     private:
+        vbit::Debug* _debug;
         int DirExists(std::string *path);
         
         int LoadConfigFile(std::string filename);

@@ -3,6 +3,7 @@
 
 #include <list>
 
+#include "debug.h"
 #include "ttxpagestream.h"
 
 // list of special pages
@@ -14,7 +15,7 @@ class SpecialPages
 {
     public:
         /** Default constructor */
-        SpecialPages();
+        SpecialPages(Debug *debug);
         /** Default destructor */
         virtual ~SpecialPages();
 
@@ -30,6 +31,7 @@ class SpecialPages
     protected:
 
     private:
+        Debug* _debug;
         std::list<TTXPageStream*> _specialPagesList;
         std::list<TTXPageStream*>::iterator _iter;
         TTXPageStream* _page;

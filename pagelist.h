@@ -9,6 +9,7 @@
 #include <list>
 
 #include "configure.h"
+#include "debug.h"
 #include "ttxpagestream.h"
 #include "packetmag.h"
 
@@ -24,7 +25,7 @@ namespace ttx
         public:
             /** @brief Create am empty page list
              */
-            PageList(Configure *configure=NULL);
+            PageList(Configure *configure, vbit::Debug *debug);
             ~PageList();
 
             /**
@@ -92,6 +93,7 @@ namespace ttx
 
         private:
             Configure* _configure; // The configuration object
+            vbit::Debug* _debug;
             std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
             vbit::PacketMag* _mag[8];
 

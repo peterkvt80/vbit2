@@ -9,6 +9,7 @@
 #include "normalpages.h"
 #include "updatedpages.h"
 #include "configure.h"
+#include "debug.h"
 
 #define MAXPACKET29TYPES 3
 
@@ -20,7 +21,7 @@ namespace vbit
     {
         public:
             /** Default constructor */
-            PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, uint8_t priority);
+            PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, Debug *debug, uint8_t priority);
             /** Default destructor */
             virtual ~PacketMag();
 
@@ -50,12 +51,15 @@ namespace vbit
             void SetCustomHeader(std::string row) {_headerTemplate = row; _hasCustomHeader = true;}
             bool GetCustomHeaderFlag() { return _hasCustomHeader; };
             void DeleteCustomHeader();
+            
+            int GetCycleDuration() { return _cycleDuration; };
 
         protected:
 
         private:
             std::list<TTXPageStream>*  _pageSet; //!< Member variable "_pageSet"
             ttx::Configure* _configure;
+            Debug* _debug;
             TTXPageStream* _page; //!< The current page being output
             TTXPage* _subpage; // pointer to the actual subpage
             int _magNumber; //!< The number of this magazine. (where 0 is mag 8)
@@ -86,6 +90,9 @@ namespace vbit
             bool _hasX28Region;
             bool _specialPagesFlipFlop; // toggle to alternate between special pages and normal pages
             int _waitingForField;
+            
+            time_t _lastCycle;
+            int _cycleDuration;
     };
 }
 

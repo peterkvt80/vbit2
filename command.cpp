@@ -33,9 +33,10 @@
 using namespace vbit;
 using namespace ttx;
 
-Command::Command(Configure *configure, PacketSubtitle* subtitle=nullptr, PageList *pageList=nullptr) :
+Command::Command(Configure *configure, Debug *debug, PacketSubtitle* subtitle=nullptr, PageList *pageList=nullptr) :
+    _debug(debug),
     _portNumber(configure->GetCommandPort()),
-    _client(subtitle, pageList)
+    _client(debug, subtitle, pageList)
 {
     // Constructor
     // Start a listener thread
@@ -54,7 +55,7 @@ void Command::DieWithError(std::string errorMessage)
 
 void Command::run()
 {
-    std::cerr << "[Command::run] Newfor subtitle listener started\n";
+    _debug->Log(Debug::LogLevels::logDEBUG,"[Command::run] Newfor subtitle listener started");
 
     int serverSock;                    /* Socket descriptor for server */
     int clientSock;                    /* Socket descriptor for client */
@@ -103,13 +104,13 @@ void Command::run()
 
     while(1)
     {
-        std::cerr << "[Command::run] Ready for a client to connect\n";
+        _debug->Log(Debug::LogLevels::logDEBUG,"[Command::run] Ready for a client to connect");
 
         /* Wait for a client to connect */
         if ((clientSock = accept(serverSock, (struct sockaddr *) &echoClntAddr, &clntLen)) < 0)
             DieWithError("accept() failed");
         
-        std::cerr << "[Command::run] Connected\n";
+        _debug->Log(Debug::LogLevels::logINFO,"[Command::run] Connected " + std::string(inet_ntoa(echoClntAddr.sin_addr)) + ":" + std::to_string(ntohs(echoClntAddr.sin_port)));
 
         /* clientSock is connected to a client! */
 

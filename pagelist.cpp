@@ -4,8 +4,9 @@
 
 using namespace ttx;
 
-PageList::PageList(Configure *configure) :
+PageList::PageList(Configure *configure, vbit::Debug *debug) :
     _configure(configure),
+    _debug(debug),
     _iterMag(0),
     _iterSubpage(nullptr)
 {
@@ -15,7 +16,7 @@ PageList::PageList(Configure *configure) :
     }
     if (_configure==nullptr)
     {
-        std::cerr << "NULL configuration object" << std::endl;
+        _debug->Log(vbit::Debug::LogLevels::logERROR,"NULL configuration object");
         return;
     }
     LoadPageList(_configure->GetPageDirectory());
@@ -30,7 +31,7 @@ int PageList::LoadPageList(std::string filepath)
     // Create PacketMags before loading
     for (int i=0;i<8;i++)
     {
-        _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
+        _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, _debug, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
     }
     
     // Load files
@@ -52,7 +53,7 @@ int PageList::ReadDirectory(std::string filepath)
     // Open the directory
     if ((dp = opendir(filepath.c_str())) == NULL)
     {
-        std::cerr << "Error(" << errno << ") opening " << filepath << std::endl;
+        _debug->Log(vbit::Debug::LogLevels::logERROR,"Error(" + std::to_string(errno) + ") opening " + filepath);
         return errno;
     }
     
@@ -72,10 +73,10 @@ int PageList::ReadDirectory(std::string filepath)
             // directory entry is another directory
             if (dirp->d_name[0] != '.') // ignore anything beginning with .
             {
-                std::cerr << "[PageList::LoadPageList] recursing into " << name << std::endl;
+                _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::LoadPageList] recursing into " + name);
                 if (ReadDirectory(name)) // recurse into directory
                 {
-                    std::cerr << "Error(" << errno << ") recursing into " << filepath << std::endl;
+                    _debug->Log(vbit::Debug::LogLevels::logERROR,"Error(" + std::to_string(errno) + ") recursing into " + filepath);
                 }
             }
             continue;
@@ -125,7 +126,7 @@ void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
                 _mag[mag]->SetCustomHeader(page->GetTxRow(0)->GetLine().substr(8,32)); // set custom headers
                 
                 if (!page->GetCustomHeaderFlag())
-                    std::cerr << "[PageList::CheckForPacket29OrCustomHeader] Added custom header for magazine " << ((mag == 0)?8:mag) << std::endl;
+                    _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::CheckForPacket29OrCustomHeader] Added custom header for magazine " + std::to_string((mag == 0)?8:mag));
                 page->SetCustomHeaderFlag(true); // mark the page
             }
             else if (page->GetCustomHeaderFlag()) // page previously had custom header
@@ -173,7 +174,7 @@ void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
                 // loop until every row 29 is copied
             }
             if (Packet29Flag && !page->GetPacket29Flag())
-                std::cerr << "[PageList::CheckForPacket29OrCustomHeader] Added packet 29 for magazine " << ((mag == 0)?8:mag) << std::endl;
+                _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::CheckForPacket29OrCustomHeader] Added packet 29 for magazine "+ std::to_string((mag == 0)?8:mag));
             
             page->SetPacket29Flag(Packet29Flag); // mark the page
             
@@ -193,7 +194,7 @@ TTXPageStream* PageList::Locate(std::string filename)
         {
             TTXPageStream* ptr;
             ptr=&(*p);
-            // std::cerr << "[PageList::Locate]scan:" << ptr->GetSourcePage() << std::endl;
+            //_debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::Locate]scan:" + ptr->GetSourcePage());
             if (filename==ptr->GetSourcePage())
             return ptr;
         }
@@ -205,7 +206,7 @@ int PageList::Match(char* pageNumber)
 {
     int matchCount=0;
 
-    std::cerr << "[PageList::Match] Selecting " << pageNumber << std::endl;
+    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::Match] Selecting " + std::string(pageNumber));
     int begin=0;
     int end=7;
 
@@ -224,7 +225,7 @@ int PageList::Match(char* pageNumber)
                 std::stringstream ss;
                 ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
                 strcpy(ps,ss.str().c_str());
-                // std::cerr << "[PageList::Match] matching " << ps << std::endl;
+                //_debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::Match] matching " + std::string(ps));
 
                 for (int i=0;i<5;i++)
                 {
@@ -255,20 +256,20 @@ int PageList::Match(char* pageNumber)
 
 TTXPageStream* PageList::NextPage()
 {
-    std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
+    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::NextPage] looking for a selected page, mag=" + std::to_string((int)_iterMag));
     bool more=true;
     if (_iterSubpage!=nullptr)
     {
-        std::cerr << "A";
+        _debug->Log(vbit::Debug::LogLevels::logDEBUG,"A");
         _iterSubpage=(TTXPageStream*) _iterSubpage->Getm_SubPage();
-        std::cerr << "B";
+        _debug->Log(vbit::Debug::LogLevels::logDEBUG,"B");
     }
     if (_iterSubpage!=nullptr)
     {
-        std::cerr << "C";
+        _debug->Log(vbit::Debug::LogLevels::logDEBUG,"C");
         return _iterSubpage;
     }
-    std::cerr << "[PageList::NextPage] _iterSubpage is null, so checking next page" << std::endl;
+    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::NextPage] _iterSubpage is null, so checking next page");
 
     if (_iter!=_pageList[_iterMag].end())
     {
@@ -298,7 +299,7 @@ TTXPageStream* PageList::NextPage()
 
 TTXPageStream* PageList::PrevPage()
 {
-    //std::cerr << "[PageList::NextPage] looking for a selected page, mag=" << (int)_iterMag << std::endl;
+    //_debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::NextPage] looking for a selected page, mag=" + std::to_string((int)_iterMag));
     bool more=true;
     if (_iter!=_pageList[_iterMag].begin())
     {
@@ -332,16 +333,16 @@ TTXPageStream* PageList::FirstPage()
     _iter=_pageList[_iterMag].begin();
     _iterSubpage=&(*_iter);
     // Iterate through all the pages
-    std::cerr << "[PageList::FirstPage] about to find if there is a selected page" << std::endl;
+    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::FirstPage] about to find if there is a selected page");
     for (TTXPageStream* p=_iterSubpage; p!=nullptr; p=NextPage())
     {
         if (p->Selected()) // If the page is selected, return a pointer to it
         {
-            std::cerr << "[PageList::FirstPage] selected page found" << std::endl;
+            _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::FirstPage] selected page found");
             return p;
         }
     }
-    std::cerr << "[PageList::FirstPage] no selected page" << std::endl;
+    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::FirstPage] no selected page");
     return nullptr; // No selected page
 }
 
@@ -409,7 +410,7 @@ void PageList::DeleteOldPages()
                 {
                     // Packet 29 was loaded from this page, so remove it.
                     _mag[mag]->DeletePacket29();
-                    std::cerr << "[PageList::DeleteOldPages] Removing packet 29 from magazine " << ((mag == 0)?8:mag) << std::endl;
+                    _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::DeleteOldPages] Removing packet 29 from magazine " + std::to_string((mag == 0)?8:mag));
                 }
                 if (ptr->GetCustomHeaderFlag())
                 {

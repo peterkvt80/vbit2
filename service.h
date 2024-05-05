@@ -8,6 +8,7 @@
 #include <list>
 
 #include "configure.h"
+#include "debug.h"
 #include "pagelist.h"
 #include "packetServer.h"
 #include "packet.h"
@@ -35,7 +36,7 @@ namespace ttx
              * @param configure A Configure object with all the settings
              * @param pageList A pageList object already loaded with pages
              */
-            Service(Configure* configure, PageList* pageList, PacketServer* packetServer);
+            Service(Configure* configure, vbit::Debug* debug, PageList* pageList, PacketServer* packetServer);
             
             ~Service();
             
@@ -53,6 +54,7 @@ namespace ttx
         private:
             // Member variables that define the service
             Configure* _configure; /// Member reference to the configuration settings
+            vbit::Debug* _debug;
             PageList* _pageList; /// Member reference to the pages list
             PacketServer* _packetServer;
 
@@ -68,7 +70,7 @@ namespace ttx
 
             vbit::PacketSubtitle* _subtitle; // Newfor needs to know which packet source is doing subtitles
             
-            vbit::PacketDebug* _debug; // Debug packet source
+            vbit::PacketDebug* _packetDebug; // Debug packet source
 
             // Member functions
             void _register(vbit::PacketSource *src); /// Register packet sources

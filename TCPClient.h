@@ -53,6 +53,7 @@
 #include "pagelist.h"
 #include "newfor.h"
 
+#include "debug.h"
 #include "packetsubtitle.h"
 
 namespace vbit
@@ -60,11 +61,13 @@ namespace vbit
     class TCPClient
     {
         public:
-            TCPClient(PacketSubtitle* subtitle, ttx::PageList* pageList);
+            TCPClient(Debug* debug, PacketSubtitle* subtitle, ttx::PageList* pageList);
             ~TCPClient();
             void Handler(int clntSocket);
 
         private:
+            Debug* _debug;
+            
             // Constants
             static const uint8_t MAXCMD=128;
             static const uint8_t RCVBUFSIZE=132;   /* Size of receive buffer */

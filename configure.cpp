@@ -16,7 +16,8 @@ int Configure::DirExists(std::string *path)
         return 0;
 }
 
-Configure::Configure(int argc, char** argv) :
+Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
+    _debug(debug),
     // settings for generation of packet 8/30
     _initialMag(1),
     _initialPage(0x00),
@@ -42,7 +43,6 @@ Configure::Configure(int argc, char** argv) :
     _commandPortEnabled = false;
     
     _reverseBits = false;
-    _debugLevel = 0;
 
     _rowAdaptive = false;
     _linesPerField = 16; // default to 16 lines per field
@@ -72,7 +72,7 @@ Configure::Configure(int argc, char** argv) :
                     _pageDir = argv[++i];
                 else
                 {
-                    std::cerr << "[Configure::Configure] --dir requires an argument\n";
+                    std::cerr << "--dir requires an argument\n";
                     exit(EXIT_FAILURE);
                 }
             }
@@ -104,19 +104,19 @@ Configure::Configure(int argc, char** argv) :
                     }
                     else
                     {
-                        std::cerr << "[Configure::Configure] invalid --format type\n";
+                        std::cerr << "invalid --format type\n";
                         exit(EXIT_FAILURE);
                     }
                     
                     if (_reverseBits && _OutputFormat != T42)
                     {
-                        std::cerr << "[Configure::Configure] --reverse requires t42 format\n";
+                        std::cerr << "--reverse requires t42 format\n";
                         exit(EXIT_FAILURE);
                     }
                 }
                 else
                 {
-                    std::cerr << "[Configure::Configure] --format requires an argument\n";
+                    std::cerr << "--format requires an argument\n";
                     exit(EXIT_FAILURE);
                 }
             }
@@ -126,7 +126,7 @@ Configure::Configure(int argc, char** argv) :
                 
                 if (_OutputFormat != T42)
                 {
-                    std::cerr << "[Configure::Configure] --reverse requires t42 format\n";
+                    std::cerr << "--reverse requires t42 format\n";
                     exit(EXIT_FAILURE);
                 }
             }
@@ -138,13 +138,13 @@ Configure::Configure(int argc, char** argv) :
                     ss >> _PID;
                     if (_PID < 0x20 || _PID >= 0x1FFF || !ss.eof())
                     {
-                        std::cerr << "[Configure::Configure] invalid PID\n";
+                        std::cerr << "invalid PID\n";
                         exit(EXIT_FAILURE);
                     }
                 }
                 else
                 {
-                    std::cerr << "[Configure::Configure] --pid requires an argument\n";
+                    std::cerr << "--pid requires an argument\n";
                     exit(EXIT_FAILURE);
                 }
             }
@@ -166,13 +166,13 @@ Configure::Configure(int argc, char** argv) :
                     }
                     else
                     {
-                        std::cerr << "[Configure::Configure] invalid reserved bytes argument\n";
+                        std::cerr << "invalid reserved bytes argument\n";
                         exit(EXIT_FAILURE);
                     }
                 }
                 else
                 {
-                    std::cerr << "[Configure::Configure] --reserved requires an argument\n";
+                    std::cerr << "--reserved requires an argument\n";
                     exit(EXIT_FAILURE);
                 }
             }
@@ -183,23 +183,37 @@ Configure::Configure(int argc, char** argv) :
                     errno = 0;
                     char *end_ptr;
                     long l = std::strtol(argv[++i], &end_ptr, 10);
-                    if (errno == 0 && *end_ptr == '\0' && l > -1 && l < MAXDEBUGLEVEL)
+                    if (errno == 0 && *end_ptr == '\0' && l > -1)
                     {
-                        _debugLevel = (int)l;
+                        switch(l){
+                            case 0:
+                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logNONE);
+                                break;
+                            case 1:
+                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logERROR);
+                                break;
+                            case 2:
+                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logWARN);
+                                break;
+                            case 3:
+                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logINFO);
+                                break;
+                            case 4:
+                            default:
+                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logDEBUG);
+                                break;
+                        }
                         
-                        std::stringstream ss;
-                        ss << "[Configure::Configure] debugging enabled at level " << _debugLevel << "\n";
-                        std::cerr << ss.str();
                     }
                     else
                     {
-                        std::cerr << "[Configure::Configure] invalid debug level argument\n";
+                        std::cerr << "invalid debug level argument\n";
                         exit(EXIT_FAILURE);
                     }
                 }
                 else
                 {
-                    std::cerr << "[Configure::Configure] --debug requires an argument\n";
+                    std::cerr << "--debug requires an argument\n";
                     exit(EXIT_FAILURE);
                 }
             }
@@ -216,19 +230,19 @@ Configure::Configure(int argc, char** argv) :
                     }
                     else
                     {
-                        std::cerr << "[Configure::Configure] invalid server port number\n";
+                        std::cerr << "invalid server port number\n";
                         exit(EXIT_FAILURE);
                     }
                 }
                 else
                 {
-                    std::cerr << "[Configure::Configure] --packetserver requires a port number\n";
+                    std::cerr << "--packetserver requires a port number\n";
                     exit(EXIT_FAILURE);
                 }
             }
             else
             {
-                std::cerr << "[Configure::Configure] unrecognised argument: " << arg << std::endl;
+                std::cerr << "unrecognised argument: " << arg << std::endl;
                 exit(EXIT_FAILURE);
             }
         }
@@ -237,16 +251,14 @@ Configure::Configure(int argc, char** argv) :
     if (!DirExists(&_pageDir))
     {
         std::stringstream ss;
-        ss << "[Configure::Configure] " << _pageDir << " does not exist or is not a directory\n";
+        ss << _pageDir << " does not exist or is not a directory\n";
         std::cerr << ss.str();
         exit(EXIT_FAILURE);
     }
     
     // TODO: allow overriding config file from command line
-    std::stringstream ss;
-    ss << "[Configure::Configure] Pages directory is " << _pageDir << "\n";
-    ss << "[Configure::Configure] Config file is " << _configFile << "\n";
-    std::cerr << ss.str();
+    _debug->Log(vbit::Debug::LogLevels::logINFO,"[Configure::Configure] Pages directory is " + _pageDir);
+    _debug->Log(vbit::Debug::LogLevels::logINFO,"[Configure::Configure] Config file is " + _configFile);
     
     std::string path;
     path = _pageDir;
@@ -259,7 +271,7 @@ Configure::Configure(int argc, char** argv) :
 
 Configure::~Configure()
 {
-    std::cerr << "[Configure] Destructor\n";
+    
 }
 
 int Configure::LoadConfigFile(std::string filename)
@@ -272,9 +284,7 @@ int Configure::LoadConfigFile(std::string filename)
 
     if (filein.is_open())
     {
-        std::stringstream ss;
-        ss << "[Configure::LoadConfigFile] opened " << filename << "\n";
-        std::cerr << ss.str();
+        _debug->Log(vbit::Debug::LogLevels::logINFO,"[Configure::LoadConfigFile] opened " + filename);
 
         std::string line;
         std::string name;
@@ -544,9 +554,7 @@ int Configure::LoadConfigFile(std::string filename)
                 }
                 if (error)
                 {
-                    std::stringstream ss;
-                    ss << "[Configure::LoadConfigFile] invalid config line: " << line << "\n";
-                    std::cerr << ss.str();
+                    _debug->Log(vbit::Debug::LogLevels::logERROR,"[Configure::LoadConfigFile] invalid config line: " + line);
                 }
             }
         }
@@ -555,7 +563,7 @@ int Configure::LoadConfigFile(std::string filename)
     }
     else
     {
-        std::cerr << "[Configure::LoadConfigFile] open failed\n";
+        _debug->Log(vbit::Debug::LogLevels::logWARN,"[Configure::LoadConfigFile] open failed");
         return -1;
     }
 }

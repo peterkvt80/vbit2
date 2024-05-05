@@ -50,20 +50,21 @@ int main(int argc, char** argv)
     #ifdef WIN32
     _setmode(_fileno(stdout), _O_BINARY); // set stdout to binary mode stdout to avoid pesky line ending conversion
     #endif
+    Debug *debug=new Debug();
     /// @todo option of adding a non standard config path
-    Configure *configure=new Configure(argc, argv);
-    PageList *pageList=new PageList(configure);
-    PacketServer *packetServer=new PacketServer(configure);
+    Configure *configure=new Configure(debug, argc, argv);
+    PageList *pageList=new PageList(configure, debug);
+    PacketServer *packetServer=new PacketServer(configure, debug);
 
-    Service* svc=new Service(configure, pageList, packetServer); // Need to copy the subtitle packet source for Newfor
+    Service* svc=new Service(configure, debug, pageList, packetServer); // Need to copy the subtitle packet source for Newfor
 
-    std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, pageList));
+    std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, debug, pageList));
     std::thread serviceThread(&Service::run, svc);
 
     if (configure->GetCommandPortEnabled())
     {
         // only start command thread if required
-        std::thread commandThread(&Command::run, Command(configure, svc->GetSubtitle(), pageList) );
+        std::thread commandThread(&Command::run, Command(configure, debug, svc->GetSubtitle(), pageList) );
         commandThread.detach();
     }
 

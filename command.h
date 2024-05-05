@@ -50,6 +50,7 @@
 #include <arpa/inet.h>  /* for sockaddr_in and inet_ntoa() */
 #endif
 
+#include "debug.h"
 #include "pagelist.h"
 #include "TCPClient.h"
 
@@ -63,7 +64,7 @@ namespace vbit
              * @description Listens on port 5570 and accepts connections.
              * When connected it can be sent Newfor commands.
              */
-            Command(ttx::Configure *configure, vbit::PacketSubtitle* subtitle, ttx::PageList* pageList);
+            Command(ttx::Configure *configure, Debug *debug, vbit::PacketSubtitle* subtitle, ttx::PageList* pageList);
 
             /**
              * @brief Destructor
@@ -76,6 +77,7 @@ namespace vbit
             void run();
 
         private:
+            Debug* _debug;
             int _portNumber; /// The port number is configurable. Default is 5570 for no oarticular reason.
             TCPClient _client; /// Did I call this a client? It is where clients connect and get their commands executed.
 

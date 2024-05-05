@@ -6,8 +6,9 @@
 using namespace ttx;
 using namespace vbit;
 
-Service::Service(Configure *configure, PageList *pageList, PacketServer *packetServer) :
+Service::Service(Configure *configure, vbit::Debug *debug, PageList *pageList, PacketServer *packetServer) :
     _configure(configure),
+    _debug(debug),
     _pageList(pageList),
     _packetServer(packetServer),
     _fieldCounter(49) // roll over immediately
@@ -22,10 +23,10 @@ Service::Service(Configure *configure, PageList *pageList, PacketServer *packetS
     }
     
     // Add packet sources for subtitles and packet 830
-    _register(_subtitle=new PacketSubtitle(_configure));
+    _register(_subtitle=new PacketSubtitle(_configure, _debug));
     _register(new Packet830(_configure));
     
-    _register(_debug=new PacketDebug(_configure));
+    _register(_packetDebug=new PacketDebug(_configure, _debug));
     
     _linesPerField = _configure->GetLinesPerField();
     
@@ -49,7 +50,7 @@ void Service::_register(PacketSource *src)
 
 int Service::run()
 {
-    //std::cerr << "[Service::worker] This is the worker process" << std::endl;
+    _debug->Log(Debug::LogLevels::logDEBUG,"[Service::run] This is the worker process");
     std::list<vbit::PacketSource*>::const_iterator iterator=_Sources.begin(); // Iterator for packet sources
 
     std::list<vbit::PacketSource*>::const_iterator first; // Save the first so we know if we have looped.
@@ -58,13 +59,10 @@ int Service::run()
 
     static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // A pre-prepared quiet packet to avoid eating the heap
 
-    //std::cerr << "[Service::run] Loop starts" << std::endl;
-    std::stringstream ss;
-    ss << "[Service::run] Lines per field: " << (int)_linesPerField << "\n";
-    std::cerr << ss.str();
+
+    _debug->Log(Debug::LogLevels::logINFO,"[Service::run] Lines per field: " + std::to_string((int)_linesPerField));
     while(1)
     {
-        //std::cerr << "[Service::run]iterates. VBI line=" << (int) _lineCounter << " (int) field=" << (int) _fieldCounter << std::endl;
         // If counters (or other trigger) causes an event then send the events
         
         // Iterate through the packet sources until we get a packet to transmit
@@ -78,9 +76,9 @@ int Service::run()
         // Send ONLY one packet per loop
         _updateEvents();
         
-        if (_debug->IsReady()) // Special case for debug. Ensures it can have the first line of field
+        if (_packetDebug->IsReady()) // Special case for debug. Ensures it can have the first line of field
         {
-            if (_debug->GetPacket(pkt) != nullptr)
+            if (_packetDebug->GetPacket(pkt) != nullptr)
             {
                 _packetOutput(pkt);
             }
@@ -116,7 +114,6 @@ int Service::run()
                 {
                     p=nullptr;
                     // If we get a lot of this maybe there is a problem?
-                    // std::cerr << "[Service::run] No packet available for this line" << std::endl;
                     break;
                 }
 
@@ -182,7 +179,7 @@ void Service::_updateEvents()
             masterClock++; // step the master clock before updating debug packet
         }
         
-        _debug->TimeAndField(masterClock, _fieldCounter, now); // update the clocks in debugPacket.
+        _packetDebug->TimeAndField(masterClock, _fieldCounter, now); // update the clocks in debugPacket.
         
         if (_fieldCounter == 0)
         {
@@ -191,7 +188,7 @@ void Service::_updateEvents()
             {
                 masterClock = now;
                 
-                std::cerr << "[Service::_updateEvents] Resynchronising master clock" << std::endl; // emit warning on stderr
+                _debug->Log(Debug::LogLevels::logWARN,"[Service::_updateEvents] Resynchronising master clock");
             }
             
             mc->SetMasterClock(masterClock); // update the master clock singleton

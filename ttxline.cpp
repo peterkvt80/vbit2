@@ -110,8 +110,9 @@ char TTXLine::GetCharAt(int xLoc)
 {
     if (m_textline.length()<(uint16_t)xLoc)
     {
-        // @todo extend the line to 40 characters
-        std::cerr << "[TTXLine::GetCharAt] oops, need to extend this line\n";
+        // extend the line to 40 characters
+        for (int i=xLoc;i<40;i++)
+            m_textline+=" ";
     }
     return m_textline[xLoc];
 }

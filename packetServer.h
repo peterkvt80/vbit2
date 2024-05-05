@@ -2,6 +2,7 @@
 #define _PACKETSERVER_H_
 
 #include "configure.h"
+#include "debug.h"
 #include <mutex>
 
 #ifdef WIN32
@@ -20,7 +21,7 @@ namespace ttx
     class PacketServer
     {
         public:
-            PacketServer(ttx::Configure *configure);
+            PacketServer(ttx::Configure *configure, vbit::Debug *debug);
             ~PacketServer();
             
             void run();
@@ -28,6 +29,7 @@ namespace ttx
             void SendField(std::vector<std::vector<uint8_t>> FrameBuffer);
             
         private:
+            vbit::Debug* _debug;
             static const uint16_t MAXPENDING=5;
             static const uint16_t MAXCLIENTS=5;
             static const uint16_t BUFFLEN=256;

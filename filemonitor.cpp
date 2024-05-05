@@ -27,8 +27,10 @@
 using namespace vbit;
 using namespace ttx;
 
-FileMonitor::FileMonitor(Configure *configure, PageList *pageList) :
-    _configure(configure),_pageList(pageList)
+FileMonitor::FileMonitor(Configure *configure, Debug *debug, PageList *pageList) :
+    _configure(configure),
+    _debug(debug),
+    _pageList(pageList)
 {
     //ctor
 }
@@ -47,9 +49,7 @@ FileMonitor::~FileMonitor()
 void FileMonitor::run()
 {
     std::string path=_configure->GetPageDirectory() ;
-    std::stringstream ss;
-    ss << "[FileMonitor::run] Monitoring " << path << "\n";
-    std::cerr << ss.str();
+    _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Monitoring " + path);
 
     while (true)
     {
@@ -82,9 +82,7 @@ int FileMonitor::readDirectory(std::string path)
     // Open the directory
     if ( (dp = opendir(path.c_str())) == NULL)
     {
-        std::stringstream ss;
-        ss << "Error(" << errno << ") opening " << path << "\n";
-        std::cerr << ss.str();
+        _debug->Log(Debug::LogLevels::logERROR,"Error(" + std::to_string(errno) + ") opening " + path);
         return errno;
     }
     
@@ -105,9 +103,7 @@ int FileMonitor::readDirectory(std::string path)
             {
                 if (readDirectory(name)) // recurse into directory
                 {
-                    std::stringstream ss;
-                    ss << "Error(" << errno << ") recursing into " << name << "\n";
-                    std::cerr << ss.str();
+                    _debug->Log(Debug::LogLevels::logERROR,"Error(" + std::to_string(errno) + ") recursing into " + name);
                 }
             }
             continue;
@@ -139,8 +135,8 @@ int FileMonitor::readDirectory(std::string path)
                             q->SetSpecialFlag(true);
                             _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
                             std::stringstream ss;
-                            ss << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber() << "\n";
-                            std::cerr << ss.str();
+                            ss << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber();
+                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
                             // page will be removed from NormalPages list by the service thread
                             // page will be removed from Carousel list by the service thread
                         }
@@ -150,8 +146,8 @@ int FileMonitor::readDirectory(std::string path)
                             _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
                             q->SetNormalFlag(true);
                             std::stringstream ss;
-                            ss << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber() << "\n";
-                            std::cerr << ss.str();
+                            ss << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber();
+                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
                         }
                         
                         if ((!(q->Special())) && (!(q->GetCarouselFlag())) && q->IsCarousel())
@@ -161,8 +157,8 @@ int FileMonitor::readDirectory(std::string path)
                             q->StepNextSubpage(); // ensure we're pointing at a subpage
                             _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
                             std::stringstream ss;
-                            ss << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber() << "\n";
-                            std::cerr << ss.str();
+                            ss << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber();
+                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
                         }
                         
                         if (q->GetNormalFlag() && !(q->GetSpecialFlag()) && !(q->GetCarouselFlag()) && !(q->GetUpdatedFlag()))
@@ -182,9 +178,7 @@ int FileMonitor::readDirectory(std::string path)
             }
             else
             {
-                std::stringstream ss;
-                ss << "[FileMonitor::run] Adding a new page " << dirp->d_name << "\n";
-                std::cerr << ss.str();
+                _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Adding a new page " + std::string(dirp->d_name));
                 // A new file. Create the page object and add it to the page list.
                 
                 if ((q=new TTXPageStream(name)))
@@ -230,16 +224,12 @@ int FileMonitor::readDirectory(std::string path)
                     }
                     else
                     {
-                        std::stringstream ss;
-                        ss << "[FileMonitor::run] Failed to add" << dirp->d_name << "\n"; // should never happen
-                        std::cerr << ss.str();
+                        _debug->Log(Debug::LogLevels::logERROR,"[FileMonitor::run] Failed to add" + std::string(dirp->d_name)); // should never happen
                     }
                 }
                 else
                 {
-                    std::stringstream ss;
-                    ss << "[FileMonitor::run] Failed to load" << dirp->d_name << "\n";
-                    std::cerr << ss.str();
+                    _debug->Log(Debug::LogLevels::logWARN,"[FileMonitor::run] Failed to load" + std::string(dirp->d_name));
                 }
             }
         }

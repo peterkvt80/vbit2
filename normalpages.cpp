@@ -3,7 +3,8 @@
 
 using namespace vbit;
 
-NormalPages::NormalPages()
+NormalPages::NormalPages(Debug *debug) :
+    _debug(debug)
 {
     _iter=_NormalPagesList.begin();
     _page=nullptr;
@@ -52,9 +53,7 @@ loop:
         
         if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetNormalFlag()) // only remove it once
         {
-            std::stringstream ss;
-            ss << "[NormalPages::NextPage] Deleted " << _page->GetSourcePage() << "\n";
-            std::cerr << ss.str();
+            _debug->Log(Debug::LogLevels::logINFO,"[NormalPages::NextPage] Deleted " + _page->GetSourcePage());
             _iter = _NormalPagesList.erase(_iter);
             _page->SetNormalFlag(false);
             if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetUpdatedFlag()))
@@ -67,7 +66,7 @@ loop:
         {
             std::stringstream ss;
             ss << "[NormalPages::NextPage] page became Special"  << std::hex << _page->GetPageNumber() << "\n";
-            std::cerr << ss.str();
+            _debug->Log(Debug::LogLevels::logINFO,ss.str());
             _iter = _NormalPagesList.erase(_iter);
             _page->SetNormalFlag(false);
             _page = *_iter;

@@ -3,7 +3,8 @@
 
 using namespace vbit;
 
-Carousel::Carousel()
+Carousel::Carousel(Debug *debug) :
+    _debug(debug)
 {
     //ctor
 }
@@ -35,9 +36,7 @@ TTXPageStream* Carousel::nextCarousel()
         p=*it;
         if (p->GetStatusFlag()==TTXPageStream::MARKED && p->GetCarouselFlag()) // only remove it once
         {
-            std::stringstream ss;
-            ss << "[Carousel::nextCarousel] Deleted " << p->GetSourcePage() << "\n";
-            std::cerr << ss.str();
+            _debug->Log(Debug::LogLevels::logINFO,"[Carousel::nextCarousel] Deleted " + p->GetSourcePage());
             
             p->SetCarouselFlag(false);
             if (!(p->GetNormalFlag() || p->GetSpecialFlag() || _page->GetUpdatedFlag()))
@@ -47,8 +46,8 @@ TTXPageStream* Carousel::nextCarousel()
         else if ((!(p->IsCarousel())) || (p->Special()))
         {
             std::stringstream ss;
-            ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << p->GetPageNumber() << "\n";
-            std::cerr << ss.str();
+            ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << p->GetPageNumber();
+            _debug->Log(Debug::LogLevels::logINFO,ss.str());
             
             p->SetCarouselFlag(false);
             _carouselList.erase(it--);

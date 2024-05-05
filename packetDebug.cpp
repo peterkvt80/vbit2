@@ -2,8 +2,9 @@
 
 using namespace vbit;
 
-PacketDebug::PacketDebug(ttx::Configure* configure) :
+PacketDebug::PacketDebug(ttx::Configure* configure, Debug* debug) :
     _configure(configure),
+    _debug(debug),
     _debugPacketCI(0) // continuity counter for debug datacast packets
 {
     //ctor
@@ -41,6 +42,13 @@ Packet* PacketDebug::GetPacket(Packet* p)
     data.push_back(_debugData.systemClock >> 16);
     data.push_back(_debugData.systemClock >> 8);
     data.push_back(_debugData.systemClock);
+    
+    std::array<int, 8> magDurations = _debug->GetMagCycleDurations();
+    for (int i=0; i<8; i++){
+        if(magDurations[i] < 0 || magDurations[i] > 255)
+            magDurations[i] = 255; // clamp range 0-255
+        data.push_back(magDurations[i]);
+    }
     
     p->IDLA(_datachannel, Packet::IDLA_DL, 6, _servicePacketAddress, 0, _debugPacketCI++, data);
     

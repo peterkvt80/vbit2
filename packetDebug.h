@@ -6,6 +6,7 @@
 #include <list>
 #include "packetsource.h"
 #include "configure.h"
+#include "debug.h"
 
 #define VBIT2_DEBUG_VERSION 0x00   // Debug API version
 
@@ -18,7 +19,7 @@ namespace vbit
     {
         public:
             /** Default constructor */
-            PacketDebug(ttx::Configure* configure);
+            PacketDebug(ttx::Configure* configure, Debug* debug);
             /** Default destructor */
             virtual ~PacketDebug();
 
@@ -33,6 +34,7 @@ namespace vbit
 
         private:
             ttx::Configure* _configure;
+            Debug* _debug;
             
             uint8_t _datachannel;
             uint32_t _servicePacketAddress;

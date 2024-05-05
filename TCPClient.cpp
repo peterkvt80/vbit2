@@ -13,7 +13,8 @@ vbi_unham8(unsigned int c)
     return Hamming8DecodeTable[(uint8_t) c];
 }
 
-TCPClient::TCPClient(PacketSubtitle* subtitle, PageList* pageList) :
+TCPClient::TCPClient(Debug* debug, PacketSubtitle* subtitle, PageList* pageList) :
+    _debug(debug),
     _pCmd(_cmd),
     _newfor(subtitle),
     _pageList(pageList)
@@ -53,7 +54,7 @@ void TCPClient::command(char* cmd, char* response)
             switch (cmd[ix])
             {
                 case 'F' : // Move to first page
-                    std::cerr << "DF" << std::endl;
+                    _debug->Log(Debug::LogLevels::logDEBUG,"DF");
                     ix++;
                     if ((page=_pageList->FirstPage())==nullptr)
                     {
@@ -85,7 +86,7 @@ void TCPClient::command(char* cmd, char* response)
                     }
                     break;
                 case 'L' : // Move to last page
-                    std::cerr << "DL" << std::endl;
+                    _debug->Log(Debug::LogLevels::logDEBUG,"DL");
                     ix++;
                     if ((page=_pageList->LastPage())==nullptr)
                     {
@@ -95,13 +96,14 @@ void TCPClient::command(char* cmd, char* response)
                     status=0;
                     break;
                 case 'P' : // Secret debug code - Sends page into to stderr
-                    std::cerr << "DP" << std::endl;
+                    _debug->Log(Debug::LogLevels::logDEBUG,"DP");
                     page=_pageList->FirstPage();
                     for (int row=0;row<24;row++)
                     {
-                        std::cerr << "OL," << std::setw(2) << row;
                         TTXLine* line=page->GetRow(row);
-                        std::cerr << "," << line->GetLine() << std::endl;
+                        std::stringstream ss;
+                        ss << "OL," << std::setw(2) << row << "," << line->GetLine();
+                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                     }
                     status=0;
                     break;
@@ -139,11 +141,13 @@ void TCPClient::command(char* cmd, char* response)
             result[0]=0;
             status=0; // @todo Line number out of range =1
             //sprintf(result, "L Command Page=%.*s row=%d ptr=%s\n\r", 5, _pageNumber, row, ptr);
-            std::cerr << "[TCPClient::command] L command starts" << std::endl;
+            _debug->Log(Debug::LogLevels::logDEBUG,"[TCPClient::command] L command starts");
             for (TTXPageStream* p=_pageList->FirstPage(); p!=nullptr; p=_pageList->NextSelectedPage())
             {
                 TTXPageStream* page=p;
-                std::cerr << "[TCPClient::command] L command applied to page=" << std::hex << page->GetPageNumber() << std::endl;
+                std::stringstream ss;
+                ss << "[TCPClient::command] L command applied to page=" << std::hex << page->GetPageNumber();
+                _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                 page->SetRow(row, ptr);
             }
             break;
@@ -159,7 +163,9 @@ void TCPClient::command(char* cmd, char* response)
                     p=_pageList->NextSelectedPage())
                 {
                     TTXPageStream* page=p;
-                    std::cerr << "[TCPClient::command] MD command applied to page=" << std::hex << page->GetPageNumber() << std::endl;
+                    std::stringstream ss;
+                    ss << "[TCPClient::command] MD command applied to page=" << std::hex << page->GetPageNumber();
+                    _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                     status=0;
                     // @todo Actually delete the page from _pageList
                 }
@@ -187,10 +193,9 @@ void TCPClient::command(char* cmd, char* response)
                         matchedPages=-1; // fail
                     }
                 }
-                // @todo Create the page if status is 8
                 if (status==8)
                 {
-                    std::cerr << "[TCPClient::command] @todo Create the page" << std::endl;
+                    _debug->Log(Debug::LogLevels::logDEBUG,"[TCPClient::command] @todo Create the page");
                 }
             }
             // Failed command
@@ -200,7 +205,7 @@ void TCPClient::command(char* cmd, char* response)
                 status=1;
             }
             _pageNumber[5]=0; // Terminate the page number before we print it just in case
-            std::cerr << "[TCPClient::command] _pageNumber=" << _pageNumber << std::endl;
+            _debug->Log(Debug::LogLevels::logDEBUG,"[TCPClient::command] _pageNumber=" + std::string(_pageNumber));
             sprintf(result,"%03d",matchedPages);
             break;
         }
@@ -318,9 +323,7 @@ void TCPClient::addChar(char ch, char* response)
             else
             {
                 // Got a complete non-newfor command
-                std::stringstream ss;
-                ss << "[TCPClient::addChar] finished cmd='" << strlen(_cmd) << "\n";
-                std::cerr << ss.str();
+                _debug->Log(Debug::LogLevels::logDEBUG,"[TCPClient::addChar] finished cmd='" + std::to_string(strlen(_cmd)));
                 if (strlen(_cmd))  // Avoid this being called twice by \n\r combinations
                 {
                     command(_cmd, response);

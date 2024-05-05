@@ -2,11 +2,12 @@
 
 using namespace vbit;
 
-PacketSubtitle::PacketSubtitle(ttx::Configure *configure) :
+PacketSubtitle::PacketSubtitle(ttx::Configure *configure, Debug *debug) :
     _swap(0),
     _state(SUBTITLE_STATE_IDLE),
     _rowCount(0),
     _configure(configure),
+    _debug(debug),
     _repeatCount(_configure->GetSubtitleRepeats()),
     _C8Flag(true)
 {
@@ -29,12 +30,12 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
     {
         case SUBTITLE_STATE_IDLE : // This can not happen. We can't put out a packet if we are in idle.
         {
-            std::cerr << "[PacketSubtitle::GetPacket] can not happen" << std::endl;
+            _debug->Log(Debug::LogLevels::logERROR,"[PacketSubtitle::GetPacket] can not happen");
             break;
         }
         case SUBTITLE_STATE_HEADER:
         {
-            std::cerr << "[PacketSubtitle::GetPacket] Header. repeat count=" << (int)_repeatCount << std::endl;
+            _debug->Log(Debug::LogLevels::logDEBUG,"[PacketSubtitle::GetPacket] Header. repeat count=" + std::to_string((int)_repeatCount));
             // Construct the header packet and then wait for a field
             {
                 uint16_t status=PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C6_SUBTITLE; // Erase page + Subtitle
@@ -56,7 +57,7 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
             // 1) Copy the next non-null row to p
             if (_rowCount<24)
             {
-                std::cerr << "[PacketSubtitle::GetPacket] Sending row=" << (int) _rowCount << " string=#" << _page[_swap].GetRow(_rowCount)->GetLine() << "#" << std::endl;
+                _debug->Log(Debug::LogLevels::logDEBUG,"[PacketSubtitle::GetPacket] Sending row=" + std::to_string((int) _rowCount) + " string=#" + _page[_swap].GetRow(_rowCount)->GetLine() + "#");
                 p->SetRow(mag,_rowCount,_page[_swap].GetRow(_rowCount)->GetLine(),CODING_7BIT_TEXT);
                 _rowCount++;
                 // Don't do parity here! Packet::tx does it.
@@ -71,7 +72,7 @@ Packet* PacketSubtitle::GetPacket(Packet* p)
         }
         case SUBTITLE_STATE_NUMBER_ITEMS:
         {
-            std::cerr << "[PacketSubtitle::IsReady] This is impossible" << std::endl;
+            _debug->Log(Debug::LogLevels::logERROR,"[PacketSubtitle::IsReady] This is impossible");
             break;
         }
     }
@@ -115,24 +116,8 @@ bool PacketSubtitle::IsReady(bool force)
             {
                 if (!_page[_swap].GetRow(_rowCount)->IsBlank())
                 {
-                    std::cerr << "[PacketSubtitle::IsReady] found non blank row=" << (int) _rowCount << std::endl;
-                    std::cerr << "[PacketSubtitle::IsReady] row=" << _page[_swap].GetRow(_rowCount)->GetLine() << std::endl;
-                    /**
-                    for (int i=0;i<40;i++)
-                    {
-                        std::cerr << std::setfill('0') << std::setw(2) << std::hex << " " << (int) _page[_swap].GetRow(_rowCount)->GetCharAt(i);
-                    }
-                    std::cerr << std::endl;
-
-                    for (int i=0;i<40;i++)
-                    {
-                        char ch=_page[_swap].GetRow(_rowCount)->GetCharAt(i);
-                        if (ch<' ') ch='*';
-                        if (ch>'~') ch='*';
-                        std::cerr << " " << ch << "  ";
-                    }
-                    std::cerr << std::endl;
-                    */
+                    _debug->Log(Debug::LogLevels::logDEBUG,"[PacketSubtitle::IsReady] found non blank row=" + std::to_string((int) _rowCount));
+                    _debug->Log(Debug::LogLevels::logDEBUG,"[PacketSubtitle::IsReady] row=" + _page[_swap].GetRow(_rowCount)->GetLine());
                     break;
                 }
             }
@@ -159,7 +144,7 @@ bool PacketSubtitle::IsReady(bool force)
         }
         case SUBTITLE_STATE_NUMBER_ITEMS:
         {
-            std::cerr << "[PacketSubtitle::IsReady] This is impossible" << std::endl;
+            _debug->Log(Debug::LogLevels::logERROR,"[PacketSubtitle::IsReady] This is impossible");
             break;
         }
     }
@@ -170,12 +155,12 @@ bool PacketSubtitle::IsReady(bool force)
 void PacketSubtitle::SendSubtitle(TTXPage* page)
 {
     _mtx.lock(); // lock the critical section
-    std::cerr << "[PacketSubtitle::SendSubtitle] Got page: " << std::endl;
+    _debug->Log(Debug::LogLevels::logDEBUG,"[PacketSubtitle::SendSubtitle] Got page: ");
     
     _swap=(_swap+1)%2; // swap the double buffering
     _page[_swap].Copy(page); // deep copy page
     
-    std::cerr << "[PacketSubtitle::SendSubtitle] End of page: " << std::endl;
+    _debug->Log(Debug::LogLevels::logDEBUG,"[PacketSubtitle::SendSubtitle] End of page: ");
     SetEvent(EVENT_SUBTITLE);
 
     _repeatCount=_configure->GetSubtitleRepeats(); // transmission repeat counter

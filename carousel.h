@@ -3,6 +3,7 @@
 
 #include <list>
 
+#include "debug.h"
 #include "ttxpagestream.h"
 
 /** Carousel maintains a list of carousel pages.
@@ -18,7 +19,7 @@ class Carousel
 {
     public:
         /** Default constructor */
-        Carousel();
+        Carousel(Debug *debug);
         /** Default destructor */
         virtual ~Carousel();
 
@@ -70,6 +71,7 @@ class Carousel
     protected:
 
     private:
+        Debug* _debug;
         unsigned int _pageNumber; //!< Member variable "_pageNumber"
         TTXPageStream* _page; //!< Member variable "page"
         time_t _nextPage; //!< Member variable "nextPage"

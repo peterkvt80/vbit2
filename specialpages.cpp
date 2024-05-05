@@ -3,7 +3,8 @@
 
 using namespace vbit;
 
-SpecialPages::SpecialPages()
+SpecialPages::SpecialPages(Debug *debug) :
+    _debug(debug)
 {
     ResetIter();
 }
@@ -60,7 +61,7 @@ loop:
     {
         if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetSpecialFlag()) // only remove it once
         {
-            std::cerr << "[SpecialPages::NextPage] Deleted " << _page->GetSourcePage() << std::endl;
+            _debug->Log(Debug::LogLevels::logINFO,"[SpecialPages::NextPage] Deleted " + _page->GetSourcePage());
             _page->SetState(TTXPageStream::GONE);
             _iter = _specialPagesList.erase(_iter);
             _page->SetSpecialFlag(false);
@@ -71,7 +72,9 @@ loop:
         }
         else if (!(_page->Special()))
         {
-            std::cerr << "[SpecialPages::NextPage()] no longer special " << std::hex << _page->GetPageNumber() << std::endl;
+            std::stringstream ss;
+            ss << "[SpecialPages::NextPage()] no longer special " << std::hex << _page->GetPageNumber();
+            _debug->Log(Debug::LogLevels::logINFO,ss.str());
             _iter = _specialPagesList.erase(_iter);
             _page->SetSpecialFlag(false);
             _page = *_iter;
