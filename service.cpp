@@ -1,7 +1,6 @@
 /** Service
  */
 #include "service.h"
-#include "vbit2.h"
 
 using namespace ttx;
 using namespace vbit;
@@ -159,7 +158,7 @@ int Service::run()
 void Service::_updateEvents()
 {
     vbit::MasterClock *mc = mc->Instance();
-    time_t masterClock = mc->GetMasterClock();
+    vbit::MasterClock::timeStruct masterClock = mc->GetMasterClock();
     
     // Step the counters
     _lineCounter = (_lineCounter + 1) % _linesPerField;
@@ -171,29 +170,29 @@ void Service::_updateEvents()
         time_t now;
         time(&now);
         
-        if (masterClock > now + FORWARDSBUFFER) // allow vbit2 to run into the future before limiting packet rate
+        if (masterClock.seconds > now + FORWARDSBUFFER) // allow vbit2 to run into the future before limiting packet rate
             std::this_thread::sleep_for(std::chrono::milliseconds(40)); // back off for ≈2 fields to limit output to (less than) 50 fields per second
         
         if (_fieldCounter == 0)
         {
-            masterClock++; // step the master clock before updating debug packet
+            masterClock.seconds++; // step the master clock before updating debug packet
         }
         
-        _packetDebug->TimeAndField(masterClock, _fieldCounter, now); // update the clocks in debugPacket.
+        masterClock.fields = _fieldCounter;
+        
+        _packetDebug->TimeAndField(masterClock, now); // update the clocks in debugPacket.
         
         if (_fieldCounter == 0)
         {
             // if internal master clock is behind real time, or too far ahead, resynchronise it.
-            if (masterClock < now || masterClock > now + FORWARDSBUFFER + 1)
+            if (masterClock.seconds < now || masterClock.seconds > now + FORWARDSBUFFER + 1)
             {
-                masterClock = now;
+                masterClock.seconds = now;
                 
                 _debug->Log(Debug::LogLevels::logWARN,"[Service::_updateEvents] Resynchronising master clock");
             }
             
-            mc->SetMasterClock(masterClock); // update the master clock singleton
-            
-            if (masterClock%15==0) // TODO: how often do we want to trigger sending special packets?
+            if (masterClock.seconds%15==0) // TODO: how often do we want to trigger sending special packets?
             {
                 for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
                 {
@@ -202,6 +201,9 @@ void Service::_updateEvents()
                 }
             }
         }
+        
+        mc->SetMasterClock(masterClock); // update the master clock singleton
+        
         // New field, so set the FIELD event in all the sources.
         for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
         {

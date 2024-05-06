@@ -1,4 +1,4 @@
-#include <packetDebug.h>
+#include "packetDebug.h"
 
 using namespace vbit;
 
@@ -29,13 +29,13 @@ Packet* PacketDebug::GetPacket(Packet* p)
     data.push_back(_debugData.ver); // debug data version number
     
     // current internal master clock
-    data.push_back(_debugData.masterClock >> 24);
-    data.push_back(_debugData.masterClock >> 16);
-    data.push_back(_debugData.masterClock >> 8);
-    data.push_back(_debugData.masterClock);
+    data.push_back(_debugData.masterClockSeconds >> 24);
+    data.push_back(_debugData.masterClockSeconds >> 16);
+    data.push_back(_debugData.masterClockSeconds >> 8);
+    data.push_back(_debugData.masterClockSeconds);
     
     // current field count
-    data.push_back(_debugData.fieldCount);
+    data.push_back(_debugData.masterClockFields);
     
     // current system clock
     data.push_back(_debugData.systemClock >> 24);
@@ -43,11 +43,12 @@ Packet* PacketDebug::GetPacket(Packet* p)
     data.push_back(_debugData.systemClock >> 8);
     data.push_back(_debugData.systemClock);
     
-    std::array<int, 8> magDurations = _debug->GetMagCycleDurations();
+    std::array<int, 8> magDurations = _debug->GetMagCycleDurations(); // get magazine durations in number of fields
     for (int i=0; i<8; i++){
-        if(magDurations[i] < 0 || magDurations[i] > 255)
-            magDurations[i] = 255; // clamp range 0-255
-        data.push_back(magDurations[i]);
+        if(magDurations[i] < 0 || magDurations[i] / 50 > 255)
+            data.push_back(255); // clamp to 255 seconds
+        else
+            data.push_back(magDurations[i] / 50); // truncate to whole seconds
     }
     
     p->IDLA(_datachannel, Packet::IDLA_DL, 6, _servicePacketAddress, 0, _debugPacketCI++, data);
@@ -60,7 +61,7 @@ bool PacketDebug::IsReady(bool force)
     (void)force; // silence error about unused parameter
     bool result=false;
     
-    if (_configure->GetDebugLevel())
+    if (_debug->GetDebugLevel()) // TODO have specific configuration for datacast debugging packet
     {
         if (GetEvent(EVENT_FIELD))
         {
@@ -73,10 +74,10 @@ bool PacketDebug::IsReady(bool force)
     return result;
 }
 
-void PacketDebug::TimeAndField(time_t masterClock, uint8_t fieldCount, time_t systemClock)
+void PacketDebug::TimeAndField(MasterClock::timeStruct masterClock, time_t systemClock)
 {
     // update the clocks in _debugData struct - called once per field by Service::_updateEvents()
-    _debugData.masterClock = masterClock;
-    _debugData.fieldCount = fieldCount;
+    _debugData.masterClockSeconds = masterClock.seconds;
+    _debugData.masterClockFields = masterClock.fields;
     _debugData.systemClock = systemClock;
 }

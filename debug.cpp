@@ -26,6 +26,6 @@ void Debug::SetMagCycleDuration(int mag, int duration)
     if (mag >= 0 && mag < 8)
     {
         _magDurations[mag] = duration;
-        Log(logDEBUG, "magazine " + std::to_string(mag) + " cycle duration: " + std::to_string(duration) + " seconds");
+        Log(logDEBUG, "Magazine " + std::to_string(mag) + " cycle duration: " + std::to_string(duration / 50) + " seconds, " + std::to_string(duration % 50) + " fields");
     }
 }

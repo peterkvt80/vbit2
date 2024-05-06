@@ -1,5 +1,4 @@
 #include "ttxpagestream.h"
-#include "vbit2.h"
 
 TTXPageStream::TTXPageStream() :
     _transitionTime(0),
@@ -101,7 +100,7 @@ void TTXPageStream::SetTransitionTime(int cycleTime)
     if (GetCycleTimeMode() == 'T')
     {
         vbit::MasterClock *mc = mc->Instance();
-        _transitionTime = mc->GetMasterClock() + cycleTime;
+        _transitionTime = mc->GetMasterClock().seconds + cycleTime;
     }
     else
     {
@@ -115,7 +114,7 @@ bool TTXPageStream::Expired(bool StepCycles)
     if (GetCycleTimeMode() == 'T')
     {
         vbit::MasterClock *mc = mc->Instance();
-        return _transitionTime <= mc->GetMasterClock();
+        return _transitionTime <= mc->GetMasterClock().seconds;
     }
     else
     {

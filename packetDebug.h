@@ -8,10 +8,7 @@
 #include "configure.h"
 #include "debug.h"
 
-#define VBIT2_DEBUG_VERSION 0x00   // Debug API version
-
-#define MAXMESSAGEBUFFER 30 // maximum number of debug messages to queue before discarding
-#define BUFFERRECOVER 20 // size buffer must shrink to before allowing new messages to be queued after an overrun
+#define VBIT2_DEBUG_VERSION 0x01   // Debug API version
 
 namespace vbit
 {
@@ -26,7 +23,7 @@ namespace vbit
             // overrides
             Packet* GetPacket(Packet* p) override;
             
-            void TimeAndField(time_t masterClock, uint8_t fieldCount, time_t systemClock);
+            void TimeAndField(MasterClock::timeStruct masterClock, time_t systemClock);
             
             bool IsReady(bool force=false);
 
@@ -44,8 +41,8 @@ namespace vbit
             {
                 char header[4] = {'V','B','I','T'};
                 uint8_t ver = VBIT2_DEBUG_VERSION;
-                time_t masterClock = 0;
-                uint8_t fieldCount = 0;
+                time_t masterClockSeconds = 0;
+                uint8_t masterClockFields = 0;
                 time_t systemClock = 0;
             };
             

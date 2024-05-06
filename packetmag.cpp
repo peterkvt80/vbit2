@@ -2,7 +2,6 @@
  */
 
 #include "packetmag.h"
-#include "vbit2.h"
 
 using namespace vbit;
 
@@ -24,10 +23,11 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _magRegion(0),
     _specialPagesFlipFlop(false),
     _waitingForField(0),
-    _lastCycle(0),
     _cycleDuration(-1)
 {
     //ctor
+    _lastCycle = {0,0};
+    
     for (int i=0;i<MAXPACKET29TYPES;i++)
     {
         _headerTemplate = configure->GetHeaderTemplate();
@@ -158,10 +158,11 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     // reached the end of a magazine cycle
                     // get master clock singleton
-                    vbit::MasterClock *mc = mc->Instance();
-                    time_t t = mc->GetMasterClock();
-                    if (_lastCycle){ // wait for real timestamps
-                        _cycleDuration = difftime(t, _lastCycle); // truncates double to int
+                    MasterClock *mc = mc->Instance();
+                    MasterClock::timeStruct t = mc->GetMasterClock();
+                    if (_lastCycle.seconds){ // wait for real timestamps
+                        int diffSeconds = difftime(t.seconds, _lastCycle.seconds); // truncates double to int
+                        _cycleDuration = ((diffSeconds * 50) - _lastCycle.fields) + t.fields;
                         _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
                     }
                     _lastCycle = t; // update timestamp

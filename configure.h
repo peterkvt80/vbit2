@@ -59,7 +59,6 @@ class Configure
         bool GetCommandPortEnabled(){return _commandPortEnabled;}
         uint16_t GetLinesPerField(){return _linesPerField;}
         bool GetReverseFlag(){return _reverseBits;}
-        int GetDebugLevel(){return _debugLevel;}
         int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
         
         OutputFormat GetOutputFormat(){return _OutputFormat;}
@@ -98,7 +97,6 @@ class Configure
         uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
         bool _commandPortEnabled;
         bool _reverseBits;
-        int _debugLevel;
         
         OutputFormat _OutputFormat;
         uint16_t _PID;

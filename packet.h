@@ -12,6 +12,7 @@
 #include "tables.h"
 #include <cassert>
 #include "ttxpage.h"
+#include "masterClock.h"
 
 /**
  * Teletext packet.

@@ -5,6 +5,7 @@
 
 #include "ttxpage.h"
 #include "packet.h"
+#include "masterClock.h"
 
 /** @brief Extends TTXPage to allow Service to iterate through this page.
  *  It adds iterators to the page and also timing control if it is a carousel.

@@ -10,13 +10,12 @@
 #include "updatedpages.h"
 #include "configure.h"
 #include "debug.h"
+#include "masterClock.h"
 
 #define MAXPACKET29TYPES 3
 
 namespace vbit
 {
-    enum PacketState {PACKETSTATE_HEADER, PACKETSTATE_FASTEXT, PACKETSTATE_PACKET26, PACKETSTATE_PACKET27, PACKETSTATE_PACKET28, PACKETSTATE_TEXTROW};
-
     class PacketMag : public PacketSource
     {
         public:
@@ -57,6 +56,8 @@ namespace vbit
         protected:
 
         private:
+            enum PacketState {PACKETSTATE_HEADER, PACKETSTATE_FASTEXT, PACKETSTATE_PACKET26, PACKETSTATE_PACKET27, PACKETSTATE_PACKET28, PACKETSTATE_TEXTROW};
+            
             std::list<TTXPageStream>*  _pageSet; //!< Member variable "_pageSet"
             ttx::Configure* _configure;
             Debug* _debug;
@@ -91,8 +92,8 @@ namespace vbit
             bool _specialPagesFlipFlop; // toggle to alternate between special pages and normal pages
             int _waitingForField;
             
-            time_t _lastCycle;
-            int _cycleDuration;
+            MasterClock::timeStruct _lastCycle;
+            int _cycleDuration; // magazine cycle time in fields
     };
 }
 

@@ -27,6 +27,7 @@ namespace vbit
             
             void Log(LogLevels level, std::string str);
             void SetDebugLevel(LogLevels level){ _debugLevel = level; };
+            LogLevels GetDebugLevel(){ return _debugLevel; };
             void SetMagCycleDuration(int mag, int duration);
             std::array<int,8> GetMagCycleDurations(){ return _magDurations; };
             

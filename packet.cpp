@@ -1,6 +1,5 @@
 #include "packet.h"
 #include "version.h"
-#include "vbit2.h"
 
 using namespace vbit;
 
@@ -207,7 +206,7 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx()
 {
     // get master clock singleton
     vbit::MasterClock *mc = mc->Instance();
-    time_t t = mc->GetMasterClock();
+    time_t t = mc->GetMasterClock().seconds;
     
     // Get local time
     struct tm * timeinfo;
@@ -328,7 +327,7 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     
     // get master clock singleton
     vbit::MasterClock *mc = mc->Instance();
-    time_t t = mc->GetMasterClock();
+    time_t t = mc->GetMasterClock().seconds;
     
     // Get local time
     struct tm * timeinfo;
