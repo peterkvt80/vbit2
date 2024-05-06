@@ -57,6 +57,7 @@ namespace ttx
             Configure* _configure; /// Member reference to the configuration settings
             vbit::Debug* _debug;
             PageList* _pageList; /// Member reference to the pages list
+            vbit::PacketMag** _magList;
             PacketServer* _packetServer;
 
             // Member variables for event management

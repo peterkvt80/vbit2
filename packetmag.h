@@ -51,6 +51,7 @@ namespace vbit
             bool GetCustomHeaderFlag() { return _hasCustomHeader; };
             void DeleteCustomHeader();
             
+            void InvalidateCycleTimestamp() { _lastCycleTimestamp = {0,0}; }; // reset cycle duration calculation
             int GetCycleDuration() { return _cycleDuration; };
 
         protected:
@@ -92,7 +93,7 @@ namespace vbit
             bool _specialPagesFlipFlop; // toggle to alternate between special pages and normal pages
             int _waitingForField;
             
-            MasterClock::timeStruct _lastCycle;
+            MasterClock::timeStruct _lastCycleTimestamp;
             int _cycleDuration; // magazine cycle time in fields
     };
 }

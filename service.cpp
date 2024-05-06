@@ -12,11 +12,11 @@ Service::Service(Configure *configure, vbit::Debug *debug, PageList *pageList, P
     _packetServer(packetServer),
     _fieldCounter(49) // roll over immediately
 {
-    vbit::PacketMag **magList=_pageList->GetMagazines();
+    _magList=_pageList->GetMagazines();
     // Register all the packet sources
     for (uint8_t mag=0;mag<8;mag++)
     {
-        vbit::PacketMag* m=magList[mag];
+        vbit::PacketMag* m=_magList[mag];
         m->SetPriority(_configure->GetMagazinePriority(mag)); // set the mags to the desired priorities
         _register(m); // use the PacketMags created in pageList rather than duplicating them
     }
@@ -190,6 +190,9 @@ void Service::_updateEvents()
                 masterClock.seconds = now;
                 
                 _debug->Log(Debug::LogLevels::logWARN,"[Service::_updateEvents] Resynchronising master clock");
+                
+                for (int i=0;i<8;i++)
+                    _magList[i]->InvalidateCycleTimestamp(); // reset magazine cycle duration calculations
             }
             
             if (masterClock.seconds%15==0) // TODO: how often do we want to trigger sending special packets?

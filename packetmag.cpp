@@ -26,7 +26,7 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _cycleDuration(-1)
 {
     //ctor
-    _lastCycle = {0,0};
+    _lastCycleTimestamp = {0,0};
     
     for (int i=0;i<MAXPACKET29TYPES;i++)
     {
@@ -160,12 +160,12 @@ Packet* PacketMag::GetPacket(Packet* p)
                     // get master clock singleton
                     MasterClock *mc = mc->Instance();
                     MasterClock::timeStruct t = mc->GetMasterClock();
-                    if (_lastCycle.seconds){ // wait for real timestamps
-                        int diffSeconds = difftime(t.seconds, _lastCycle.seconds); // truncates double to int
-                        _cycleDuration = ((diffSeconds * 50) - _lastCycle.fields) + t.fields;
+                    if (_lastCycleTimestamp.seconds){ // wait for real timestamps
+                        int diffSeconds = difftime(t.seconds, _lastCycleTimestamp.seconds); // truncates double to int
+                        _cycleDuration = ((diffSeconds * 50) - _lastCycleTimestamp.fields) + t.fields;
                         _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
                     }
-                    _lastCycle = t; // update timestamp
+                    _lastCycleTimestamp = t; // update timestamp
                     
                     // couldn't get a page to send so sent a time filling header
                     p->Header(_magNumber,0xFF,0x0000,0x8010,_headerTemplate);
@@ -435,6 +435,8 @@ bool PacketMag::IsReady(bool force)
         ClearEvent(EVENT_FIELD);
         if (_waitingForField > 0)
         {
+            // _waitingForField is set to 2 when the last packet was a header but field event is not yet cleared
+            // on the next IsReady we clear the event and decrement it ready to wait for the next field event.
             _waitingForField--;
         }
     }
