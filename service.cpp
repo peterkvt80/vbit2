@@ -75,16 +75,11 @@ int Service::run()
         // Send ONLY one packet per loop
         _updateEvents();
         
-        if (_packetDebug->IsReady()) // Special case for debug. Ensures it can have the first line of field
+        // Special case for debug. Ensures it can have the first line of field
+        if (_packetDebug->IsReady(_debug->GetDebugLevel() >= Debug::LogLevels::logDEBUG)) // force if log level DEBUG
         {
-            if (_packetDebug->GetPacket(pkt) != nullptr)
-            {
-                _packetOutput(pkt);
-            }
-            else
-            {
-                _packetOutput(filler);
-            }
+            _packetDebug->GetPacket(pkt);
+            _packetOutput(pkt);
         }
         else if (_subtitle->IsReady()) // Special case for subtitles. Subtitles always go if there is one waiting
         {
@@ -153,7 +148,7 @@ int Service::run()
     return 99; // can't return but this keeps the compiler happy
 } // worker
 
-#define FORWARDSBUFFER 1
+#define FORWARDSBUFFER 1 // how far into the future vbit2 should run before rate limiting in seconds
 
 void Service::_updateEvents()
 {
@@ -180,7 +175,7 @@ void Service::_updateEvents()
         
         masterClock.fields = _fieldCounter;
         
-        _packetDebug->TimeAndField(masterClock, now); // update the clocks in debugPacket.
+        _packetDebug->TimeAndField(masterClock, now, false); // update the clocks in debugPacket.
         
         if (_fieldCounter == 0)
         {
@@ -193,6 +188,8 @@ void Service::_updateEvents()
                 
                 for (int i=0;i<8;i++)
                     _magList[i]->InvalidateCycleTimestamp(); // reset magazine cycle duration calculations
+                
+                _packetDebug->TimeAndField(masterClock, now, true); // update the clocks in debugPacket.
             }
             
             if (masterClock.seconds%15==0) // TODO: how often do we want to trigger sending special packets?
@@ -204,6 +201,8 @@ void Service::_updateEvents()
                 }
             }
         }
+        
+        
         
         mc->SetMasterClock(masterClock); // update the master clock singleton
         

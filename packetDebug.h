@@ -8,7 +8,7 @@
 #include "configure.h"
 #include "debug.h"
 
-#define VBIT2_DEBUG_VERSION 0x01   // Debug API version
+#define VBIT2_DEBUG_VERSION 0x01   // Debug packet version
 
 namespace vbit
 {
@@ -23,7 +23,7 @@ namespace vbit
             // overrides
             Packet* GetPacket(Packet* p) override;
             
-            void TimeAndField(MasterClock::timeStruct masterClock, time_t systemClock);
+            void TimeAndField(MasterClock::timeStruct masterClock, time_t systemClock, bool resync);
             
             bool IsReady(bool force=false);
 
@@ -37,16 +37,22 @@ namespace vbit
             uint32_t _servicePacketAddress;
             uint8_t _debugPacketCI; // continuity indicator for databroadcast stream
             
-            struct debugData
-            {
-                char header[4] = {'V','B','I','T'};
-                uint8_t ver = VBIT2_DEBUG_VERSION;
-                time_t masterClockSeconds = 0;
-                uint8_t masterClockFields = 0;
-                time_t systemClock = 0;
-            };
+            const time_t _startupTime;
+            time_t _masterClockSeconds;
+            uint8_t _masterClockFields;
+            time_t _systemClock;
             
-            struct debugData _debugData;
+            std::array<uint8_t, 8> _magDurations;
+            std::array<uint8_t, 8> _magSizes;
+            
+            enum DebugTypes {NONE, FORMAT1, FORMAT2};
+            DebugTypes _debugType;
+            
+            enum ClockFlags {CFLAGRESYNC = 1};
+            uint8_t _clockFlags;
+            
+            enum MagFlags {MFLAGDURATION=1, MFLAGPAGES=2};
+            uint8_t _magFlags;
     };
 }
 

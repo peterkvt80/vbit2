@@ -102,6 +102,11 @@ int PageList::ReadDirectory(std::string filepath)
     }
     closedir(dp);
     
+    for (int mag=0;mag<8;mag++)
+    {
+        _debug->SetMagazineSize(mag, _pageList[mag].size());
+    }
+    
     return 0;
 }
 
@@ -109,6 +114,7 @@ void PageList::AddPage(TTXPageStream* page)
 {
     int mag=(page->GetPageNumber() >> 16) & 0x7;
     _pageList[mag].push_back(*page);
+    _debug->SetMagazineSize(mag, _pageList[mag].size());
 }
 
 void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
@@ -420,6 +426,7 @@ void PageList::DeleteOldPages()
                 
                 // page has been removed from lists
                 _pageList[mag].remove(*p--);
+                _debug->SetMagazineSize(mag, _pageList[mag].size());
 
                 if (_iterMag == mag)
                 {

@@ -30,12 +30,15 @@ namespace vbit
             LogLevels GetDebugLevel(){ return _debugLevel; };
             void SetMagCycleDuration(int mag, int duration);
             std::array<int,8> GetMagCycleDurations(){ return _magDurations; };
+            void SetMagazineSize(int mag, int size);
+            std::array<int,8> GetMagSizes(){ return _magSizes; };
             
         protected:
 
         private:
             LogLevels _debugLevel;
             std::array<int, 8> _magDurations;
+            std::array<int, 8> _magSizes;
     };
 }
 

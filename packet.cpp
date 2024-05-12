@@ -540,13 +540,13 @@ int Packet::IDLA(uint8_t datachannel, uint8_t flags, uint8_t ial, uint32_t spa, 
             if (flags & IDLA_DL)
                 _packet[DLoffset]++;
             
-            if ((uint8_t)(_packet[p]) == 0xff || (uint8_t)(_packet[p]) == 0x00)
+            if ((_packet[p] == _packet[p-1]) && ((uint8_t)(_packet[p]) == 0xff || (uint8_t)(_packet[p]) == 0x00))
             {
                 sameCount++;
                 
                 if ((uint8_t)(_packet[p]) == (uint8_t)(_packet[p-1]))
                 {
-                    if (sameCount > 7 && p < 42)
+                    if (sameCount >= 7 && p < 42)
                     {
                         sameCount = 0;
                         _packet[++p] = 0xaa; // add a dummy byte

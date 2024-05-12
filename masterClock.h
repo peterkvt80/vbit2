@@ -2,6 +2,7 @@
 #define _MASTERCLOCK_H_
 
 #include <cstdint>
+#include <ctime>
 
 namespace vbit
 {
@@ -22,7 +23,7 @@ namespace vbit
             timeStruct GetMasterClock(){ return _masterClock; }
             
         private:
-            MasterClock(){ _masterClock = {0, 0}; }; // initialise master clock to unix epoch, it will be set when run() starts generating packets
+            MasterClock(){ _masterClock = {time(NULL)-1, 0}; }; // initialise master clock to system time - 1
             static MasterClock *instance;
             timeStruct _masterClock;
     };
