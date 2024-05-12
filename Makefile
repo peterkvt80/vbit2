@@ -32,3 +32,5 @@ clean:
 	rm -f $(objs) $(deps) vbit2
 
 -include $(deps)
+
+all: vbit2

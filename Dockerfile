@@ -8,7 +8,7 @@ RUN make -j8
 
 # make the runtime container
 FROM alpine
-RUN apk update && apk add --no-cache libstdc++ libgcc socat
+RUN apk update && apk add --no-cache libstdc++ libgcc tzdata
 COPY --from=build-env /vbit2/vbit2 /vbit2/vbit2
 WORKDIR /vbit2
 CMD ["/vbit2/vbit2"]
