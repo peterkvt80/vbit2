@@ -231,7 +231,7 @@ void PacketServer::run()
             {
                 sock = _clientSocks[i];
                 
-                if (FD_ISSET(sock , &readfds))
+                if (sock >= 0 && FD_ISSET(sock , &readfds))
                 {
                     /* socket has activity */
                     
