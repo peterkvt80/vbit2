@@ -30,7 +30,10 @@ Packet* PacketDebug::GetPacket(Packet* p)
 {
     /* Generate simple datacast packets for timing measurement and magazine monitoring.
        The user data payload for each format type is padded to a fixed 26 bytes long.
-       The first byte of each packet payload indicates the format type.
+       
+       Format types are documented below.
+       The byte offsets listed are the position within the datacast user data payload.
+       These offsets are only valid after discarding any dummy bytes per EN 300 708 6.5.7.1!
     */
     
     std::vector<uint8_t> data;
@@ -50,12 +53,28 @@ Packet* PacketDebug::GetPacket(Packet* p)
     switch(_debugType)
     {
         default:
-        case NONE: // this should never get sent
+        case NONE: // format type 0
         {
+            /* Bytes  Description
+                   0: format type
+                1-25: reserved
+            */
             break;
         }
-        case FORMAT1: // packet type 1, system time
+        case FORMAT1: // format type 1, system time
         {
+            /* Bytes  Description
+                   0: format type
+                 1-4: current master clock seconds
+                   5: current master clock field
+                   6: debug stream data format version
+                   7: clock flags
+                        b0: master clock resynchronisation
+                8-11: current system clock
+               12-15: program startup timestamp
+               16-25: reserved
+            */
+            
             _debugType = FORMAT2; // cycle to format 2 on next packet
             
             data.push_back(VBIT2_DEBUG_VERSION); // Debug stream format version
@@ -80,8 +99,20 @@ Packet* PacketDebug::GetPacket(Packet* p)
             
             break;
         }
-        case FORMAT2: // packet type 2, magazine data
+        case FORMAT2: // format type 2, magazine data
         {
+            /* Bytes  Description
+                   0: format type
+                 1-4: current master clock seconds
+                   5: current master clock field
+                   6: magazine flags
+                        b0: magazine cycle durations changed
+                        b1: magazine page counts changed
+                7-14: magazine (0-7) cycle durations in seconds
+               15-22: magazine (0-7) page counts
+               23-25: reserved
+            */
+            
             _debugType = FORMAT1; // cycle to format 1 on next packet
             
             // magazine flags
@@ -104,7 +135,7 @@ Packet* PacketDebug::GetPacket(Packet* p)
         }
     }
     
-    data.insert(data.end(), 26 - data.size(), 0); // pad payload data to 26 bytes long (leave three bytes available in packet for dummies)
+    data.insert(data.end(), 26 - data.size(), 0); // pad payload data to 26 bytes long (leave three bytes free for dummy bytes)
     
     // generate format A datacast packet with explicit data length, and implicit continuity indicator
     p->IDLA(_datachannel, Packet::IDLA_DL, 6, _servicePacketAddress, 0, _debugPacketCI++, data); 
@@ -114,13 +145,11 @@ Packet* PacketDebug::GetPacket(Packet* p)
 
 bool PacketDebug::IsReady(bool force)
 {
-    (void)force; // silence error about unused parameter
     bool result=false;
     
-    if (GetEvent(EVENT_FIELD))
+    if (GetEvent(EVENT_DATABROADCAST))
     {
-        ClearEvent(EVENT_FIELD);
-        
+        // Don't clear event, Service::_updateEvents explicitly turns it off for non datacast lines
         if (_debugType > FORMAT1) // we are in the middle of sending debug data already
         {
             result = true;
@@ -152,7 +181,7 @@ bool PacketDebug::IsReady(bool force)
                 }
             }
             
-            if (_clockFlags || _magFlags || force) // generate packets if any of the content has changed (or we are forcing output to use this as datacast filler)
+            if (_clockFlags || _magFlags || force) // generate packets if any of the content has changed, or if we are forcing output to use this source as datacast filler
                 result = true;
         }
     }

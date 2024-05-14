@@ -5,7 +5,6 @@
 
 #include "packetsource.h"
 #include "configure.h"
-#include "vbit2.h"
 
 namespace vbit
 {
@@ -37,6 +36,12 @@ class Packet830 : public PacketSource
   private:
     ttx::Configure* _configure;
     long calculateMJD(int year, int month, int day);
+    
+    // TODO: some temporary flags
+    bool _label0 = false;
+    bool _label1 = false;
+    bool _label2 = false;
+    bool _label3 = false;
 };
 
 }

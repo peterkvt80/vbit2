@@ -135,11 +135,17 @@ bool Packet830::IsReady(bool force)
     // We will be waiting for 10 fields between becoming true
     // 8/30/1 should go out on the system clock seconds interval.
     (void)force; // silence error about unused parameter
-    bool result=GetEvent(EVENT_P830_FORMAT_1) ||
-        GetEvent(EVENT_P830_FORMAT_2_LABEL_0) ||
-        GetEvent(EVENT_P830_FORMAT_2_LABEL_1) ||
-        GetEvent(EVENT_P830_FORMAT_2_LABEL_2) ||
-        GetEvent(EVENT_P830_FORMAT_2_LABEL_3);
+    bool result = false;
+    
+    if (GetEvent(EVENT_P830_FORMAT_1) || // always ready to generate a format 1 packet
+        (GetEvent(EVENT_P830_FORMAT_2_LABEL_0) && _label0) ||
+        (GetEvent(EVENT_P830_FORMAT_2_LABEL_1) && _label1) ||
+        (GetEvent(EVENT_P830_FORMAT_2_LABEL_2) && _label2) ||
+        (GetEvent(EVENT_P830_FORMAT_2_LABEL_3) && _label3)
+       )
+    {
+        result = true;
+    }
     return result;
 }
 

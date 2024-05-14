@@ -62,20 +62,22 @@ namespace ttx
 
             // Member variables for event management
             uint16_t _linesPerField;
+            uint16_t _datacastLines;
             uint16_t _lineCounter; // Which VBI line are we on? Used to signal a new field.
             uint8_t _fieldCounter; // Which field? Used to time packet 8/30
             
             uint64_t _PTS; // presentation timestamp counter
             bool _PTSFlag; // generate PCR and PTS
             
-            std::list<vbit::PacketSource*> _Sources; /// A list of packet sources
+            std::list<vbit::PacketSource*> _magazineSources; // A list of packet sources for magazine data
+            std::list<vbit::PacketSource*> _datacastSources; // A list of sources for independent data line packets
 
             vbit::PacketSubtitle* _subtitle; // Newfor needs to know which packet source is doing subtitles
-            
+            vbit::Packet830* _packet830; // BSDP packet source
             vbit::PacketDebug* _packetDebug; // Debug packet source
 
             // Member functions
-            void _register(vbit::PacketSource *src); /// Register packet sources
+            void _register(std::list<vbit::PacketSource*> *list, vbit::PacketSource *src); // Register packet sources
 
             /**
              * @brief Check if anything changed, and if so signal the event to the packet sources.

@@ -58,6 +58,7 @@ class Configure
         uint16_t GetCommandPort(){return _commandPort;}
         bool GetCommandPortEnabled(){return _commandPortEnabled;}
         uint16_t GetLinesPerField(){return _linesPerField;}
+        uint16_t GetDatacastLines(){return _datacastLines;}
         bool GetReverseFlag(){return _reverseBits;}
         int GetMagazinePriority(uint8_t mag){return _magazinePriority[mag];}
         
@@ -80,6 +81,7 @@ class Configure
         
         bool _rowAdaptive;
         uint16_t _linesPerField;
+        uint16_t _datacastLines;
         
         // settings for generation of packet 8/30
         bool _multiplexedSignalFlag; // false indicates teletext is multiplexed with video, true means full frame teletext.

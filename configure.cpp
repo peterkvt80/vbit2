@@ -46,6 +46,7 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
 
     _rowAdaptive = false;
     _linesPerField = 16; // default to 16 lines per field
+    _datacastLines = 0; // no dedicated datacast lines
 
     _multiplexedSignalFlag = false; // using this would require changing all the line counting and a way to send full field through raspi-teletext - something for the distant future when everything else is done...
     
@@ -267,6 +268,12 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
     LoadConfigFile(path); // load main config file (vbit.conf)
     
     LoadConfigFile(path+".override"); // allow overriding main config file for local configuration where main config is in version control
+    
+    if (_datacastLines > _linesPerField)
+    {
+        _debug->Log(vbit::Debug::LogLevels::logERROR,"[Configure] datacast lines cannot be greater than lines per field");
+        _datacastLines = _linesPerField; // clamp
+    }
 }
 
 Configure::~Configure()
@@ -280,7 +287,7 @@ int Configure::LoadConfigFile(std::string filename)
 
     std::vector<std::string>::iterator iter;
     // these are all the valid strings for config lines
-    std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats","enable_command_port","command_port","lines_per_field","magazine_priority" };
+    std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats","enable_command_port","command_port","lines_per_field","datacast_lines","magazine_priority"};
 
     if (filein.is_open())
     {
@@ -510,7 +517,27 @@ int Configure::LoadConfigFile(std::string filename)
                                 }
                                 break;
                             }
-                            case 11: // "magazine_priority"
+                            case 11: // datacast_lines
+                            {
+                                if (value.size() > 0 && value.size() < 4)
+                                {
+                                    try
+                                    {
+                                        _datacastLines = stoi(std::string(value, 0, 3));
+                                    }
+                                    catch (const std::invalid_argument& ia)
+                                    {
+                                        error = 1;
+                                        break;
+                                    }
+                                }
+                                else
+                                {
+                                    error = 1;
+                                }
+                                break;
+                            }
+                            case 12: // "magazine_priority"
                             {
                                 std::stringstream ss(value);
                                 std::string temps;

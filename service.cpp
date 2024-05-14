@@ -13,21 +13,25 @@ Service::Service(Configure *configure, vbit::Debug *debug, PageList *pageList, P
     _fieldCounter(49) // roll over immediately
 {
     _magList=_pageList->GetMagazines();
-    // Register all the packet sources
+    // Register all the magazine packet sources
     for (uint8_t mag=0;mag<8;mag++)
     {
         vbit::PacketMag* m=_magList[mag];
         m->SetPriority(_configure->GetMagazinePriority(mag)); // set the mags to the desired priorities
-        _register(m); // use the PacketMags created in pageList rather than duplicating them
+        _register(&_magazineSources, m); // use the PacketMags created in pageList rather than duplicating them
     }
     
-    // Add packet sources for subtitles and packet 830
-    _register(_subtitle=new PacketSubtitle(_configure, _debug));
-    _register(new Packet830(_configure));
+    // Add packet source for subtitles
+    _register(&_magazineSources, _subtitle=new PacketSubtitle(_configure, _debug));
     
-    _register(_packetDebug=new PacketDebug(_configure, _debug));
+    // register datacast sources
+    _register(&_datacastSources, _packetDebug = new PacketDebug(_configure, _debug));
+    
+    // don't register BSDP source
+    _packet830 = new Packet830(_configure);
     
     _linesPerField = _configure->GetLinesPerField();
+    _datacastLines = _configure->GetDatacastLines();
     
     _lineCounter = _linesPerField - 1; // roll over immediately
     
@@ -42,41 +46,42 @@ Service::~Service()
 {
 }
 
-void Service::_register(PacketSource *src)
+void Service::_register(std::list<vbit::PacketSource*> *list, PacketSource *src)
 {
-    _Sources.push_front(src);
+    list->push_front(src);
 }
 
 int Service::run()
 {
     _debug->Log(Debug::LogLevels::logDEBUG,"[Service::run] This is the worker process");
-    std::list<vbit::PacketSource*>::const_iterator iterator=_Sources.begin(); // Iterator for packet sources
-
-    std::list<vbit::PacketSource*>::const_iterator first; // Save the first so we know if we have looped.
+    
+    std::list<vbit::PacketSource*>::const_iterator iterator=_magazineSources.begin(); // Iterator for magazine packet sources
 
     vbit::Packet* pkt=new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
 
     static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // A pre-prepared quiet packet to avoid eating the heap
 
-
     _debug->Log(Debug::LogLevels::logINFO,"[Service::run] Lines per field: " + std::to_string((int)_linesPerField));
+    _debug->Log(Debug::LogLevels::logINFO,"[Service::run] Dedicated datacast lines: " + std::to_string((int)_datacastLines));
     while(1)
     {
-        // If counters (or other trigger) causes an event then send the events
-        
-        // Iterate through the packet sources until we get a packet to transmit
-        
-        vbit::PacketSource* p;
-        first=iterator;
-        bool force=false;
-        uint8_t sourceCount=0;
-        uint8_t listSize=_Sources.size();
-        
         // Send ONLY one packet per loop
         _updateEvents();
         
-        // Special case for debug. Ensures it can have the first line of field
-        if (_packetDebug->IsReady(_debug->GetDebugLevel() >= Debug::LogLevels::logDEBUG)) // force if log level DEBUG
+        // special case for BSDP. Ensures it will always get a vbi line
+        if (_packet830->IsReady())
+        {
+            if (_packet830->GetPacket(pkt) != nullptr)
+            {
+                _packetOutput(pkt);
+            }
+            else
+            {
+                _packetOutput(filler);
+            }
+        }
+        // Special case for debug. Ensures it can steal lines from other sources during DATABROADCAST event
+        else if (_packetDebug->IsReady(_datacastLines)) // force if log level DEBUG
         {
             _packetDebug->GetPacket(pkt);
             _packetOutput(pkt);
@@ -94,13 +99,17 @@ int Service::run()
         }
         else
         {
-            // scan the rest of the available sources
+            // Iterate through the packet sources until we get a packet to transmit
+            vbit::PacketSource* p;
+            uint8_t sourceCount=0;
+            uint8_t listSize=_magazineSources.size();
+            bool force=false;
             do
             {
                 // Loop back to the first source
-                if (iterator==_Sources.end())
+                if (iterator==_magazineSources.end())
                 {
-                    iterator=_Sources.begin();
+                    iterator=_magazineSources.begin();
                 }
 
                 // If we have tried all sources with and without force, then break out with a filler to prevent a deadlock
@@ -194,7 +203,7 @@ void Service::_updateEvents()
             
             if (masterClock.seconds%15==0) // TODO: how often do we want to trigger sending special packets?
             {
-                for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
+                for (std::list<vbit::PacketSource*>::const_iterator iterator = _magazineSources.begin(), end = _magazineSources.end(); iterator != end; ++iterator)
                 {
                     (*iterator)->SetEvent(EVENT_SPECIAL_PAGES);
                     (*iterator)->SetEvent(EVENT_PACKET_29);
@@ -202,12 +211,10 @@ void Service::_updateEvents()
             }
         }
         
-        
-        
         mc->SetMasterClock(masterClock); // update the master clock singleton
         
-        // New field, so set the FIELD event in all the sources.
-        for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
+        // New field, so set the FIELD event in all the registered magazine sources.
+        for (std::list<vbit::PacketSource*>::const_iterator iterator = _magazineSources.begin(), end = _magazineSources.end(); iterator != end; ++iterator)
         {
             (*iterator)->SetEvent(EVENT_FIELD);
         }
@@ -243,16 +250,23 @@ void Service::_updateEvents()
                     break;
                 }
             }
-            for (std::list<vbit::PacketSource*>::const_iterator iterator = _Sources.begin(), end = _Sources.end(); iterator != end; ++iterator)
-            {
-                (*iterator)->SetEvent(ev);
-            }
+            _packet830->SetEvent(ev); // only BSDP source needs to know about these events
         }
-        
-        std::cout << std::flush;
     }
     
-    // @todo Databroadcast events. Flag when there is data in the buffer.
+    
+    for (std::list<vbit::PacketSource*>::const_iterator iterator = _datacastSources.begin(), end = _datacastSources.end(); iterator != end; ++iterator)
+    {
+        // if no dedicated datacast lines are assigned, allow datacast on all lines
+        if ((_datacastLines == 0) || (_lineCounter >= _linesPerField - _datacastLines))
+        {
+            (*iterator)->SetEvent(EVENT_DATABROADCAST);
+        }
+        else
+        {
+            (*iterator)->ClearEvent(EVENT_DATABROADCAST);
+        }
+    }
 }
 
 void Service::_packetOutput(vbit::Packet* pkt)
