@@ -10,6 +10,7 @@
 #include "filemonitor.h"
 #include "command.h"
 #include "packetServer.h"
+#include "datacastServer.h"
 #include "masterClock.h"
 
 #ifdef WIN32

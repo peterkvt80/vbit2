@@ -68,6 +68,9 @@ class Configure
         uint16_t GetPacketServerPort(){return _packetServerPort;}
         bool GetPacketServerEnabled(){return _packetServerPort != 0;}
         
+        uint16_t GetDatacastServerPort(){return _datacastServerPort;}
+        bool GetDatacastServerEnabled(){return _datacastServerPort != 0;}
+        
     private:
         vbit::Debug* _debug;
         int DirExists(std::string *path);
@@ -104,6 +107,7 @@ class Configure
         uint16_t _PID;
         
         uint16_t _packetServerPort;
+        uint16_t _datacastServerPort;
     };
 }
 

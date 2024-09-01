@@ -55,8 +55,9 @@ int main(int argc, char** argv)
     Configure *configure=new Configure(debug, argc, argv);
     PageList *pageList=new PageList(configure, debug);
     PacketServer *packetServer=new PacketServer(configure, debug);
+    DatacastServer *datacastServer=new DatacastServer(configure, debug);
 
-    Service* svc=new Service(configure, debug, pageList, packetServer); // Need to copy the subtitle packet source for Newfor
+    Service* svc=new Service(configure, debug, pageList, packetServer, datacastServer); // Need to copy the subtitle packet source for Newfor
 
     std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, debug, pageList));
     std::thread serviceThread(&Service::run, svc);
@@ -73,6 +74,13 @@ int main(int argc, char** argv)
         // only start packet server thread if required
         std::thread packetServerThread(&PacketServer::run, packetServer );
         packetServerThread.detach();
+    }
+
+    if (configure->GetDatacastServerEnabled())
+    {
+        // only start datacast server thread if required
+        std::thread datacastServerThread(&DatacastServer::run, datacastServer );
+        datacastServerThread.detach();
     }
 
     // The threads should never stop, but just in case...

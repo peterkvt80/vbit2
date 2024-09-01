@@ -70,9 +70,10 @@ Packet* PacketDebug::GetPacket(Packet* p)
                    6: debug stream data format version
                    7: clock flags
                         b0: master clock resynchronisation
-                8-11: current system clock
-               12-15: program startup timestamp
-               16-25: reserved
+                8-11: current system clock seconds
+                  12: current system clock field
+               13-16: program startup timestamp
+               17-25: reserved
             */
             
             _debugType = FORMAT2; // cycle to format 2 on next packet
@@ -88,6 +89,7 @@ Packet* PacketDebug::GetPacket(Packet* p)
             data.push_back(_systemClock >> 16);
             data.push_back(_systemClock >> 8);
             data.push_back(_systemClock);
+            data.push_back(_systemClockFields);
             
             // vbit2 startup timestamp
             data.push_back(_startupTime >> 24);
@@ -95,7 +97,7 @@ Packet* PacketDebug::GetPacket(Packet* p)
             data.push_back(_startupTime >> 8);
             data.push_back(_startupTime);
             
-            // 16 of 26 bytes used
+            // 17 of 26 bytes used
             
             break;
         }
@@ -147,7 +149,7 @@ bool PacketDebug::IsReady(bool force)
 {
     bool result=false;
     
-    if (GetEvent(EVENT_DATABROADCAST))
+    if (GetEvent(EVENT_DATABROADCAST) && GetEvent(EVENT_FIELD))
     {
         // Don't clear event, Service::_updateEvents explicitly turns it off for non datacast lines
         if (_debugType > FORMAT1) // we are in the middle of sending debug data already
@@ -184,17 +186,20 @@ bool PacketDebug::IsReady(bool force)
             if (_clockFlags || _magFlags || force) // generate packets if any of the content has changed, or if we are forcing output to use this source as datacast filler
                 result = true;
         }
+        
+        ClearEvent(EVENT_FIELD); // don't jam all datacast lines in a field
     }
     
     return result;
 }
 
-void PacketDebug::TimeAndField(MasterClock::timeStruct masterClock, time_t systemClock, bool resync)
+void PacketDebug::TimeAndField(MasterClock::timeStruct masterClock, time_t systemClock, uint8_t systemClockFields, bool resync)
 {
     // update the clocks in _debugData struct - called once per field by Service::_updateEvents()
     _masterClockSeconds = masterClock.seconds;
     _masterClockFields = masterClock.fields;
     _systemClock = systemClock;
+    _systemClockFields = systemClockFields;
     if (resync)
         _clockFlags |= CFLAGRESYNC; // set flag
 }

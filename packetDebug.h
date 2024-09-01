@@ -8,7 +8,7 @@
 #include "configure.h"
 #include "debug.h"
 
-#define VBIT2_DEBUG_VERSION 0x01   // Debug packet version
+#define VBIT2_DEBUG_VERSION 0x02   // Debug packet version
 
 namespace vbit
 {
@@ -23,7 +23,7 @@ namespace vbit
             // overrides
             Packet* GetPacket(Packet* p) override;
             
-            void TimeAndField(MasterClock::timeStruct masterClock, time_t systemClock, bool resync);
+            void TimeAndField(MasterClock::timeStruct masterClock, time_t systemClock, uint8_t systemClockFields, bool resync);
             
             bool IsReady(bool force=false);
 
@@ -41,6 +41,7 @@ namespace vbit
             time_t _masterClockSeconds;
             uint8_t _masterClockFields;
             time_t _systemClock;
+            uint8_t _systemClockFields;
             
             std::array<uint8_t, 8> _magDurations;
             std::array<uint8_t, 8> _magSizes;

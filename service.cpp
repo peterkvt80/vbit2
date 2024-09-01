@@ -5,11 +5,12 @@
 using namespace ttx;
 using namespace vbit;
 
-Service::Service(Configure *configure, vbit::Debug *debug, PageList *pageList, PacketServer *packetServer) :
+Service::Service(Configure *configure, vbit::Debug *debug, PageList *pageList, PacketServer *packetServer, DatacastServer *datacastServer) :
     _configure(configure),
     _debug(debug),
     _pageList(pageList),
     _packetServer(packetServer),
+    _datacastServer(datacastServer),
     _fieldCounter(49) // roll over immediately
 {
     _magList=_pageList->GetMagazines();
@@ -26,6 +27,12 @@ Service::Service(Configure *configure, vbit::Debug *debug, PageList *pageList, P
     
     // register datacast sources
     _register(&_datacastSources, _packetDebug = new PacketDebug(_configure, _debug));
+    
+    vbit::PacketDatacast** channels = _datacastServer->GetDatachannels();
+    for (int dc=1; dc<16; dc++)
+    {
+        _register(&_datacastSources, channels[dc]);
+    }
     
     // don't register BSDP source
     _packet830 = new Packet830(_configure);
@@ -55,7 +62,8 @@ int Service::run()
 {
     _debug->Log(Debug::LogLevels::logDEBUG,"[Service::run] This is the worker process");
     
-    std::list<vbit::PacketSource*>::const_iterator iterator=_magazineSources.begin(); // Iterator for magazine packet sources
+    std::list<vbit::PacketSource*>::const_iterator magIterator=_magazineSources.begin(); // Iterator for magazine packet sources
+    std::list<vbit::PacketSource*>::const_iterator dcIterator=_datacastSources.begin(); // Iterator for datacast sources
 
     vbit::Packet* pkt=new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
 
@@ -81,7 +89,7 @@ int Service::run()
             }
         }
         // Special case for debug. Ensures it can steal lines from other sources during DATABROADCAST event
-        else if (_packetDebug->IsReady(_datacastLines)) // force if log level DEBUG
+        else if (_packetDebug->IsReady(_debug->GetDebugLevel() == Debug::LogLevels::logDEBUG)) // force if log level is DEBUG
         {
             _packetDebug->GetPacket(pkt);
             _packetOutput(pkt);
@@ -100,16 +108,45 @@ int Service::run()
         else
         {
             // Iterate through the packet sources until we get a packet to transmit
-            vbit::PacketSource* p;
+            vbit::PacketSource* p=nullptr;
+            
+            if (_datacastLines)
+            {
+                // try datacast sources first
+                for (unsigned int count = 0; count < _datacastSources.size()-1; count++) // iterate over sources once
+                {
+                    // Get the packet source
+                    p=(*dcIterator);
+                    
+                    if (++dcIterator==--_datacastSources.end()) // loop skipping last source (_packetDebug)
+                    {
+                        dcIterator=_datacastSources.begin();
+                    }
+                    
+                    if (p->IsReady(count==_datacastSources.size()-2)) // force if the last datacast source
+                        break; // a datacast buffer has packets to go
+                    else
+                        p=nullptr;
+                }
+                if (p)
+                {
+                    p->GetPacket(pkt);
+                    _packetOutput(pkt);
+                    continue; // main while loop
+                }
+                // else fall through to magazine sources
+            }
+            
+            // now try magazine sources
             uint8_t sourceCount=0;
             uint8_t listSize=_magazineSources.size();
             bool force=false;
             do
             {
                 // Loop back to the first source
-                if (iterator==_magazineSources.end())
+                if (magIterator==_magazineSources.end())
                 {
-                    iterator=_magazineSources.begin();
+                    magIterator=_magazineSources.begin();
                 }
 
                 // If we have tried all sources with and without force, then break out with a filler to prevent a deadlock
@@ -127,37 +164,61 @@ int Service::run()
                 }
 
                 // Get the packet source
-                p=(*iterator);
-                ++iterator;
+                p=(*magIterator);
+                ++magIterator;
 
                 sourceCount++; // Count how many sources we tried.
             }
             while (!p->IsReady(force));
             
-            // Did we find a packet? Then send it otherwise put out a filler
+            // Did we find a packet?
             if (p)
             {
                 // GetPacket returns nullptr if the pkt isn't valid - if it's null go round again.
                 if (p->GetPacket(pkt) != nullptr)
                 {
                     _packetOutput(pkt);
+                    continue; // main while loop
                 }
-                else
-                {
-                    _packetOutput(filler);
-                }
+                // else fall through to filler
             }
-            else
+            
+            if (!_datacastLines)
             {
-                _packetOutput(filler);
+                // output datacast in place of filler
+                for (unsigned int count = 0; count < _datacastSources.size()-1; count++) // iterate over sources once
+                {
+                    // Get the packet source
+                    p=(*dcIterator);
+                    
+                    if (++dcIterator==--_datacastSources.end()) // loop skipping last source (_packetDebug)
+                    {
+                        dcIterator=_datacastSources.begin();
+                    }
+                    
+                    if (p->IsReady())
+                    {
+                        p->GetPacket(pkt);
+                        break;
+                    }
+                    else
+                        p=nullptr;
+                }
+                
+                if (p)
+                {
+                    _packetOutput(pkt);
+                    continue; // main while loop
+                }
+                // else fall through to filler
             }
+            
+            _packetOutput(filler);
         }
 
     } // while forever
     return 99; // can't return but this keeps the compiler happy
 } // worker
-
-#define FORWARDSBUFFER 1 // how far into the future vbit2 should run before rate limiting in seconds
 
 void Service::_updateEvents()
 {
@@ -167,15 +228,18 @@ void Service::_updateEvents()
     // Step the counters
     _lineCounter = (_lineCounter + 1) % _linesPerField;
     
+    auto t1 = std::chrono::system_clock::now();
+    auto duration = t1.time_since_epoch();
+    int64_t fields = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() / 20;
+    
+    time_t now = fields / 50;
+    
+    if (((int64_t)masterClock.seconds * 50 + masterClock.fields) > fields)
+        std::this_thread::sleep_for(std::chrono::milliseconds(40)); // back off for ≈2 fields to limit output to (less than) 50 fields per second
+    
     if (_lineCounter == 0) // new field
     {
         _fieldCounter = (_fieldCounter + 1) % 50;
-        
-        time_t now;
-        time(&now);
-        
-        if (masterClock.seconds > now + FORWARDSBUFFER) // allow vbit2 to run into the future before limiting packet rate
-            std::this_thread::sleep_for(std::chrono::milliseconds(40)); // back off for ≈2 fields to limit output to (less than) 50 fields per second
         
         if (_fieldCounter == 0)
         {
@@ -184,12 +248,12 @@ void Service::_updateEvents()
         
         masterClock.fields = _fieldCounter;
         
-        _packetDebug->TimeAndField(masterClock, now, false); // update the clocks in debugPacket.
+        _packetDebug->TimeAndField(masterClock, now, fields%50, false); // update the clocks in debugPacket.
         
         if (_fieldCounter == 0)
         {
-            // if internal master clock is behind real time, or too far ahead, resynchronise it.
-            if (masterClock.seconds < now || masterClock.seconds > now + FORWARDSBUFFER + 1)
+            // if internal master clock is behind real time, or more than 1 second ahead, resynchronise it.
+            if (masterClock.seconds < now || masterClock.seconds > now + 1)
             {
                 masterClock.seconds = now;
                 
@@ -198,7 +262,7 @@ void Service::_updateEvents()
                 for (int i=0;i<8;i++)
                     _magList[i]->InvalidateCycleTimestamp(); // reset magazine cycle duration calculations
                 
-                _packetDebug->TimeAndField(masterClock, now, true); // update the clocks in debugPacket.
+                _packetDebug->TimeAndField(masterClock, now, fields%50, true); // update the clocks in debugPacket.
             }
             
             if (masterClock.seconds%15==0) // TODO: how often do we want to trigger sending special packets?
@@ -218,6 +282,8 @@ void Service::_updateEvents()
         {
             (*iterator)->SetEvent(EVENT_FIELD);
         }
+        
+        _packetDebug->SetEvent(EVENT_FIELD);
         
         if (_fieldCounter%10==0) // Packet 830 happens every 200ms.
         {
