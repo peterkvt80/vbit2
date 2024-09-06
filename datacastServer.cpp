@@ -264,7 +264,7 @@ void DatacastServer::run()
                                     {
                                         uint8_t flags = readBuffer[2] & 0xe;
                                         uint8_t ial = readBuffer[2] >> 4;
-                                        uint32_t spa = readBuffer[3] | (readBuffer[4] << 8) | (readBuffer[5] << 16);
+                                        uint32_t spa = (uint8_t)readBuffer[3] | ((uint8_t)readBuffer[4] << 8) | ((uint8_t)readBuffer[5] << 16);
                                         uint8_t ri = readBuffer[6];
                                         uint8_t ci = readBuffer[7];
                                         
