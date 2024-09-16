@@ -57,7 +57,7 @@ elif output == "raspi-teletext":
     for i in range(linesPerField):
         mask = (mask << 1) & 0xffff
     
-    destproc = [os.path.join(os.getenv('HOME'), "raspi-teletext/teletext"), "-m", "0x{:04x}".format(mask), "-"]
+    destproc = [os.path.join(os.getenv('HOME'), "raspi-teletext/teletext"), "-m", "0x{:04x}".format(mask), "-l", "66", "-"]
 
 if prerun:
     subprocess.run(prerun)

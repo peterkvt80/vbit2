@@ -15,6 +15,7 @@
             {"name":"Ceefax (Yorks and Lincs)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/Yorks&Lincs","path":"CeefaxYorksAndLincs", "subservices":[{"name":"CeefaxCommon","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/national","path":"National","required":true}]}
         ]},
         {"name":"Chunkytext","type":"git","url":"https://zxnet.co.uk/git/cf.git","path":"Chunkytext"},
-        {"name":"SPARK","type":"git","url":"https://github.com/ZXGuesser/spark-teletext.git","path":"SPARK"}
+        {"name":"SPARK","type":"git","url":"https://github.com/ZXGuesser/spark-teletext.git","path":"SPARK"},
+        {"name":"Nemetext","type":"git","url":"https://github.com/JamieNemeth/nemetext.git","path":"Nemetext"}
     ]
 }
