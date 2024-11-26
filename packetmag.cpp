@@ -209,7 +209,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 if (_status & PAGESTATUS_C8_UPDATE)
                 {
                     // Clear update bit in stored page so that update flag is only transmitted once
-                    _subpage->SetPageStatus(_status & ~PAGESTATUS_C8_UPDATE);
+                    _subpage->SetPageStatus(_subpage->GetPageStatus() & ~PAGESTATUS_C8_UPDATE);
                     
                     // Also set the erase flag in output. This will allow left over rows in adaptive transmission to be cleared without leaving the erase flag set causing flickering.
                     _status|=PAGESTATUS_C4_ERASEPAGE;
