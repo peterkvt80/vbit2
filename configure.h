@@ -46,11 +46,15 @@ class Configure
         inline std::string GetPageDirectory(){return _pageDir;};
         
         std::string GetHeaderTemplate(){return _headerTemplate;}
+        void SetHeaderTemplate(std::string str);
         bool GetRowAdaptive(){return _rowAdaptive;}
+        void SetRowAdaptive(bool flag){_rowAdaptive = flag;}
         std::string GetServiceStatusString(){return _serviceStatusString;}
+        void SetServiceStatusString(std::string status){status.resize(20,' '); _serviceStatusString = status;}
         bool GetMultiplexedSignalFlag(){return _multiplexedSignalFlag;}
         uint16_t GetNetworkIdentificationCode(){return _NetworkIdentificationCode;}
         std::array<uint8_t, 4> GetReservedBytes(){return _reservedBytes;}
+        void SetReservedBytes(std::array<uint8_t, 4> reserved){_reservedBytes = reserved;}
         uint8_t GetInitialMag(){return _initialMag;}
         uint8_t GetInitialPage(){return _initialPage;}
         uint16_t GetInitialSubcode(){return _initialSubcode;}

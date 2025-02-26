@@ -19,11 +19,19 @@
 #define DCSET       0x00
 #define DCRAW       0x01
 #define DCFORMATA   0x02
+#define DCFORMATB   0x03    /* placeholder - may never implement */
+#define DCCONFIG    0x04    /* vbit2 configuration API */
 
-#define DCOK    0x00    /* command successful */
-#define DCTRUNC 0xfd    /* command completed but data was truncated */
-#define DCFULL  0xfe    /* command failed as buffer is full */
-#define DCERR   0xff    /* command failed */
+#define DCOK        0x00    /* command successful */
+#define DCTRUNC     0xfd    /* command completed but data was truncated */
+#define DCFULL      0xfe    /* command failed as buffer is full */
+#define DCERR       0xff    /* command failed */
+
+/* command numbers for configuration API */
+#define CONFRAFLAG  0x00    /* get/set row adaptive flag */
+#define CONFRBYTES  0x01    /* get/set BSDP reserved bytes */
+#define CONFSTATUS  0x02    /* get/set BSDP status message */
+#define CONFHEADER  0x03    /* get/set header template */
 
 namespace ttx
 
@@ -41,6 +49,7 @@ namespace ttx
             vbit::PacketDatacast** GetDatachannels() { vbit::PacketDatacast **channels=_datachannel; return channels; };
             
         private:
+            ttx::Configure* _configure;
             vbit::Debug* _debug;
             vbit::PacketDatacast* _datachannel[16]; /* array of datacast sources */
             
