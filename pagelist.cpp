@@ -19,102 +19,91 @@ PageList::PageList(Configure *configure, vbit::Debug *debug) :
         _debug->Log(vbit::Debug::LogLevels::logERROR,"NULL configuration object");
         return;
     }
-    LoadPageList(_configure->GetPageDirectory());
+    
+    for (int i=0;i<8;i++)
+    {
+        _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, _debug, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
+    }
 }
 
 PageList::~PageList()
 {
 }
 
-int PageList::LoadPageList(std::string filepath)
-{
-    // Create PacketMags before loading
-    for (int i=0;i<8;i++)
-    {
-        _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, _debug, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
-    }
-    
-    // Load files
-    if (ReadDirectory(filepath))
-        return errno;
-    
-    PopulatePageTypeLists(); // add pages to the appropriate lists for their type
-    
-    return 0;
-}
-
-int PageList::ReadDirectory(std::string filepath)
-{
-    DIR *dp;
-    TTXPageStream* q;
-    struct dirent *dirp;
-    struct stat attrib;
-    
-    // Open the directory
-    if ((dp = opendir(filepath.c_str())) == NULL)
-    {
-        _debug->Log(vbit::Debug::LogLevels::logERROR,"Error(" + std::to_string(errno) + ") opening " + filepath);
-        return errno;
-    }
-    
-    // Load the filenames into a list
-    while ((dirp = readdir(dp)) != NULL)
-    {
-        std::string name;
-        name=filepath;
-        name+="/";
-        name+=dirp->d_name;
-        
-        if (stat(name.c_str(), &attrib) == -1) // get the attributes of the file
-            continue; // skip file on failure
-        
-        if (attrib.st_mode & S_IFDIR)
-        {
-            // directory entry is another directory
-            if (dirp->d_name[0] != '.') // ignore anything beginning with .
-            {
-                _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::LoadPageList] recursing into " + name);
-                if (ReadDirectory(name)) // recurse into directory
-                {
-                    _debug->Log(vbit::Debug::LogLevels::logERROR,"Error(" + std::to_string(errno) + ") recursing into " + filepath);
-                }
-            }
-            continue;
-        }
-        
-        //p=new TTXPageStream(filepath+"/"+dirp->d_name);
-        if (std::string(dirp->d_name).find(".tti") != std::string::npos) // Is the file type .tti or ttix?
-        {
-            q=new TTXPageStream(filepath+"/"+dirp->d_name);
-            // If the page loaded, then push it into the appropriate magazine
-            if (q->Loaded())
-            {
-                q->RenumberSubpages();
-                
-                CheckForPacket29OrCustomHeader(q);
-            }
-            
-            int mag=(q->GetPageNumber() >> 16) & 0x7;
-            _pageList[mag].push_back(*q); // This copies. But we can't copy a mutex
-            
-            
-        }
-    }
-    closedir(dp);
-    
-    for (int mag=0;mag<8;mag++)
-    {
-        _debug->SetMagazineSize(mag, _pageList[mag].size());
-    }
-    
-    return 0;
-}
-
-void PageList::AddPage(TTXPageStream* page)
+void PageList::AddPage(TTXPageStream* page, bool noupdate)
 {
     int mag=(page->GetPageNumber() >> 16) & 0x7;
     _pageList[mag].push_back(*page);
     _debug->SetMagazineSize(mag, _pageList[mag].size());
+    
+    page->RenumberSubpages();
+    
+    UpdatePageLists(&(_pageList[mag].back()), noupdate);
+}
+
+void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
+{
+    int mag=(page->GetPageNumber() >> 16) & 0x7;
+    
+    if (page->Special())
+    {
+        // Page is 'special'
+        if (!(page->GetSpecialFlag()))
+        {
+            if (page->GetNormalFlag())
+            {
+                page->SetNormalFlag(false);
+                page->SetCarouselFlag(false);
+                page->SetUpdatedFlag(false);
+                std::stringstream ss;
+                ss << "[PageList::UpdatePageLists] page was normal, is now special " << std::hex << (page->GetPageNumber() >> 8);
+                _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
+            }
+            _mag[mag]->GetSpecialPages()->addPage(page);
+        }
+    }
+    else
+    {
+        // Page is 'normal'
+        if (page->GetSpecialFlag())
+        {
+            std::stringstream ss;
+            ss << "[PageList::UpdatePageLists] page was special, is now normal " << std::hex << (page->GetPageNumber() >> 8);
+            _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
+        }
+        
+        page->SetSpecialFlag(false);
+        _mag[mag]->GetNormalPages()->addPage(page);
+        
+        if (page->IsCarousel())
+        {
+            // Page is also a 'carousel'
+            if (!(page->GetCarouselFlag()))
+            {
+                std::stringstream ss;
+                ss << "[PageList::UpdatePageLists] page is now a carousel " << std::hex << (page->GetPageNumber() >> 8);
+                _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
+                page->SetUpdatedFlag(false);
+                page->StepNextSubpage(); // ensure we're pointing at a subpage
+                _mag[mag]->GetCarousel()->addPage(page);
+            }
+        }
+        else
+        {
+            page->SetCarouselFlag(false);
+            // add normal, non carousel pages to updatedPages list
+            if ((!(page->GetUpdatedFlag())) && !noupdate)
+            {
+                _mag[mag]->GetUpdatedPages()->addPage(page);
+            }
+            else
+            {
+                page->SetUpdatedFlag(false);
+            }
+        }
+    }
+    
+    CheckForPacket29OrCustomHeader(page);
 }
 
 void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
@@ -425,7 +414,7 @@ void PageList::DeleteOldPages()
                 }
                 
                 // page has been removed from lists
-                _pageList[mag].remove(*p--);
+                _pageList[mag].remove(*p--); // this finally deletes the pagestream/page object
                 _debug->SetMagazineSize(mag, _pageList[mag].size());
 
                 if (_iterMag == mag)
@@ -438,43 +427,6 @@ void PageList::DeleteOldPages()
             {
                 // Pages marked here get deleted in the Service thread
                 ptr->SetState(TTXPageStream::MARKED);
-            }
-        }
-    }
-}
-
-void PageList::PopulatePageTypeLists()
-{
-    for (int mag=0;mag<8;mag++)
-    {
-        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
-        {
-            TTXPageStream* ptr;
-            ptr=&(*p);
-            if (ptr->Special())
-            {
-                // Page is 'special'
-                ptr->SetSpecialFlag(true);
-                ptr->SetNormalFlag(false);
-                ptr->SetCarouselFlag(false);
-                _mag[mag]->GetSpecialPages()->addPage(ptr);
-            }
-            else
-            {
-                // Page is 'normal'
-                ptr->SetSpecialFlag(false);
-                ptr->SetNormalFlag(true);
-                _mag[mag]->GetNormalPages()->addPage(ptr);
-                
-                if (ptr->IsCarousel())
-                {
-                    // Page is also 'carousel'
-                    ptr->SetCarouselFlag(true);
-                    _mag[mag]->GetCarousel()->addPage(ptr);
-                    ptr->StepNextSubpage();
-                }
-                else
-                    ptr->SetCarouselFlag(false);
             }
         }
     }

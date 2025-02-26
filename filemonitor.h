@@ -39,7 +39,7 @@ namespace vbit
             ttx::Configure* _configure; /// Member reference to the configuration settings
             Debug* _debug;
             ttx::PageList* _pageList;
-            int readDirectory(std::string path);
+            int readDirectory(std::string path, bool firstrun=false);
     };
 }
 

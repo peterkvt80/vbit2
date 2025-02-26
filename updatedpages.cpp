@@ -17,6 +17,7 @@ UpdatedPages::~UpdatedPages()
 
 void UpdatedPages::addPage(TTXPageStream* p)
 {
+    p->SetUpdatedFlag(true);
     _UpdatedPagesList.push_front(p);
 }
 

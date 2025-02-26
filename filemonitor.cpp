@@ -50,6 +50,8 @@ void FileMonitor::run()
 {
     std::string path=_configure->GetPageDirectory() ;
     _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Monitoring " + path);
+    
+    readDirectory(path, true);
 
     while (true)
     {
@@ -72,7 +74,7 @@ void FileMonitor::run()
     }
 } // run
 
-int FileMonitor::readDirectory(std::string path)
+int FileMonitor::readDirectory(std::string path, bool firstrun)
 {
     struct dirent *dirp;
     struct stat attrib;
@@ -127,48 +129,8 @@ int FileMonitor::readDirectory(std::string path)
                         q->LoadPage(name); // What if this fails? We can see the bool. What to do ?
                         q->IncrementUpdateCount();
                         q->RenumberSubpages();
-                        int mag=(q->GetPageNumber() >> 16) & 0x7;
                         
-                        if ((!(q->GetSpecialFlag())) && (q->Special()))
-                        {
-                            // page was not 'special' but now is, add to SpecialPages list
-                            q->SetSpecialFlag(true);
-                            _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                            std::stringstream ss;
-                            ss << "[FileMonitor::run] page was normal, is now special " << std::hex << q->GetPageNumber();
-                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                            // page will be removed from NormalPages list by the service thread
-                            // page will be removed from Carousel list by the service thread
-                        }
-                        else if ((q->GetSpecialFlag()) && (!(q->Special())))
-                        {
-                            // page was 'special' but now isn't, add to NormalPages list
-                            _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                            q->SetNormalFlag(true);
-                            std::stringstream ss;
-                            ss << "[FileMonitor::run] page was special, is now normal " << std::hex << q->GetPageNumber();
-                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                        }
-                        
-                        if ((!(q->Special())) && (!(q->GetCarouselFlag())) && q->IsCarousel())
-                        {
-                            // 'normal' page was not 'carousel' but now is, add to Carousel list
-                            q->SetCarouselFlag(true);
-                            q->StepNextSubpage(); // ensure we're pointing at a subpage
-                            _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                            std::stringstream ss;
-                            ss << "[FileMonitor::run] page is now a carousel " << std::hex << q->GetPageNumber();
-                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                        }
-                        
-                        if (q->GetNormalFlag() && !(q->GetSpecialFlag()) && !(q->GetCarouselFlag()) && !(q->GetUpdatedFlag()))
-                        {
-                            // add normal, non carousel pages to updatedPages list
-                            _pageList->GetMagazines()[mag]->GetUpdatedPages()->addPage(q);
-                            q->SetUpdatedFlag(true);
-                        }
-                        
-                        _pageList->CheckForPacket29OrCustomHeader(q);
+                        _pageList->UpdatePageLists(q);
                         
                         q->SetModifiedTime(attrib.st_mtime);
                         // unlock
@@ -178,54 +140,15 @@ int FileMonitor::readDirectory(std::string path)
             }
             else
             {
-                _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Adding a new page " + std::string(dirp->d_name));
+                if (!firstrun){ // suppress logspam on first run
+                    _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Adding a new page " + std::string(dirp->d_name));
+                }
                 // A new file. Create the page object and add it to the page list.
                 
                 if ((q=new TTXPageStream(name)))
                 {
-                    _pageList->AddPage(q);
-                    if((q=_pageList->Locate(name))) // get pointer to copy in list
-                    {
-                        q->RenumberSubpages();
-                        int mag=(q->GetPageNumber() >> 16) & 0x7;
-                        if (q->Special())
-                        {
-                            // Page is 'special'
-                            q->SetCarouselFlag(false);
-                            q->SetSpecialFlag(true);
-                            q->SetNormalFlag(false);
-                            q->SetUpdatedFlag(false);
-                            _pageList->GetMagazines()[mag]->GetSpecialPages()->addPage(q);
-                        }
-                        else
-                        {
-                            // Page is 'normal'
-                            q->SetSpecialFlag(false);
-                            q->SetNormalFlag(true);
-                            _pageList->GetMagazines()[mag]->GetNormalPages()->addPage(q);
-                            
-                            if (q->IsCarousel())
-                            {
-                                // Page is also a 'carousel'
-                                q->SetCarouselFlag(true);
-                                q->StepNextSubpage(); // ensure we're pointing at a subpage
-                                _pageList->GetMagazines()[mag]->GetCarousel()->addPage(q);
-                            }
-                            else
-                            {
-                                q->SetCarouselFlag(false);
-                                // add normal, non carousel pages to updatedPages list
-                                _pageList->GetMagazines()[mag]->GetUpdatedPages()->addPage(q);
-                                q->SetUpdatedFlag(true);
-                            }
-                        }
-                        
-                        _pageList->CheckForPacket29OrCustomHeader(q);
-                    }
-                    else
-                    {
-                        _debug->Log(Debug::LogLevels::logERROR,"[FileMonitor::run] Failed to add" + std::string(dirp->d_name)); // should never happen
-                    }
+                    // don't add to updated pages list if this is the initial load
+                    _pageList->AddPage(q, firstrun);
                 }
                 else
                 {

@@ -28,12 +28,6 @@ namespace ttx
             PageList(Configure *configure, vbit::Debug *debug);
             ~PageList();
 
-            /**
-             * @param filepath Path to pages directory
-             * @param Return 0 if OK or errno
-            */
-            int LoadPageList(std::string filepath);
-
             vbit::PacketMag **GetMagazines(){vbit::PacketMag **p=_mag;return p;};
 
             /** Return the page object that was loaded from <filename>
@@ -53,7 +47,11 @@ namespace ttx
             /** Add a teletext page to the proper magazine
             * @param page TTXPageStream object that has already been loaded
             */
-            void AddPage(TTXPageStream* page);
+            void AddPage(TTXPageStream* page, bool noupdate=false);
+            
+            /** Add a teletext page to the correct list for its type
+            */
+            void UpdatePageLists(TTXPageStream* page, bool noupdate=false);
 
             /** Clear all the exists flags
             */
@@ -96,12 +94,6 @@ namespace ttx
             vbit::Debug* _debug;
             std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
             vbit::PacketMag* _mag[8];
-
-            int ReadDirectory(std::string filepath);
-
-            /** Get pages of each type into their respective lists
-            */
-            void PopulatePageTypeLists();
 
             // iterators through selected pages. (use the same iterator for D command and MD, L etc.)
             uint8_t _iterMag;  /// Magazine number for the iterator

@@ -18,6 +18,7 @@ NormalPages::~NormalPages()
 
 void NormalPages::addPage(TTXPageStream* p)
 {
+    p->SetNormalFlag(true);
     _NormalPagesList.push_front(p);
     _needSorting = true; // set flag to indicate that list should be sorted before next cycle
 }
@@ -65,7 +66,7 @@ loop:
         if (_page->Special())
         {
             std::stringstream ss;
-            ss << "[NormalPages::NextPage] page became Special"  << std::hex << _page->GetPageNumber() << "\n";
+            ss << "[NormalPages::NextPage] page became Special "  << std::hex << (_page->GetPageNumber() >> 8);
             _debug->Log(Debug::LogLevels::logINFO,ss.str());
             _iter = _NormalPagesList.erase(_iter);
             _page->SetNormalFlag(false);
