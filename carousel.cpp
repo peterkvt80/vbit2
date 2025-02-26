@@ -17,6 +17,7 @@ Carousel::~Carousel()
 void Carousel::addPage(TTXPageStream* p)
 {
     // @todo Don't allow duplicate entries
+    p->SetCarouselFlag(true);
     p->SetTransitionTime(p->GetCycleTime());
     _carouselList.push_front(p);
 }
@@ -46,7 +47,7 @@ TTXPageStream* Carousel::nextCarousel()
         else if ((!(p->IsCarousel())) || (p->Special()))
         {
             std::stringstream ss;
-            ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << p->GetPageNumber();
+            ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << (p->GetPageNumber() >> 8);
             _debug->Log(Debug::LogLevels::logINFO,ss.str());
             
             p->SetCarouselFlag(false);

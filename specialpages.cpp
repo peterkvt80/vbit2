@@ -16,6 +16,7 @@ SpecialPages::~SpecialPages()
 
 void SpecialPages::addPage(TTXPageStream* p)
 {
+    p->SetSpecialFlag(true);
     _specialPagesList.push_front(p);
 }
 
@@ -73,7 +74,7 @@ loop:
         else if (!(_page->Special()))
         {
             std::stringstream ss;
-            ss << "[SpecialPages::NextPage()] no longer special " << std::hex << _page->GetPageNumber();
+            ss << "[SpecialPages::NextPage()] no longer special " << std::hex << (_page->GetPageNumber() >> 8);
             _debug->Log(Debug::LogLevels::logINFO,ss.str());
             _iter = _specialPagesList.erase(_iter);
             _page->SetSpecialFlag(false);

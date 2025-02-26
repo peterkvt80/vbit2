@@ -87,8 +87,6 @@ void TTXPage::m_Init()
 
 TTXPage::~TTXPage()
 {
-    static int j=0;
-    j++;
     // This bit causes a lot of grief.
     // Need to be super careful that we don't destroy it. Like if you make a copy then destroy the copy.
     for (int i=0;i<=MAXROW;i++)
