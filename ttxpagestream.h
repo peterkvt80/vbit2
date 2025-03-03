@@ -26,7 +26,8 @@ class TTXPageStream : public TTXPage
           NOTFOUND, // Not found yet
           FOUND,    // Matched on drive
           MARKED,   // To be deleted
-          GONE      // Safe to delete
+          GONE,     // Safe to delete
+          REMOVE    // To be removed from service
         };
 
         /** Default constructor. Don't call this */

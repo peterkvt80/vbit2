@@ -3,7 +3,9 @@
 
 using namespace vbit;
 
-Carousel::Carousel(Debug *debug) :
+Carousel::Carousel(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug) :
+    _mag(mag),
+    _pageSet(pageSet),
     _debug(debug)
 {
     //ctor
@@ -22,11 +24,6 @@ void Carousel::addPage(TTXPageStream* p)
     _carouselList.push_front(p);
 }
 
-void Carousel::deletePage(TTXPageStream* p)
-{
-    _carouselList.remove(p);
-}
-
 TTXPageStream* Carousel::nextCarousel()
 {
     TTXPageStream* p;
@@ -37,13 +34,22 @@ TTXPageStream* Carousel::nextCarousel()
         p=*it;
         if (p->GetLock()) // try to lock this page against changes
         {
-            if (p->GetStatusFlag()==TTXPageStream::MARKED && p->GetCarouselFlag()) // only remove it once
+            if ((p->GetStatusFlag()==TTXPageStream::MARKED || p->GetStatusFlag()==TTXPageStream::REMOVE) && p->GetCarouselFlag()) // only remove it once
             {
                 _debug->Log(Debug::LogLevels::logINFO,"[Carousel::nextCarousel] Deleted " + p->GetFilename());
                 
                 p->SetCarouselFlag(false);
                 if (!(p->GetNormalFlag() || p->GetSpecialFlag() || p->GetUpdatedFlag()))
-                    p->SetState(TTXPageStream::GONE); // if we are last mark it gone
+                {
+                    // we are last
+                    _pageSet->remove(p); // and remove it from the pageSet
+                    _debug->SetMagazineSize(_mag, _pageSet->size());
+                    
+                    if (p->GetStatusFlag()==TTXPageStream::REMOVE)
+                        p->SetState(TTXPageStream::FOUND);
+                    else // MARKED
+                        p->SetState(TTXPageStream::GONE);
+                }
                 _carouselList.erase(it--);
             }
             else if ((!(p->IsCarousel())) || (p->Special()))

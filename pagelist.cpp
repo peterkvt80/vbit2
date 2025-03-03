@@ -32,12 +32,30 @@ PageList::~PageList()
 
 void PageList::AddPage(TTXPageStream* page, bool noupdate)
 {
-    int mag=(page->GetPageNumber() >> 16) & 0x7;
+    int num = page->GetPageNumber() >> 8;
+    int mag = (num >> 8) & 7;
     
-    _pageList[mag].push_back(page);
-    UpdatePageLists(page, noupdate);
+    if ((num & 0xFF) != 0xFF)
+    {
+        // never load page mFF into page lists
+        TTXPageStream* q = Locate(num);
+        if (q)
+        {
+            _pageList[mag].remove(q);
+            q->SetState(TTXPageStream::REMOVE);
+            
+            std::stringstream ss;
+            ss << "[PageList::AddPage] Replacing page " << std::hex << num;
+            _debug->Log(vbit::Debug::LogLevels::logERROR,ss.str());
+        }
+
+        _pageList[mag].push_back(page);
+        UpdatePageLists(page, noupdate);
     
-    _debug->SetMagazineSize(mag, _pageList[mag].size());
+        _debug->SetMagazineSize(mag, _pageList[mag].size());
+    } else {
+        CheckForPacket29OrCustomHeader(page);
+    }
 }
 
 void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
@@ -105,8 +123,6 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
             page->SetCarouselFlag(false);
         }
     }
-    
-    CheckForPacket29OrCustomHeader(page);
 }
 
 void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
@@ -181,21 +197,31 @@ void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
     }
 }
 
-// Find a page by filename
-TTXPageStream* PageList::Locate(std::string filename)
+// Find a page by number - Warning: this will only find the first match so don't let multiples into the list!
+TTXPageStream* PageList::Locate(int PageNumber)
 {
     // This is called from the FileMonitor thread
-    for (int mag=0;mag<8;mag++)
+    int mag = (PageNumber >> 8) & 7;
+    for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
     {
-        //for (auto p : _pageList[mag])
-        for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
-        {
-            TTXPageStream* ptr = *p;
-            if (filename==ptr->GetFilename())
-                return ptr;
-        }
+        TTXPageStream* ptr = *p;
+        if (PageNumber==ptr->GetPageNumber() >> 8)
+            return ptr;
     }
-    return NULL; // @todo placeholder What should we do here?
+    return nullptr;
+}
+
+// Does the page list contain a particular TTXPageStream
+bool PageList::Contains(TTXPageStream* page)
+{
+    // This is called from the FileMonitor thread
+    int mag = (page->GetPageNumber() >> 16) & 7;
+    for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    {
+        if (*p==page)
+            return true;
+    }
+    return false;
 }
 
 int PageList::Match(char* pageNumber)
@@ -367,67 +393,6 @@ TTXPageStream* PageList::NextSelectedPage()
         if (page==nullptr || page->Selected())
         {
             return page;
-        }
-    }
-}
-
-// Detect pages that have been deleted from the drive
-// Do this by first clearing all the "exists" flags
-// As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
-void PageList::ClearFlags()
-{
-    for (int mag=0;mag<8;mag++)
-    {
-        for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
-        {
-            TTXPageStream* ptr = *p;
-            // Don't unmark a file that was MARKED. Once condemned it won't be pardoned
-            if (ptr->GetStatusFlag()==TTXPageStream::FOUND || ptr->GetStatusFlag()==TTXPageStream::NEW)
-            {
-                ptr->SetState(TTXPageStream::NOTFOUND);
-            }
-        }
-    }
-}
-
-void PageList::DeleteOldPages()
-{
-    // This is called from the FileMonitor thread
-    for (int mag=0;mag<8;mag++)
-    {
-        for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
-        {
-            TTXPageStream* ptr = *p;
-            if (ptr->GetStatusFlag()==TTXPageStream::GONE)
-            {
-                if (ptr->GetPacket29Flag())
-                {
-                    // Packet 29 was loaded from this page, so remove it.
-                    _mag[mag]->DeletePacket29();
-                    _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::DeleteOldPages] Removing packet 29 from magazine " + std::to_string((mag == 0)?8:mag));
-                }
-                if (ptr->GetCustomHeaderFlag())
-                {
-                    // Custom header was loaded from this page, so remove it.
-                    _mag[mag]->DeleteCustomHeader();
-                }
-                
-                // page has been removed from lists
-                _pageList[mag].remove(*p--);
-                delete ptr; // this finally deletes the pagestream/page object
-                _debug->SetMagazineSize(mag, _pageList[mag].size());
-
-                if (_iterMag == mag)
-                {
-                    // _iter is iterating _pageList[mag]
-                    _iter=_pageList[_iterMag].begin(); // reset it?
-                }
-            }
-            else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
-            {
-                // Pages marked here get deleted in the Service thread
-                ptr->SetState(TTXPageStream::MARKED);
-            }
         }
     }
 }
