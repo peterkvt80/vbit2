@@ -34,29 +34,37 @@ TTXPageStream* UpdatedPages::NextPage()
         _page = *_iter;
     }
 
-loop:
-    if (_iter == _UpdatedPagesList.end())
+    while(true)
     {
-        _page = nullptr;
-    }
-    
-    if (_page)
-    {
-        /* remove pointers from this list if the pages are marked for deletion */
-        if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetUpdatedFlag()) // only remove it once
+        if (_iter == _UpdatedPagesList.end())
         {
-            _debug->Log(Debug::LogLevels::logINFO,"[UpdatedPages::NextPage] Deleted " + _page->GetSourcePage());
-            _iter = _UpdatedPagesList.erase(_iter);
-            _page->SetUpdatedFlag(false);
-            if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetNormalFlag()))
-                _page->SetState(TTXPageStream::GONE); // if we are last mark it gone.
-            _page = *_iter;
-            goto loop; // jump back to try for the next page
+            _page = nullptr;
+            return _page;
         }
         
-        _iter = _UpdatedPagesList.erase(_iter); // remove page from this list after transmitting it
-        _page->SetUpdatedFlag(false);
+        if (_page)
+        {
+            if (_page->GetLock()) // try to lock this page against changes
+            {
+                /* remove pointers from this list if the pages are marked for deletion */
+                if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetUpdatedFlag()) // only remove it once
+                {
+                    _debug->Log(Debug::LogLevels::logINFO,"[UpdatedPages::NextPage] Deleted " + _page->GetFilename());
+                    _iter = _UpdatedPagesList.erase(_iter);
+                    _page->SetUpdatedFlag(false);
+                    if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetNormalFlag()))
+                        _page->SetState(TTXPageStream::GONE); // if we are last mark it gone.
+                }
+                else
+                {
+                    _iter = _UpdatedPagesList.erase(_iter); // remove page from this list after transmitting it
+                    _page->SetUpdatedFlag(false);
+                    return _page; // return locked page
+                }
+                
+                _page->FreeLock(); // must unlock page again
+                _page = *_iter;
+            }
+        }
     }
-    
-    return _page;
 }

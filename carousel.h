@@ -23,37 +23,6 @@ class Carousel
         /** Default destructor */
         virtual ~Carousel();
 
-        /** Access _pageNumber
-         * \return The current value of _pageNumber
-         */
-        unsigned int Get_pageNumber() { return _pageNumber; }
-        /** Set _pageNumber
-         * \param val New value to set
-         */
-        void Set_pageNumber(unsigned int val) { _pageNumber = val; }
-        /** Access page
-         * \return The current value of page
-         */
-        TTXPageStream* Getpage() { return _page; }
-        /** Set page
-         * \param val New value to set
-         */
-        void Setpage(TTXPageStream* val) { _page = val; }
-        /** Access nextPage
-         * \return The current value of nextPage
-         */
-        time_t GetnextPage() { return _nextPage; }
-        /** Set nextPage
-         * \param val New value to set
-         */
-        void SetnextPage(time_t val) { _nextPage = val; }
-
-        /* List management */
-
-        /** Clear the carousel list
-         */
-        void clear();
-
         /** Add a page to the list
          */
         void addPage(TTXPageStream* p);
@@ -72,12 +41,8 @@ class Carousel
 
     private:
         Debug* _debug;
-        unsigned int _pageNumber; //!< Member variable "_pageNumber"
-        TTXPageStream* _page; //!< Member variable "page"
-        time_t _nextPage; //!< Member variable "nextPage"
 
         std::list<TTXPageStream*> _carouselList; /// The list of carousel pages
-
 };
 
 }

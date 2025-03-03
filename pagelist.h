@@ -92,12 +92,12 @@ namespace ttx
         private:
             Configure* _configure; // The configuration object
             vbit::Debug* _debug;
-            std::list<TTXPageStream> _pageList[8]; /// The list of Pages in this service. One list per magazine
+            std::list<TTXPageStream*> _pageList[8]; /// The list of Pages in this service. One list per magazine
             vbit::PacketMag* _mag[8];
 
             // iterators through selected pages. (use the same iterator for D command and MD, L etc.)
             uint8_t _iterMag;  /// Magazine number for the iterator
-            std::list<TTXPageStream>::iterator _iter;  /// pages in a magazine
+            std::list<TTXPageStream*>::iterator _iter;  /// pages in a magazine
             TTXPageStream* _iterSubpage;    /// Subpages in a carousel
     };
 }

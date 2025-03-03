@@ -5,7 +5,7 @@
 
 using namespace vbit;
 
-PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, Debug *debug, uint8_t priority) :
+PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream*>* pageSet, ttx::Configure *configure, Debug *debug, uint8_t priority) :
     _pageSet(pageSet),
     _configure(configure),
     _debug(debug),
@@ -66,10 +66,12 @@ Packet* PacketMag::GetPacket(Packet* p)
         return nullptr;
     }
 
+loopback: // jump back point to avoid returning null packets when we could send something
     switch (_state)
     {
         case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
         {
+            _waitingForField = true; // enforce 20ms page erasure interval
             if (GetEvent(EVENT_PACKET_29) && _hasPacket29)
             {
                 if (_mtx.try_lock()) // skip if unable to get lock
@@ -103,10 +105,10 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     // got a special page
                     
-                    if (_page->GetPageFunction() == MIP)
+                    if (_page->GetPageFunction() != MIP)
                     {
-                        // Magazine Inventory Page
-                        _waitingForField = 2; // enforce 20ms page erasure interval
+                        // presentation enhancement pages
+                        _waitingForField = false; // don't need a page erasure interval
                     }
                     
                     if (_page->IsCarousel())
@@ -128,7 +130,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     // got to the end of the special pages
                     ClearEvent(EVENT_SPECIAL_PAGES);
-                    return nullptr;
+                    goto loopback;
                 }
             }
             else
@@ -169,7 +171,6 @@ Packet* PacketMag::GetPacket(Packet* p)
                     
                     // couldn't get a page to send so sent a time filling header
                     p->Header(_magNumber,0xFF,0x0000,0x8010,_headerTemplate);
-                    _waitingForField = 2; // enforce 20ms page erasure interval
                     return p;
                 }
                 
@@ -228,11 +229,9 @@ Packet* PacketMag::GetPacket(Packet* p)
             
             if (!(_status & 0x8000))
             {
-                _page=nullptr;
-                return nullptr;
+                _page->FreeLock(); // Must free the lock or we can never use this page again!
+                goto loopback;
             }
-            
-            _waitingForField = 2; // enforce 20ms page erasure interval
             
             // clear a flag we use to prevent duplicated X/28/0 packets
             _hasX28Region = false;
@@ -328,7 +327,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
                 // do X/1 to X/25 first and go back to X/26 after
                 _state=PACKETSTATE_TEXTROW;
-                return nullptr;
+                goto loopback;
             }
             /* fallthrough */
             [[gnu::fallthrough]];
@@ -351,7 +350,8 @@ Packet* PacketMag::GetPacket(Packet* p)
                 // otherwise we end the page here
                 _state=PACKETSTATE_HEADER;
                 _thisRow=0;
-                return nullptr;
+                _page->FreeLock(); // Must free the lock or we can never use this page again!
+                goto loopback;
             }
             /* fallthrough */
             [[gnu::fallthrough]];
@@ -374,6 +374,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                     // if this is a normal page we've finished
                     _state=PACKETSTATE_HEADER;
                     _thisRow=0;
+                    _page->FreeLock(); // Must free the lock or we can never use this page again!
                 }
                 else
                 {
@@ -381,14 +382,14 @@ Packet* PacketMag::GetPacket(Packet* p)
                     _lastTxt=_page->GetTxRow(26);
                     _state=PACKETSTATE_PACKET26;
                 }
-                return nullptr;
+                goto loopback;
             }
             else
             {
             //_outp("J");
-                if (_lastTxt->IsBlank() && (_configure->GetRowAdaptive() || _page->GetPageFunction() != LOP)) // If a row is empty then skip it if row adaptive mode on, or not a level 1 page
+                if (_lastTxt->IsBlank() && (_configure->GetRowAdaptive() || _thisRow == 25 || _page->GetPageFunction() != LOP)) // If a row is empty then skip it if row adaptive mode on, or not a level 1 page
                 {
-                    return nullptr;
+                    goto loopback;
                 }
                 else
                 {
@@ -412,6 +413,7 @@ Packet* PacketMag::GetPacket(Packet* p)
         default:
         {
             _state=PACKETSTATE_HEADER;// For now, do the next page
+            _page->FreeLock(); // Must free the lock or we can never use this page again!
             return nullptr;
         }
     }
@@ -433,15 +435,13 @@ bool PacketMag::IsReady(bool force)
     if (GetEvent(EVENT_FIELD))
     {
         ClearEvent(EVENT_FIELD);
-        if (_waitingForField > 0)
+        if (_waitingForField)
         {
-            // _waitingForField is set to 2 when the last packet was a header but field event is not yet cleared
-            // on the next IsReady we clear the event and decrement it ready to wait for the next field event.
-            _waitingForField--;
+            _waitingForField = false;
         }
     }
     
-    if (_waitingForField == 0)
+    if (!_waitingForField)
     {
         _priorityCount--;
         if (_priorityCount==0 || force || (_updatedPages->waiting())) // force if there are updated pages waiting
