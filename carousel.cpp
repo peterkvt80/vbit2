@@ -18,7 +18,7 @@ void Carousel::addPage(TTXPageStream* p)
 {
     // @todo Don't allow duplicate entries
     p->SetCarouselFlag(true);
-    p->SetTransitionTime(p->GetCycleTime());
+    p->SetTransitionTime(p->GetCycleTime()+1);
     _carouselList.push_front(p);
 }
 
@@ -35,37 +35,41 @@ TTXPageStream* Carousel::nextCarousel()
     for (std::list<TTXPageStream*>::iterator it=_carouselList.begin();it!=_carouselList.end();++it)
     {
         p=*it;
-        if (p->GetStatusFlag()==TTXPageStream::MARKED && p->GetCarouselFlag()) // only remove it once
+        if (p->GetLock()) // try to lock this page against changes
         {
-            _debug->Log(Debug::LogLevels::logINFO,"[Carousel::nextCarousel] Deleted " + p->GetSourcePage());
-            
-            p->SetCarouselFlag(false);
-            if (!(p->GetNormalFlag() || p->GetSpecialFlag() || _page->GetUpdatedFlag()))
-                p->SetState(TTXPageStream::GONE); // if we are last mark it gone
-            _carouselList.erase(it--);
-        }
-        else if ((!(p->IsCarousel())) || (p->Special()))
-        {
-            std::stringstream ss;
-            ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << (p->GetPageNumber() >> 8);
-            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-            
-            p->SetCarouselFlag(false);
-            _carouselList.erase(it--);
-        }
-        else
-        {
-            if (p->Expired())
+            if (p->GetStatusFlag()==TTXPageStream::MARKED && p->GetCarouselFlag()) // only remove it once
             {
-                // We found a carousel that is ready to step
-                if (p->GetCarouselPage()->GetPageStatus() & PAGESTATUS_C9_INTERRUPTED)
+                _debug->Log(Debug::LogLevels::logINFO,"[Carousel::nextCarousel] Deleted " + p->GetFilename());
+                
+                p->SetCarouselFlag(false);
+                if (!(p->GetNormalFlag() || p->GetSpecialFlag() || p->GetUpdatedFlag()))
+                    p->SetState(TTXPageStream::GONE); // if we are last mark it gone
+                _carouselList.erase(it--);
+            }
+            else if ((!(p->IsCarousel())) || (p->Special()))
+            {
+                std::stringstream ss;
+                ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << (p->GetPageNumber() >> 8);
+                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                
+                p->SetCarouselFlag(false);
+                _carouselList.erase(it--);
+            }
+            else
+            {
+                if (p->Expired())
                 {
-                    // carousel should go out now out of sequence
-                    return p;
+                    // We found a carousel that is ready to step
+                    if (p->GetCarouselPage()->GetPageStatus() & PAGESTATUS_C9_INTERRUPTED)
+                    {
+                        // carousel should go out now out of sequence
+                        return p; // return page locked
+                    }
                 }
             }
+            
+            p->FreeLock(); // unlock
         }
-        p=nullptr;
     }
-    return p;
+    return nullptr;
 }

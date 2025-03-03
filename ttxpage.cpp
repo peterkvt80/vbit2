@@ -24,71 +24,31 @@
  *************************************************************************** **/
  #include "ttxpage.h"
 
-
 TTXPage::TTXPage() :
+    m_cycletimeseconds(1), /* default to cycling carousels every page cycle */
     m_PageNumber(FIRSTPAGE),
     m_SubPage(nullptr),
-    m_sourcepage("none"),   //ctor
+    m_filename("none"),
+    m_cycletimetype('C'),
     m_subcode(0),
-    m_Loaded(false),
+    m_pagestatus(0), /* default to not sending page to ignore malformed/blank tti files */
+    m_region(0),
+    m_lastpacket(0),
+    m_pagecoding(CODING_7BIT_TEXT),
+    m_pagefunction(LOP),
     _Selected(false),
     _headerCRC(0),
     _pageCRC(0)
 {
-    m_Init();
-}
-
-/* TODO: move the body of this out into a LoadPage function */
-/** ctor
- *  Load a teletext page from file
- * \param filename : Name of teletext file to load
- * \param shortFilename : Filename without path
- */
-TTXPage::TTXPage(std::string filename) :
-    m_PageNumber(FIRSTPAGE),
-    m_SubPage(nullptr),
-    m_sourcepage(filename),
-    m_subcode(0),
-    m_Loaded(false),
-    _Selected(false),
-    _headerCRC(0),
-    _pageCRC(0)
-{
-    m_Init(); // Careful! We should move inits to the initialisation list and call the default constructor
-
-    if (!m_Loaded)
-        if (m_LoadTTI(filename))
-        {
-            m_Loaded=true;
-        }
-}
-
-void TTXPage::m_Init()
-{
-    m_region=0;
     for (int i=0;i<=MAXROW;i++)
     {
         m_pLine[i]=nullptr;
     }
-    for (int i=0;i<6;i++)
-    {
-        SetFastextLink(i,0x8ff);
-    }
-    // Member variables
-    m_destination="inserter";
-    m_description="Description goes here";
-    m_cycletimeseconds=1; /* default to cycling carousels every page cycle */
-    m_cycletimetype='C';
-    m_pagestatus=0; /* default to not sending page to ignore malformed/blank tti files */
-    m_lastpacket=0;
-    m_pagecoding=CODING_7BIT_TEXT;
-    m_pagefunction=LOP;
 }
 
 TTXPage::~TTXPage()
 {
-    // This bit causes a lot of grief.
-    // Need to be super careful that we don't destroy it. Like if you make a copy then destroy the copy.
+    //std::cerr << "TTXPage dtor\n";
     for (int i=0;i<=MAXROW;i++)
     {
         if (m_pLine[i]!=nullptr)
@@ -105,6 +65,39 @@ TTXPage::~TTXPage()
     }
 }
 
+void TTXPage::m_Init()
+{
+    m_PageNumber = FIRSTPAGE;
+    // deleted old lines and subpages
+    for (int i=0;i<=MAXROW;i++)
+    {
+        if (m_pLine[i]!=nullptr)
+        {
+            delete m_pLine[i];
+        }
+        m_pLine[i]=nullptr;
+    }
+    
+    if (m_SubPage!=nullptr)
+    {
+        delete m_SubPage;
+        m_SubPage=nullptr;
+    }
+    
+    m_region=0;
+    for (int i=0;i<6;i++)
+    {
+        SetFastextLink(i,0x8ff);
+    }
+    // Member variables
+    m_cycletimeseconds=1; /* default to cycling carousels every page cycle */
+    m_cycletimetype='C';
+    m_pagestatus=0; /* default to not sending page to ignore malformed/blank tti files */
+    m_lastpacket=0;
+    m_pagecoding=CODING_7BIT_TEXT;
+    m_pagefunction=LOP;
+}
+
 bool TTXPage::m_LoadTTI(std::string filename)
 {
     const std::string cmd[]={"DS","SP","DE","CT","PN","SC","PS","MS","OL","FL","RD","RE","PF"};
@@ -113,6 +106,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
     int lines=0;
     // Open the file
     std::ifstream filein(filename.c_str());
+    m_filename = filename;
     TTXPage* p=this;
     p->m_Init(); // reset page
     char * ptr;
@@ -131,24 +125,11 @@ bool TTXPage::m_LoadTTI(std::string filename)
                 found=true;
                 switch (i)
                 {
-                    case 0 : // "DS" - Destination inserter name
+                    case 0 : // "DS"
+                    case 1 : // "SP"
+                    case 2 : // "DE"
                     {
-                        // DS,inserter
-                        std::getline(filein, m_destination);
-                        break;
-                    }
-                    case 1 : // "SP" - Source page file name
-                    {
-                        // SP is the path + name of the file from where is was loaded. Used also for Save.
-                        // SP,c:\Minited\inserter\ONAIR\P100.tti
-
-                        std::getline(filein, line);
-                        break;
-                    }
-                    case 2 : // "DE" - Description
-                    {
-                        // DE,Read back page  20/11/07
-                        std::getline(filein, m_description);
+                        std::getline(filein, line); // consume line
                         break;
                     }
                     case 3 : // "CT" - Cycle time (seconds)
@@ -183,7 +164,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
                             subpage=line.substr(3,2);
                             pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),nullptr,10);
                         }
-                        if (p->m_PageNumber!=FIRSTPAGE) // // Subsequent pages need new page instances
+                        if (p->m_PageNumber!=FIRSTPAGE) // Subsequent pages need new page instances
                         {
                             int pagestatus = p->GetPageStatus();
                             TTXPage* newSubPage=new TTXPage();  // Create a new instance for the subpage
@@ -280,6 +261,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
     }
     filein.close(); // Not sure that we need to close it
     p->Setm_SubPage(nullptr);
+    this->RenumberSubpages();
     return (lines>0);
 }
 
@@ -296,9 +278,7 @@ TTXPage::TTXPage(const TTXPage& other)
     for (int i=0;i<6;i++)
         m_fastextlinks[i]=other.m_fastextlinks[i];      // FL
 
-    m_destination=other.m_destination;  // DS
-    m_sourcepage=other.m_sourcepage;   // SP
-    m_description=other.m_description;  // DE
+    m_filename=other.m_filename;
     m_cycletimeseconds=other.m_cycletimeseconds;
     m_cycletimetype=other.m_cycletimetype;
     m_subcode=other.m_subcode;              // SC
@@ -307,19 +287,7 @@ TTXPage::TTXPage(const TTXPage& other)
     m_region=other.m_region;               // RE
     m_pagecoding=other.m_pagecoding;
     m_pagefunction=other.m_pagefunction;
-    m_Loaded=other.m_Loaded;
-
 }
-
-
-/*
-TTXPage& TTXPage::operator=(const TTXPage& rhs)
-{
-    if (this == &rhs) return *this; // handle self assignment
-    //assignment operator
-    return *this;
-}
-*/
 
 TTXPage* TTXPage::GetPage(unsigned int pageNumber)
 {
@@ -337,9 +305,8 @@ TTXLine* TTXPage::GetRow(unsigned int row)
         return nullptr;
     }
     TTXLine* line=m_pLine[row];
-    // Don't create row 0, or enhancement rows as they are special.
     if (line==nullptr && row>0 && row<26)
-        line=m_pLine[row]=new TTXLine("                                        ");
+        line=new TTXLine("                                        "); // return a blank row for X/1-X/25
     return line;
 }
 
@@ -378,7 +345,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
     }
 
     if (m_pLine[rownumber]==nullptr)
-            m_pLine[rownumber]=new TTXLine(line,rownumber<MAXROW); // Didn't exist before
+        m_pLine[rownumber]=new TTXLine(line,true); // Didn't exist before
     else
     {
         if (rownumber<26) // Ordinary line
@@ -468,9 +435,7 @@ void TTXPage::CopyMetaData(TTXPage* page)
     for (int i=0;i<6;i++)
         SetFastextLink(i,page->GetFastextLink(i));
 
-    m_destination=page->m_destination;  // DS
-    SetSourcePage(page->GetSourcePage());// SP
-    m_description=page->m_description;  // DE
+    m_filename = page->GetFilename();
     m_cycletimeseconds=page->m_cycletimeseconds;     // CT
     m_cycletimetype=page->m_cycletimetype;       // CT
     m_subcode=page->m_subcode;              // SC

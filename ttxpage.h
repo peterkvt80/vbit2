@@ -43,9 +43,6 @@ class TTXPage
         /** Default constructor */
         TTXPage();
 
-        /** Construct from a file */
-        TTXPage(std::string filename);
-
         /** Default destructor */
         virtual ~TTXPage();
 
@@ -80,11 +77,6 @@ class TTXPage
          int GetPageStatus() {return m_pagestatus;}
          void SetPageStatus(int ps){m_pagestatus=ps;}
 
-         /** Setter/Getter for m_description
-          */
-         std::string GetDescription() const {return m_description;}
-         void SetDescription(std::string desc){m_description=desc;}
-
          /** Setter/Getter for cycle counter/timer seconds
           */
          int GetCycleTime() {return m_cycletimeseconds;}
@@ -95,13 +87,7 @@ class TTXPage
          char GetCycleTimeMode() {return m_cycletimetype;}
          void SetCycleTimeMode(char mode){m_cycletimetype=mode;}
 
-         /** Setter/Getter for m_sourcepage
-          *  This is the filename that was used to load the page
-          */
-         std::string GetSourcePage() const {return m_sourcepage;}
-         void SetSourcePage(std::string fname){m_sourcepage=fname;}
-
-        void RenumberSubpages();
+         std::string GetFilename() const {return m_filename;}
 
         /** Get a row of text
          * \return The TTXLine object of the required row. Check result for NULL if there isn't an actual row.
@@ -168,8 +154,6 @@ class TTXPage
         
         /** Get the array of 6 fastext links */
         int* GetLinkSet(){return m_fastextlinks;};
-
-        inline bool Loaded() const {return m_Loaded;};
         
         unsigned int GetLastPacket() {return m_lastpacket;};
         
@@ -203,16 +187,14 @@ class TTXPage
         bool m_LoadTTI(std::string filename);
         int m_cycletimeseconds;     // CT
         int m_fastextlinks[6];      // FL
-        int m_PageNumber;           // PN
         
     private:
         // Private variables
         // Private objects
+        int m_PageNumber;           // PN
         TTXPage* m_SubPage;
         TTXLine* m_pLine[MAXROW+1];
-        std::string m_destination;  // DS
-        std::string m_sourcepage;   // SP
-        std::string m_description;  // DE
+        std::string m_filename;
         char m_cycletimetype;       // CT
         unsigned int m_subcode;     // SC
         int m_pagestatus;           // PS
@@ -220,7 +202,6 @@ class TTXPage
         unsigned int m_lastpacket;
         PageCoding m_pagecoding;
         PageFunction m_pagefunction;
-        bool m_Loaded;
         bool _Selected; /// True if this page has been selected.
         bool _fileChanged; // page was reloaded
         
@@ -229,6 +210,7 @@ class TTXPage
         
         // Private functions
         void m_Init();
+        void RenumberSubpages();
         void SetFileChangedFlag(){_fileChanged = true;};
 
 };

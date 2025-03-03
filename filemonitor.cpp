@@ -120,22 +120,21 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
             {
                 if (!(q->GetStatusFlag()==TTXPageStream::MARKED || q->GetStatusFlag()==TTXPageStream::GONE)) // file is not mid-deletion
                 {
+                    q->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
                     if (attrib.st_mtime!=q->GetModifiedTime()) // File exists. Has it changed?
                     {
                         // We just load the new page and update the modified time
-                        // This isn't good enough.
-                        // We need a mutex or semaphore to lock out this page while we do that
-                        // lock
-                        q->LoadPage(name); // What if this fails? We can see the bool. What to do ?
+                        
+                        q->LoadPage(name); // waits for mutex
+                        
                         q->IncrementUpdateCount();
-                        q->RenumberSubpages();
                         
                         _pageList->UpdatePageLists(q);
                         
                         q->SetModifiedTime(attrib.st_mtime);
-                        // unlock
+                        
+                        q->FreeLock(); // must unlock or everything will grind to a halt
                     }
-                    q->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
                 }
             }
             else

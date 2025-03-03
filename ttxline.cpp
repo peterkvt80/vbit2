@@ -42,7 +42,8 @@ TTXLine::TTXLine():m_textline("                                        "),
 
 TTXLine::~TTXLine()
 {
-    if (_nextLine)
+    //std::cerr << "TTXLine dtor\n";
+    if (_nextLine!=nullptr)
         delete _nextLine;
 }
 

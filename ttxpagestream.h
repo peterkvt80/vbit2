@@ -1,6 +1,7 @@
 #ifndef _TTXPAGESTREAM_H_
 #define _TTXPAGESTREAM_H_
 
+#include <mutex>
 #include <sys/stat.h>
 
 #include "ttxpage.h"
@@ -91,6 +92,9 @@ class TTXPageStream : public TTXPage
         void SetModifiedTime(time_t timeVal){_modifiedTime=timeVal;};
 
         bool LoadPage(std::string filename);
+        
+        bool GetLock();
+        void FreeLock();
 
         /**
          * @brief Set the flag used to detect file updates
@@ -145,6 +149,8 @@ class TTXPageStream : public TTXPage
         bool _isUpdated;
 
         int _updateCount; // update counter for special pages.
+        
+        std::mutex* _mtx;
 };
 
 #endif // _TTXPAGESTREAM_H_

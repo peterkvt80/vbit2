@@ -33,12 +33,11 @@ PageList::~PageList()
 void PageList::AddPage(TTXPageStream* page, bool noupdate)
 {
     int mag=(page->GetPageNumber() >> 16) & 0x7;
-    _pageList[mag].push_back(*page);
+    
+    _pageList[mag].push_back(page);
+    UpdatePageLists(page, noupdate);
+    
     _debug->SetMagazineSize(mag, _pageList[mag].size());
-    
-    page->RenumberSubpages();
-    
-    UpdatePageLists(&(_pageList[mag].back()), noupdate);
 }
 
 void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
@@ -52,28 +51,32 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
         {
             if (page->GetNormalFlag())
             {
-                page->SetNormalFlag(false);
-                page->SetCarouselFlag(false);
-                page->SetUpdatedFlag(false);
                 std::stringstream ss;
                 ss << "[PageList::UpdatePageLists] page was normal, is now special " << std::hex << (page->GetPageNumber() >> 8);
                 _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
             }
             _mag[mag]->GetSpecialPages()->addPage(page);
         }
+        
+        page->SetNormalFlag(false);
+        page->SetCarouselFlag(false);
+        page->SetUpdatedFlag(false);
     }
     else
     {
         // Page is 'normal'
-        if (page->GetSpecialFlag())
+        if (!(page->GetNormalFlag()))
         {
-            std::stringstream ss;
-            ss << "[PageList::UpdatePageLists] page was special, is now normal " << std::hex << (page->GetPageNumber() >> 8);
-            _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
+            if (page->GetSpecialFlag())
+            {
+                std::stringstream ss;
+                ss << "[PageList::UpdatePageLists] page was special, is now normal " << std::hex << (page->GetPageNumber() >> 8);
+                _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
+            }
+            
+            _mag[mag]->GetNormalPages()->addPage(page);
         }
-        
         page->SetSpecialFlag(false);
-        _mag[mag]->GetNormalPages()->addPage(page);
         
         if (page->IsCarousel())
         {
@@ -83,14 +86,13 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
                 std::stringstream ss;
                 ss << "[PageList::UpdatePageLists] page is now a carousel " << std::hex << (page->GetPageNumber() >> 8);
                 _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
-                page->SetUpdatedFlag(false);
                 page->StepNextSubpage(); // ensure we're pointing at a subpage
                 _mag[mag]->GetCarousel()->addPage(page);
             }
+            page->SetUpdatedFlag(false);
         }
         else
         {
-            page->SetCarouselFlag(false);
             // add normal, non carousel pages to updatedPages list
             if ((!(page->GetUpdatedFlag())) && !noupdate)
             {
@@ -100,6 +102,7 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
             {
                 page->SetUpdatedFlag(false);
             }
+            page->SetCarouselFlag(false);
         }
     }
     
@@ -185,13 +188,11 @@ TTXPageStream* PageList::Locate(std::string filename)
     for (int mag=0;mag<8;mag++)
     {
         //for (auto p : _pageList[mag])
-        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+        for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
         {
-            TTXPageStream* ptr;
-            ptr=&(*p);
-            //_debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::Locate]scan:" + ptr->GetSourcePage());
-            if (filename==ptr->GetSourcePage())
-            return ptr;
+            TTXPageStream* ptr = *p;
+            if (filename==ptr->GetFilename())
+                return ptr;
         }
     }
     return NULL; // @todo placeholder What should we do here?
@@ -208,13 +209,13 @@ int PageList::Match(char* pageNumber)
     for (int mag=begin;mag<end+1;mag++)
     {
         // For each page
-        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+        for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
         {
             TTXPageStream* ptr;
             char s[6];
             char* ps=s;
             bool match=true;
-            for (ptr=&(*p);ptr!=nullptr;ptr=(TTXPageStream*)ptr->Getm_SubPage()) // For all the subpages in a carousel
+            for (ptr=*p;ptr!=nullptr;ptr=(TTXPageStream*)ptr->Getm_SubPage()) // For all the subpages in a carousel
             {
                 // Convert the page number into a string so we can compare it
                 std::stringstream ss;
@@ -285,7 +286,7 @@ TTXPageStream* PageList::NextPage()
 
     if (more)
     {
-        _iterSubpage=&(*_iter);
+        _iterSubpage=*_iter;
         return _iterSubpage;
     }
     _iterSubpage=nullptr;
@@ -316,7 +317,7 @@ TTXPageStream* PageList::PrevPage()
 
     if (more)
     {
-        return &(*_iter);
+        return *_iter;
     }
     return nullptr; // Returned after the first page is iterated
 }
@@ -326,7 +327,7 @@ TTXPageStream* PageList::FirstPage()
     // Reset the iterators
     _iterMag=0;
     _iter=_pageList[_iterMag].begin();
-    _iterSubpage=&(*_iter);
+    _iterSubpage=*_iter;
     // Iterate through all the pages
     _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::FirstPage] about to find if there is a selected page");
     for (TTXPageStream* p=_iterSubpage; p!=nullptr; p=NextPage())
@@ -347,7 +348,7 @@ TTXPageStream* PageList::LastPage()
     _iterMag=7;
     _iter=_pageList[_iterMag].end();
     // Iterate through all the pages
-    for (TTXPageStream* p=&(*_iter); p!=nullptr; p=PrevPage())
+    for (TTXPageStream* p=*_iter; p!=nullptr; p=PrevPage())
     {
         if (p->Selected()) // If the page is selected, return a pointer to it
         {
@@ -377,10 +378,9 @@ void PageList::ClearFlags()
 {
     for (int mag=0;mag<8;mag++)
     {
-        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+        for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
         {
-            TTXPageStream* ptr;
-            ptr=&(*p);
+            TTXPageStream* ptr = *p;
             // Don't unmark a file that was MARKED. Once condemned it won't be pardoned
             if (ptr->GetStatusFlag()==TTXPageStream::FOUND || ptr->GetStatusFlag()==TTXPageStream::NEW)
             {
@@ -395,10 +395,9 @@ void PageList::DeleteOldPages()
     // This is called from the FileMonitor thread
     for (int mag=0;mag<8;mag++)
     {
-        for (std::list<TTXPageStream>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+        for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
         {
-            TTXPageStream* ptr;
-            ptr=&(*p);
+            TTXPageStream* ptr = *p;
             if (ptr->GetStatusFlag()==TTXPageStream::GONE)
             {
                 if (ptr->GetPacket29Flag())
@@ -414,7 +413,8 @@ void PageList::DeleteOldPages()
                 }
                 
                 // page has been removed from lists
-                _pageList[mag].remove(*p--); // this finally deletes the pagestream/page object
+                _pageList[mag].remove(*p--);
+                delete ptr; // this finally deletes the pagestream/page object
                 _debug->SetMagazineSize(mag, _pageList[mag].size());
 
                 if (_iterMag == mag)
