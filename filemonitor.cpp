@@ -127,21 +127,24 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                         
                         q->LoadPage(name); // waits for mutex
                         q->IncrementUpdateCount();
+                        int status = q->GetPageStatus();
                         if (!(_pageList->Contains(q)))
                         {
                             // this page is not currently in pagelist
-                            _pageList->AddPage(q);
+                            _pageList->AddPage(q, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
                         }
                         else
                         {
-                            _pageList->UpdatePageLists(q);
+                            _pageList->UpdatePageLists(q, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
                         }
+                        q->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an updated page
                         
                         _pageList->CheckForPacket29OrCustomHeader(q);
                         
                         q->SetModifiedTime(attrib.st_mtime);
                         
                         q->FreeLock(); // must unlock or everything will grind to a halt
+                        
                     }
                 }
             }
@@ -155,8 +158,9 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                 if ((q=new TTXPageStream(name)))
                 {
                     // don't add to updated pages list if this is the initial load
-                    //int num = q->GetPageNumber() >> 8;
-                    _pageList->AddPage(q, firstrun);
+                    int status = q->GetPageStatus();
+                    _pageList->AddPage(q, firstrun || !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                    q->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an newly loaded page
                     
                     _FilesList.push_back(q);
                 }
