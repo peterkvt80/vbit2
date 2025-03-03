@@ -2,6 +2,7 @@
 #define _NORMALPAGES_H
 
 #include <list>
+#include <mutex>
 
 #include "debug.h"
 #include "ttxpagestream.h"
@@ -15,7 +16,7 @@ class NormalPages
 {
     public:
         /** Default constructor */
-        NormalPages(Debug *debug);
+        NormalPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug);
         /** Default destructor */
         virtual ~NormalPages();
 
@@ -26,6 +27,8 @@ class NormalPages
     protected:
 
     private:
+        int _mag;
+        std::list<TTXPageStream*>* _pageSet; // the parent pagelist for this magazine
         Debug* _debug;
         std::list<TTXPageStream*> _NormalPagesList;
         std::list<TTXPageStream*>::iterator _iter;

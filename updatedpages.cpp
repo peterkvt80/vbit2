@@ -3,7 +3,9 @@
 
 using namespace vbit;
 
-UpdatedPages::UpdatedPages(Debug *debug) :
+UpdatedPages::UpdatedPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug) :
+    _mag(mag),
+    _pageSet(pageSet),
     _debug(debug)
 {
     _iter=_UpdatedPagesList.begin();
@@ -47,13 +49,22 @@ TTXPageStream* UpdatedPages::NextPage()
             if (_page->GetLock()) // try to lock this page against changes
             {
                 /* remove pointers from this list if the pages are marked for deletion */
-                if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetUpdatedFlag()) // only remove it once
+                if ((_page->GetStatusFlag()==TTXPageStream::MARKED || _page->GetStatusFlag()==TTXPageStream::REMOVE) && _page->GetUpdatedFlag()) // only remove it once
                 {
                     _debug->Log(Debug::LogLevels::logINFO,"[UpdatedPages::NextPage] Deleted " + _page->GetFilename());
                     _iter = _UpdatedPagesList.erase(_iter);
                     _page->SetUpdatedFlag(false);
                     if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetNormalFlag()))
-                        _page->SetState(TTXPageStream::GONE); // if we are last mark it gone.
+                    {
+                        // we are last
+                        _pageSet->remove(_page); // and remove it from the pageSet
+                        _debug->SetMagazineSize(_mag, _pageSet->size());
+                        
+                        if (_page->GetStatusFlag()==TTXPageStream::REMOVE)
+                            _page->SetState(TTXPageStream::FOUND);
+                        else // MARKED
+                            _page->SetState(TTXPageStream::GONE);
+                    }
                 }
                 else
                 {

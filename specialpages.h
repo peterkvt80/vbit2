@@ -15,7 +15,7 @@ class SpecialPages
 {
     public:
         /** Default constructor */
-        SpecialPages(Debug *debug);
+        SpecialPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug);
         /** Default destructor */
         virtual ~SpecialPages();
 
@@ -25,12 +25,11 @@ class SpecialPages
 
         void addPage(TTXPageStream* p);
 
-        void deletePage(TTXPageStream* p);
-
-
     protected:
 
     private:
+        int _mag;
+        std::list<TTXPageStream*>* _pageSet; // the parent pagelist for this magazine
         Debug* _debug;
         std::list<TTXPageStream*> _specialPagesList;
         std::list<TTXPageStream*>::iterator _iter;

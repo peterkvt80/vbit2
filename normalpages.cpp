@@ -3,7 +3,9 @@
 
 using namespace vbit;
 
-NormalPages::NormalPages(Debug *debug) :
+NormalPages::NormalPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug) :
+    _mag(mag),
+    _pageSet(pageSet),
     _debug(debug)
 {
     _iter=_NormalPagesList.begin();
@@ -56,13 +58,22 @@ TTXPageStream* NormalPages::NextPage()
             {
                 /* remove pointers from this list if the pages are marked for deletion */
                 
-                if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetNormalFlag()) // only remove it once
+                if ((_page->GetStatusFlag()==TTXPageStream::MARKED || _page->GetStatusFlag()==TTXPageStream::REMOVE) && _page->GetNormalFlag()) // only remove it once
                 {
-                    _debug->Log(Debug::LogLevels::logINFO,"[NormalPages::NextPage] Deleted " + _page->GetFilename());
+                    _debug->Log(Debug::LogLevels::logINFO,"[NormalPages::NextPage] Removed " + _page->GetFilename());
                     _iter = _NormalPagesList.erase(_iter);
                     _page->SetNormalFlag(false);
                     if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetUpdatedFlag()))
-                        _page->SetState(TTXPageStream::GONE); // if we are last mark it gone
+                    {
+                        // we are last
+                        _pageSet->remove(_page); // and remove it from the pageSet
+                        _debug->SetMagazineSize(_mag, _pageSet->size());
+                        
+                        if (_page->GetStatusFlag()==TTXPageStream::REMOVE)
+                            _page->SetState(TTXPageStream::FOUND);
+                        else // MARKED
+                            _page->SetState(TTXPageStream::GONE);
+                    }
                 } 
                 else if (_page->Special())
                 {

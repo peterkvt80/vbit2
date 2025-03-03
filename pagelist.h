@@ -30,12 +30,11 @@ namespace ttx
 
             vbit::PacketMag **GetMagazines(){vbit::PacketMag **p=_mag;return p;};
 
-            /** Return the page object that was loaded from <filename>
-            * @param filename The filename of the page we are looking for.
+            /** Return the page object with the specified page number
             */
-            TTXPageStream* Locate(std::string filename);
-
-            // Probably want a nextPage function to scan using a wildcard
+            TTXPageStream* Locate(int PageNumber);
+            
+            bool Contains(TTXPageStream* page);
 
             /**
             * \brief Match - Find and mark all pages that match the page identity
@@ -49,16 +48,11 @@ namespace ttx
             */
             void AddPage(TTXPageStream* page, bool noupdate=false);
             
+            void RemovePage(TTXPageStream* page);
+            
             /** Add a teletext page to the correct list for its type
             */
             void UpdatePageLists(TTXPageStream* page, bool noupdate=false);
-
-            /** Clear all the exists flags
-            */
-            void ClearFlags();
-            /** Delete all pages that no longer exist
-            */
-            void DeleteOldPages();
 
 
             /** \brief Iterate through all pages

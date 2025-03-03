@@ -3,7 +3,9 @@
 
 using namespace vbit;
 
-SpecialPages::SpecialPages(Debug *debug) :
+SpecialPages::SpecialPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug) :
+    _mag(mag),
+    _pageSet(pageSet),
     _debug(debug)
 {
     ResetIter();
@@ -18,12 +20,6 @@ void SpecialPages::addPage(TTXPageStream* p)
 {
     p->SetSpecialFlag(true);
     _specialPagesList.push_front(p);
-}
-
-void SpecialPages::deletePage(TTXPageStream* p)
-{
-    _specialPagesList.remove(p);
-    ResetIter();
 }
 
 TTXPageStream* SpecialPages::NextPage()
@@ -65,13 +61,22 @@ TTXPageStream* SpecialPages::NextPage()
                     _page->StepNextSubpageNoLoop(); // ensure we don't point at a null subpage
                 }
                 
-                if (_page->GetStatusFlag()==TTXPageStream::MARKED && _page->GetSpecialFlag()) // only remove it once
+                if ((_page->GetStatusFlag()==TTXPageStream::MARKED || _page->GetStatusFlag()==TTXPageStream::REMOVE) && _page->GetSpecialFlag()) // only remove it once
                 {
                     _debug->Log(Debug::LogLevels::logINFO,"[SpecialPages::NextPage] Deleted " + _page->GetFilename());
                     _iter = _specialPagesList.erase(_iter);
                     _page->SetSpecialFlag(false);
                     if (!(_page->GetNormalFlag() || _page->GetCarouselFlag() || _page->GetUpdatedFlag()))
-                        _page->SetState(TTXPageStream::GONE); // if we are last mark it gone
+                    {
+                        // we are last
+                        _pageSet->remove(_page); // and remove it from the pageSet
+                        _debug->SetMagazineSize(_mag, _pageSet->size());
+                        
+                        if (_page->GetStatusFlag()==TTXPageStream::REMOVE)
+                            _page->SetState(TTXPageStream::FOUND);
+                        else // MARKED
+                            _page->SetState(TTXPageStream::GONE);
+                    }
                 }
                 else if (!(_page->Special()))
                 {

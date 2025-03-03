@@ -15,7 +15,7 @@ class UpdatedPages
 {
     public:
         /** Default constructor */
-        UpdatedPages(Debug *debug);
+        UpdatedPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug);
         /** Default destructor */
         virtual ~UpdatedPages();
 
@@ -28,6 +28,8 @@ class UpdatedPages
     protected:
 
     private:
+        int _mag;
+        std::list<TTXPageStream*>* _pageSet; // the parent pagelist for this magazine
         Debug* _debug;
         std::list<TTXPageStream*> _UpdatedPagesList;
         std::list<TTXPageStream*>::iterator _iter;

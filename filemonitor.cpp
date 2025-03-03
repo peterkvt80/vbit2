@@ -55,12 +55,12 @@ void FileMonitor::run()
 
     while (true)
     {
-        _pageList->ClearFlags(); // Assume that no files exist
+        ClearFlags(); // Assume that no files exist
         
         readDirectory(path);
         
         // Delete pages that no longer exist (this blocks the thread until the pages are removed)
-        _pageList->DeleteOldPages();
+        DeleteOldPages();
 
         // Wait 5 seconds to avoid hogging cpu
         // Sounds like a job for a mutex.
@@ -115,10 +115,10 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
         {
             // Now we want to process changes
             // 1) Is it a new page? Then add it.
-            TTXPageStream* q=_pageList->Locate(name);
+            TTXPageStream* q = Locate(name);
             if (q) // File was found
             {
-                if (!(q->GetStatusFlag()==TTXPageStream::MARKED || q->GetStatusFlag()==TTXPageStream::GONE)) // file is not mid-deletion
+                if (!(q->GetStatusFlag()==TTXPageStream::MARKED || q->GetStatusFlag()==TTXPageStream::REMOVE || q->GetStatusFlag()==TTXPageStream::GONE)) // file is not mid-deletion
                 {
                     q->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
                     if (attrib.st_mtime!=q->GetModifiedTime()) // File exists. Has it changed?
@@ -126,10 +126,18 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                         // We just load the new page and update the modified time
                         
                         q->LoadPage(name); // waits for mutex
-                        
                         q->IncrementUpdateCount();
+                        if (!(_pageList->Contains(q)))
+                        {
+                            // this page is not currently in pagelist
+                            _pageList->AddPage(q);
+                        }
+                        else
+                        {
+                            _pageList->UpdatePageLists(q);
+                        }
                         
-                        _pageList->UpdatePageLists(q);
+                        _pageList->CheckForPacket29OrCustomHeader(q);
                         
                         q->SetModifiedTime(attrib.st_mtime);
                         
@@ -147,7 +155,10 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                 if ((q=new TTXPageStream(name)))
                 {
                     // don't add to updated pages list if this is the initial load
+                    //int num = q->GetPageNumber() >> 8;
                     _pageList->AddPage(q, firstrun);
+                    
+                    _FilesList.push_back(q);
                 }
                 else
                 {
@@ -159,4 +170,85 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
     closedir(dp);
     
     return 0;
+}
+
+
+// Find a page by filename
+TTXPageStream* FileMonitor::Locate(std::string filename)
+{
+    for (std::list<TTXPageStream*>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    {
+        TTXPageStream* ptr = *p;
+        if (filename==ptr->GetFilename())
+            return ptr;
+    }
+    
+    return NULL; // @todo placeholder What should we do here?
+}
+
+// Detect pages that have been deleted from the drive
+// Do this by first clearing all the "exists" flags
+// As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
+void FileMonitor::ClearFlags()
+{
+    for (std::list<TTXPageStream*>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    {
+        TTXPageStream* ptr = *p;
+        // Don't unmark a file that was MARKED. Once condemned it won't be pardoned
+        if (ptr->GetStatusFlag()==TTXPageStream::FOUND || ptr->GetStatusFlag()==TTXPageStream::NEW)
+        {
+            ptr->SetState(TTXPageStream::NOTFOUND);
+        }
+    }
+}
+
+void FileMonitor::DeleteOldPages()
+{
+    for (std::list<TTXPageStream*>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    {
+        TTXPageStream* ptr = *p;
+        if (ptr->GetStatusFlag()==TTXPageStream::GONE)
+        {
+            Delete29AndHeader(ptr);
+            
+            _FilesList.remove(*p--);
+            // page has been removed from lists so safe to delete
+            delete ptr; // this finally deletes the pagestream/page object
+        }
+        else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
+        {
+            if (!(_pageList->Contains(ptr)))
+            {
+                // Page is not in pagelist so won't be seen by service thread
+                // delete it directly
+                _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::DeleteOldPages] Deleted " + ptr->GetFilename());
+                
+                Delete29AndHeader(ptr);
+                _FilesList.remove(*p--);
+                // page has been removed from all lists so safe to delete
+                delete ptr; // this finally deletes the pagestream/page object
+            }
+            else
+            {
+                // Pages marked here get deleted in the Service thread
+                ptr->SetState(TTXPageStream::MARKED);
+            }
+        }
+    }
+}
+
+void FileMonitor::Delete29AndHeader(TTXPageStream* page)
+{
+    int mag=(page->GetPageNumber() >> 16) & 0x7;
+    if (page->GetPacket29Flag())
+    {
+        // Packet 29 was loaded from this page, so remove it.
+        _pageList->GetMagazines()[mag]->DeletePacket29();
+        _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::DeleteOldPages] Removing packet 29 from magazine " + std::to_string((mag == 0)?8:mag));
+    }
+    if (page->GetCustomHeaderFlag())
+    {
+        // Custom header was loaded from this page, so remove it.
+        _pageList->GetMagazines()[mag]->DeleteCustomHeader();
+    }
 }

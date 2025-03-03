@@ -34,10 +34,10 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream*>* pageSet, ttx::Confi
         _packet29[i]=nullptr;
     }
 
-    _carousel=new vbit::Carousel(_debug);
-    _specialPages=new vbit::SpecialPages(_debug);
-    _normalPages=new vbit::NormalPages(_debug);
-    _updatedPages=new vbit::UpdatedPages(_debug);
+    _carousel=new vbit::Carousel(_magNumber, _pageSet, _debug);
+    _specialPages=new vbit::SpecialPages(_magNumber, _pageSet, _debug);
+    _normalPages=new vbit::NormalPages(_magNumber, _pageSet, _debug);
+    _updatedPages=new vbit::UpdatedPages(_magNumber, _pageSet, _debug);
 }
 
 PacketMag::~PacketMag()

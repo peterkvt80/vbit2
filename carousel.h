@@ -19,17 +19,13 @@ class Carousel
 {
     public:
         /** Default constructor */
-        Carousel(Debug *debug);
+        Carousel(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug);
         /** Default destructor */
         virtual ~Carousel();
 
         /** Add a page to the list
          */
         void addPage(TTXPageStream* p);
-
-        /** Add a page to the list
-         */
-        void deletePage(TTXPageStream* p);
 
         /** Find the next carousel page that needs to be transmitted
          *  @return The next carousel if it is time to go or NULL
@@ -40,6 +36,8 @@ class Carousel
     protected:
 
     private:
+        int _mag;
+        std::list<TTXPageStream*>* _pageSet; // the parent pagelist for this magazine
         Debug* _debug;
 
         std::list<TTXPageStream*> _carouselList; /// The list of carousel pages
