@@ -14,7 +14,7 @@ class Packet830 : public PacketSource
 {
   public:
     /** Default constructor */
-    Packet830(ttx::Configure *configure);
+    Packet830(Configure *configure);
     /** Default destructor */
     virtual ~Packet830();
 
@@ -34,7 +34,7 @@ class Packet830 : public PacketSource
   protected:
 
   private:
-    ttx::Configure* _configure;
+    Configure* _configure;
     long calculateMJD(int year, int month, int day);
     
     // TODO: some temporary flags

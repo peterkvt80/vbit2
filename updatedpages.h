@@ -5,6 +5,7 @@
 
 #include "debug.h"
 #include "ttxpagestream.h"
+#include "pagelist.h"
 
 // list of updated pages
 
@@ -15,7 +16,7 @@ class UpdatedPages
 {
     public:
         /** Default constructor */
-        UpdatedPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug);
+        UpdatedPages(int mag, PageList *pageList, Debug *debug);
         /** Default destructor */
         virtual ~UpdatedPages();
 
@@ -29,7 +30,7 @@ class UpdatedPages
 
     private:
         int _mag;
-        std::list<TTXPageStream*>* _pageSet; // the parent pagelist for this magazine
+        PageList* _pageList;
         Debug* _debug;
         std::list<TTXPageStream*> _UpdatedPagesList;
         std::list<TTXPageStream*>::iterator _iter;

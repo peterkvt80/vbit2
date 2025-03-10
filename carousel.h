@@ -5,6 +5,7 @@
 
 #include "debug.h"
 #include "ttxpagestream.h"
+#include "pagelist.h"
 
 /** Carousel maintains a list of carousel pages.
  *  Each list entry is a page number, a page object and a time
@@ -19,7 +20,7 @@ class Carousel
 {
     public:
         /** Default constructor */
-        Carousel(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug);
+        Carousel(int mag, PageList *pageList, Debug *debug);
         /** Default destructor */
         virtual ~Carousel();
 
@@ -37,7 +38,7 @@ class Carousel
 
     private:
         int _mag;
-        std::list<TTXPageStream*>* _pageSet; // the parent pagelist for this magazine
+        PageList* _pageList;
         Debug* _debug;
 
         std::list<TTXPageStream*> _carouselList; /// The list of carousel pages

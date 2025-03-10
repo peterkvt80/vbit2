@@ -25,24 +25,24 @@
 #define DCFULL  0xfe    /* command failed as buffer is full */
 #define DCERR   0xff    /* command failed */
 
-namespace ttx
+namespace vbit
 
 {
     class DatacastServer
     {
         public:
-            DatacastServer(ttx::Configure *configure, vbit::Debug *debug);
+            DatacastServer(Configure *configure, Debug *debug);
             ~DatacastServer();
             
             void run();
             bool GetIsActive(){return _isActive;}; /* is the packet server running? */
             
             
-            vbit::PacketDatacast** GetDatachannels() { vbit::PacketDatacast **channels=_datachannel; return channels; };
+            PacketDatacast** GetDatachannels() { PacketDatacast **channels=_datachannel; return channels; };
             
         private:
-            vbit::Debug* _debug;
-            vbit::PacketDatacast* _datachannel[16]; /* array of datacast sources */
+            Debug* _debug;
+            PacketDatacast* _datachannel[16]; /* array of datacast sources */
             
             static const uint16_t MAXPENDING=5;
             static const uint16_t MAXCLIENTS=5;

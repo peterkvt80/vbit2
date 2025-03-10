@@ -2,9 +2,9 @@
 
 #include "datacastServer.h"
 
-using namespace ttx;
+using namespace vbit;
 
-DatacastServer::DatacastServer(ttx::Configure *configure, vbit::Debug *debug) :
+DatacastServer::DatacastServer(Configure *configure, Debug *debug) :
     _debug(debug),
     _portNumber(configure->GetDatacastServerPort()),
     _isActive(false)
@@ -21,7 +21,7 @@ DatacastServer::DatacastServer(ttx::Configure *configure, vbit::Debug *debug) :
     _datachannel[0]=nullptr; // can't use datachannel 0
     for (int dc=1; dc<16; dc++)
     {
-        _datachannel[dc] = new vbit::PacketDatacast(dc, configure); // create 15 datacast channels
+        _datachannel[dc] = new PacketDatacast(dc, configure); // create 15 datacast channels
     }
 }
 
@@ -56,7 +56,7 @@ void DatacastServer::SocketError(std::string errorMessage)
 
 void DatacastServer::run()
 {
-    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[DatacastServer::run] Datacast server thread started");
+    _debug->Log(Debug::LogLevels::logDEBUG,"[DatacastServer::run] Datacast server thread started");
     
     int newSock;
     int sock;
@@ -171,7 +171,7 @@ void DatacastServer::run()
                     #else
                         close(newSock);
                     #endif
-                    _debug->Log(vbit::Debug::LogLevels::logWARN,"[DatacastServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
+                    _debug->Log(Debug::LogLevels::logWARN,"[DatacastServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
                     break;
                 }
                 
@@ -181,7 +181,7 @@ void DatacastServer::run()
                     /* add to active sockets */
                     _clientSocks[i] = newSock;
                     _clientChannel[i] = -1; // no channel set
-                    _debug->Log(vbit::Debug::LogLevels::logINFO,"[DatacastServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
+                    _debug->Log(Debug::LogLevels::logINFO,"[DatacastServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
                     break;
                 }
             }
@@ -298,7 +298,7 @@ void DatacastServer::run()
                             
                             if (res.size() > 254)
                             {
-                                _debug->Log(vbit::Debug::LogLevels::logERROR,"[DatacastServer::run] Response too long");
+                                _debug->Log(Debug::LogLevels::logERROR,"[DatacastServer::run] Response too long");
                                 res.resize(254); // truncate!
                             }
                             
@@ -315,7 +315,7 @@ void DatacastServer::run()
                     if (n == 0)
                     {
                         /* client disconnected */
-                        _debug->Log(vbit::Debug::LogLevels::logINFO,"[DatacastServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " on socket " + std::to_string(sock));
+                        _debug->Log(Debug::LogLevels::logINFO,"[DatacastServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " on socket " + std::to_string(sock));
                     }
                     else
                     {
@@ -325,7 +325,7 @@ void DatacastServer::run()
                             int e = errno;
                         #endif
                         
-                        _debug->Log(vbit::Debug::LogLevels::logWARN,"[DatacastServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " recv error " + std::to_string(e) + " on socket " + std::to_string(sock));
+                        _debug->Log(Debug::LogLevels::logWARN,"[DatacastServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " recv error " + std::to_string(e) + " on socket " + std::to_string(sock));
                     }
                     
                     /* close the socket when any error occurs */

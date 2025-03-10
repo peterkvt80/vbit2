@@ -205,7 +205,7 @@ int Packet::GetOffsetOfSubstition(std::string string)
 std::array<uint8_t, PACKETSIZE>* Packet::tx()
 {
     // get master clock singleton
-    vbit::MasterClock *mc = mc->Instance();
+    MasterClock *mc = mc->Instance();
     time_t t = mc->GetMasterClock().seconds;
     
     // Get local time
@@ -326,7 +326,7 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     // perform the header template substitutions for page number, date, etc.
     
     // get master clock singleton
-    vbit::MasterClock *mc = mc->Instance();
+    MasterClock *mc = mc->Instance();
     time_t t = mc->GetMasterClock().seconds;
     
     // Get local time

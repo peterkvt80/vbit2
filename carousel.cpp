@@ -3,9 +3,9 @@
 
 using namespace vbit;
 
-Carousel::Carousel(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug) :
+Carousel::Carousel(int mag, PageList *pageList, Debug *debug) :
     _mag(mag),
-    _pageSet(pageSet),
+    _pageList(pageList),
     _debug(debug)
 {
     //ctor
@@ -42,8 +42,7 @@ TTXPageStream* Carousel::nextCarousel()
                 if (!(p->GetNormalFlag() || p->GetSpecialFlag() || p->GetUpdatedFlag()))
                 {
                     // we are last
-                    _pageSet->remove(p); // and remove it from the pageSet
-                    _debug->SetMagazineSize(_mag, _pageSet->size());
+                    _pageList->RemovePage(p); // remove it from the pagelist
                     
                     if (p->GetStatusFlag()==TTXPageStream::REMOVE)
                         p->SetState(TTXPageStream::FOUND);

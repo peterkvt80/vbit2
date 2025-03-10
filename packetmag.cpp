@@ -5,8 +5,8 @@
 
 using namespace vbit;
 
-PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream*>* pageSet, ttx::Configure *configure, Debug *debug, uint8_t priority) :
-    _pageSet(pageSet),
+PacketMag::PacketMag(uint8_t mag, PageList *pageList, Configure *configure, Debug *debug, uint8_t priority) :
+    _pageList(pageList),
     _configure(configure),
     _debug(debug),
     _page(nullptr),
@@ -34,10 +34,10 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream*>* pageSet, ttx::Confi
         _packet29[i]=nullptr;
     }
 
-    _carousel=new vbit::Carousel(_magNumber, _pageSet, _debug);
-    _specialPages=new vbit::SpecialPages(_magNumber, _pageSet, _debug);
-    _normalPages=new vbit::NormalPages(_magNumber, _pageSet, _debug);
-    _updatedPages=new vbit::UpdatedPages(_magNumber, _pageSet, _debug);
+    _carousel=new Carousel(_magNumber, _pageList, _debug);
+    _specialPages=new SpecialPages(_magNumber, _pageList, _debug);
+    _normalPages=new NormalPages(_magNumber, _pageList, _debug);
+    _updatedPages=new UpdatedPages(_magNumber, _pageList, _debug);
 }
 
 PacketMag::~PacketMag()
@@ -56,12 +56,12 @@ Packet* PacketMag::GetPacket(Packet* p)
     int* links=NULL;
     bool updatedFlag=false;
     
-    static vbit::Packet* TempPacket=new vbit::Packet(8,25,"                                        "); // a temporary packet for checksum calculation
+    static Packet* TempPacket=new Packet(8,25,"                                        "); // a temporary packet for checksum calculation
 
     // We should only call GetPacket if IsReady has returned true
 
     // no pages
-    if (_pageSet->size()<1)
+    if (_pageList->GetSize(_magNumber)<1)
     {
         return nullptr;
     }
@@ -451,7 +451,7 @@ bool PacketMag::IsReady(bool force)
         }
     }
     
-    if (_pageSet->size()>0)
+    if (_pageList->GetSize(_magNumber)>0)
     {
         return result;
     }

@@ -9,7 +9,6 @@
 #include "debug.h"
 #include "pagelist.h"
 #include "filemonitor.h"
-#include "command.h"
 #include "packetServer.h"
 #include "datacastServer.h"
 #include "masterClock.h"

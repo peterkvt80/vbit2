@@ -22,7 +22,7 @@
 
 #define CONFIGFILE "vbit.conf" // default config file name
 
-namespace ttx
+namespace vbit
 
 {
 class Configure
@@ -40,7 +40,7 @@ class Configure
         //Configure();
         /** Constructor can take overrides from the command line
          */
-        Configure(vbit::Debug *debug, int argc=0, char** argv=NULL);
+        Configure(Debug *debug, int argc=0, char** argv=NULL);
         ~Configure();
         
         inline std::string GetPageDirectory(){return _pageDir;};
@@ -54,9 +54,6 @@ class Configure
         uint8_t GetInitialMag(){return _initialMag;}
         uint8_t GetInitialPage(){return _initialPage;}
         uint16_t GetInitialSubcode(){return _initialSubcode;}
-        uint8_t GetSubtitleRepeats(){return _subtitleRepeats;}
-        uint16_t GetCommandPort(){return _commandPort;}
-        bool GetCommandPortEnabled(){return _commandPortEnabled;}
         uint16_t GetLinesPerField(){return _linesPerField;}
         uint16_t GetDatacastLines(){return _datacastLines;}
         bool GetReverseFlag(){return _reverseBits;}
@@ -72,15 +69,13 @@ class Configure
         bool GetDatacastServerEnabled(){return _datacastServerPort != 0;}
         
     private:
-        vbit::Debug* _debug;
+        Debug* _debug;
         int DirExists(std::string *path);
         
         int LoadConfigFile(std::string filename);
         
         // template string for generating header packets
         std::string _headerTemplate;
-        
-        uint16_t _commandPort;
         
         bool _rowAdaptive;
         uint16_t _linesPerField;
@@ -99,8 +94,6 @@ class Configure
         
         std::string _configFile; /// Configuration file name --config
         std::string _pageDir; /// Configuration file name --dir
-        uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
-        bool _commandPortEnabled;
         bool _reverseBits;
         
         OutputFormat _OutputFormat;

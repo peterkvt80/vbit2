@@ -2,7 +2,7 @@
 
 using namespace vbit;
 
-PacketDebug::PacketDebug(ttx::Configure* configure, Debug* debug) :
+PacketDebug::PacketDebug(Configure* configure, Debug* debug) :
     _configure(configure),
     _debug(debug),
     _debugPacketCI(0), // continuity counter for debug datacast packets

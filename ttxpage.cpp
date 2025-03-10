@@ -265,39 +265,6 @@ bool TTXPage::m_LoadTTI(std::string filename)
     return (lines>0);
 }
 
-TTXPage::TTXPage(const TTXPage& other)
-{
-    //copy ctor.
-
-    m_PageNumber=other.m_PageNumber;  // PN
-    m_SubPage=other.m_SubPage;
-    for (int i=0;i<=MAXROW;i++)
-    {
-        m_pLine[i]=other.m_pLine[i]; // Is this a deep copy?
-    }
-    for (int i=0;i<6;i++)
-        m_fastextlinks[i]=other.m_fastextlinks[i];      // FL
-
-    m_filename=other.m_filename;
-    m_cycletimeseconds=other.m_cycletimeseconds;
-    m_cycletimetype=other.m_cycletimetype;
-    m_subcode=other.m_subcode;              // SC
-    m_pagestatus=other.m_pagestatus;           // PS
-    m_lastpacket=other.m_lastpacket;
-    m_region=other.m_region;               // RE
-    m_pagecoding=other.m_pagecoding;
-    m_pagefunction=other.m_pagefunction;
-}
-
-TTXPage* TTXPage::GetPage(unsigned int pageNumber)
-{
-    TTXPage* p=this;
-    for (;pageNumber>0 && p->m_SubPage!=nullptr;p=p->m_SubPage, pageNumber--);
-    // Iterate down the page list to find the required page object
-    return p;
-}
-
-
 TTXLine* TTXPage::GetRow(unsigned int row)
 {
     if (row>MAXROW)
@@ -306,7 +273,10 @@ TTXLine* TTXPage::GetRow(unsigned int row)
     }
     TTXLine* line=m_pLine[row];
     if (line==nullptr && row>0 && row<26)
+    {
         line=new TTXLine("                                        "); // return a blank row for X/1-X/25
+        m_pLine[row] = line; // remember it for next time and so it can be destroyed!
+    }
     return line;
 }
 
@@ -429,35 +399,6 @@ void TTXPage::RenumberSubpages()
     }
 }
 
-void TTXPage::CopyMetaData(TTXPage* page)
-{
-    m_PageNumber=page->m_PageNumber;
-    for (int i=0;i<6;i++)
-        SetFastextLink(i,page->GetFastextLink(i));
-
-    m_filename = page->GetFilename();
-    m_cycletimeseconds=page->m_cycletimeseconds;     // CT
-    m_cycletimetype=page->m_cycletimetype;       // CT
-    m_subcode=page->m_subcode;              // SC
-    m_pagestatus=page->m_pagestatus;           // PS
-    m_lastpacket=page->m_lastpacket;
-    m_region=page->m_region;            // RE
-}
-
-void TTXPage::SetLanguage(int language)
-{
-    language=language & 0x07;   // Limit language 0..7
-    m_pagestatus=m_pagestatus & ~0x0380; // Clear the old language bits
-    m_pagestatus=m_pagestatus | (language << 7);   // Shift the language bits into the right place and OR them in
-}
-
-int TTXPage::GetLanguage()
-{
-    int language;
-    language=(m_pagestatus >> 7) & 0x07;
-    return language;
-}
-
 void TTXPage::SetPageNumber(int page)
 {
     if ((page<0x10000) || (page>0x8ff99))
@@ -465,13 +406,6 @@ void TTXPage::SetPageNumber(int page)
         page = 0x8FF00;
     }
     m_PageNumber=page;
-}
-
-int TTXPage::GetFastextLink(int link)
-{
-    if (link<0 || link>5)
-        return 0;
-    return m_fastextlinks[link];
 }
 
 void TTXPage::SetFastextLink(int link, int value)
@@ -482,36 +416,6 @@ void TTXPage::SetFastextLink(int link, int value)
         return;
     }
     m_fastextlinks[link]=value;
-}
-
-/** This is similar to the copy constructor
- * @todo This would be a better version to make into a copy constructor?
- */
-void TTXPage::Copy(TTXPage* src)
-{
-    // Deep copy the rows.
-    for (int i=0;i<=MAXROW;i++)
-    {
-        // Make sure that we have line object and that it does not get destroyed
-
-        if (this->m_pLine[i]==nullptr)
-        {
-            this->m_pLine[i]=new TTXLine();
-        }
-
-        // If null then blank the line
-        if (src->m_pLine[i]==nullptr)
-        {
-            this->SetRow(i,"                                        "); // Just blank lines rather than destroy them
-        }
-        else
-        {
-            *(this->m_pLine[i])=*(src->m_pLine[i]);
-        }
-    }
-    this->m_SubPage=nullptr;  // (Might want to copy carousels but this is only used for subtitles so far)
-    // Copy everything else
-    this->CopyMetaData(src);
 }
 
 void TTXPage::SetPageFunctionInt(int pageFunction)

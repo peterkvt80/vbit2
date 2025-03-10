@@ -9,6 +9,7 @@
 #include "normalpages.h"
 #include "updatedpages.h"
 #include "configure.h"
+#include "pagelist.h"
 #include "debug.h"
 #include "masterClock.h"
 
@@ -20,14 +21,9 @@ namespace vbit
     {
         public:
             /** Default constructor */
-            PacketMag(uint8_t mag, std::list<TTXPageStream*>* pageSet, ttx::Configure *configure, Debug *debug, uint8_t priority);
+            PacketMag(uint8_t mag, PageList *pageList, Configure *configure, Debug *debug, uint8_t priority);
             /** Default destructor */
             virtual ~PacketMag();
-
-            /** Access _pageSet
-            * \return The current value of _pageSet
-            */
-            std::list<TTXPageStream*>*  Get_pageSet() { return _pageSet; }
 
             Carousel* GetCarousel() { return _carousel; }
             SpecialPages* GetSpecialPages() { return _specialPages; }
@@ -59,8 +55,8 @@ namespace vbit
         private:
             enum PacketState {PACKETSTATE_HEADER, PACKETSTATE_FASTEXT, PACKETSTATE_PACKET26, PACKETSTATE_PACKET27, PACKETSTATE_PACKET28, PACKETSTATE_TEXTROW};
             
-            std::list<TTXPageStream*>*  _pageSet;
-            ttx::Configure* _configure;
+            PageList* _pageList;
+            Configure* _configure;
             Debug* _debug;
             TTXPageStream* _page; //!< The current page being output
             TTXPage* _subpage; // pointer to the actual subpage

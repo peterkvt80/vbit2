@@ -46,11 +46,6 @@ class TTXPage
         /** Default destructor */
         virtual ~TTXPage();
 
-        /** Copy constructor
-         *  \param other Object to copy from
-         */
-        TTXPage(const TTXPage& other);
-
         /** Access m_SubPage which is the next page in a carousel
          * \return The current value of m_SubPage
          */
@@ -60,12 +55,6 @@ class TTXPage
          * \param val New value to set
          */
         void Setm_SubPage(TTXPage* val) { m_SubPage = val; }
-
-        /** Get the page
-         *  Warning! This is not the teletext page number. It is just an index to the pages in this list.
-         * \return Pointer to the page object that we want
-         */
-         TTXPage* GetPage(unsigned int pageNumber);
 
          /** Setter/Getter for m_pageNumber
           */
@@ -109,25 +98,6 @@ class TTXPage
          */
          unsigned int GetSubCode() {return m_subcode;}
 
-        /** Copy the metadata from page to here.
-         *  Metadata is everything except the actual text lines and the SubPage link.
-         * \param page : A TTXPage object to copy from
-         * \return
-         */
-        void CopyMetaData(TTXPage* page);
-
-        /** Set the language.
-         * 0=Engliah, 1=German, 2=Swedish, 3=Italian, 4=French, 5=Spanish, 6=Czech
-         * \param language A language number 0..6 for western europe.
-         * \return Nothing.
-         */
-        void SetLanguage(int language);
-
-        /** Get the language.
-         * \return language 0..6.
-         */
-        int GetLanguage();
-
         /** Set the region.
          * A region is just one of the 16 sets of character sets.
          * \param region : A hex value 0..f
@@ -139,12 +109,6 @@ class TTXPage
          * \return region 0..f.
          */
         int GetRegion(){return m_region;}
-
-        /** Get a Fastext link
-         * \param link 0..5 where 0..3 are the main links, 5 is index and 4, nobody knows why
-         * \return A link number (in hex base)
-         */
-        int GetFastextLink(int link);
 
         /** Set a Fastext link
          * \param link 0..5 where 0..3 are the main links, 5 is index and 4, nobody knows why
@@ -167,11 +131,6 @@ class TTXPage
         void SetPageCodingInt(int pageCoding){m_pagecoding = ReturnPageCoding(pageCoding);};
 
         bool Special() {return (m_pagefunction == GPOP || m_pagefunction == POP || m_pagefunction == GDRCS || m_pagefunction == DRCS || m_pagefunction == MOT || m_pagefunction == MIP);} // more convenient way to tell if a page is 'special'.
-
-        /** @todo migrate this deep copy into the standard copy constructor
-         * Warning. Only deep copies the top page. Not for carousels (yet)
-         */
-        void Copy(TTXPage* src);
         
         bool HasFileChanged(){bool t = _fileChanged; _fileChanged = false; return t; }; // clears the flag for this subpage
 

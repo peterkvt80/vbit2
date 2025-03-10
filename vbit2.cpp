@@ -36,7 +36,6 @@
 #include "vbit2.h"
 
 using namespace vbit;
-using namespace ttx;
 
 MasterClock *MasterClock::instance = 0; // initialise MasterClock singleton
 
@@ -70,13 +69,6 @@ int main(int argc, char** argv)
 
     std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, debug, pageList));
     std::thread serviceThread(&Service::run, svc);
-
-    if (configure->GetCommandPortEnabled())
-    {
-        // only start command thread if required
-        std::thread commandThread(&Command::run, Command(configure, debug, svc->GetSubtitle(), pageList) );
-        commandThread.detach();
-    }
 
     if (configure->GetPacketServerEnabled())
     {

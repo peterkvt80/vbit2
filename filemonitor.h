@@ -10,6 +10,7 @@
 
 #include "configure.h"
 #include "pagelist.h"
+#include "packetmag.h"
 
 /**
  * @brief Watches for changes to teletext page files and updates the page list as needed
@@ -23,7 +24,7 @@ namespace vbit
         public:
             /** Default constructor */
             FileMonitor();
-            FileMonitor(ttx::Configure *configure, Debug *debug, ttx::PageList *pageList);
+            FileMonitor(Configure *configure, Debug *debug, PageList *pageList);
             /** Default destructor */
             virtual ~FileMonitor();
 
@@ -36,9 +37,9 @@ namespace vbit
         protected:
 
         private:
-            ttx::Configure* _configure; /// Member reference to the configuration settings
+            Configure* _configure; /// Member reference to the configuration settings
             Debug* _debug;
-            ttx::PageList* _pageList;
+            PageList* _pageList;
             std::list<TTXPageStream*> _FilesList;
             int readDirectory(std::string path, bool firstrun=false);
             

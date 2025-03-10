@@ -99,14 +99,6 @@ bool TTXLine::IsBlank()
     return true; // Yes, the line is blank
 }
 
-char TTXLine::SetCharAt(int x,int code)
-{
-    char c=m_textline[x];
-    code=code & 0x7f;
-    m_textline[x]=code;
-    return c;
-}
-
 char TTXLine::GetCharAt(int xLoc)
 {
     if (m_textline.length()<(uint16_t)xLoc)

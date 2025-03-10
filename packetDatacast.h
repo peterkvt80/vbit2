@@ -9,7 +9,7 @@ namespace vbit
     class PacketDatacast : public PacketSource
     {
         public:
-            PacketDatacast(uint8_t datachannel, ttx::Configure* configure);
+            PacketDatacast(uint8_t datachannel, Configure* configure);
             virtual ~PacketDatacast();
             
             Packet* GetPacket(Packet* p) override;

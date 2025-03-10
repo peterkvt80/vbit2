@@ -1,14 +1,13 @@
 /** PageList
  */
 #include "pagelist.h"
+#include "packetmag.h"
 
-using namespace ttx;
+using namespace vbit;
 
-PageList::PageList(Configure *configure, vbit::Debug *debug) :
+PageList::PageList(Configure *configure, Debug *debug) :
     _configure(configure),
-    _debug(debug),
-    _iterMag(0),
-    _iterSubpage(nullptr)
+    _debug(debug)
 {
     for (int i=0;i<8;i++)
     {
@@ -16,13 +15,13 @@ PageList::PageList(Configure *configure, vbit::Debug *debug) :
     }
     if (_configure==nullptr)
     {
-        _debug->Log(vbit::Debug::LogLevels::logERROR,"NULL configuration object");
+        _debug->Log(Debug::LogLevels::logERROR,"NULL configuration object");
         return;
     }
     
     for (int i=0;i<8;i++)
     {
-        _mag[i]=new vbit::PacketMag(i, &_pageList[i], _configure, _debug, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
+        _mag[i]=new PacketMag(i, this, _configure, _debug, 9); // this creates the eight PacketMags that Service will use. Priority will be set in Service later
     }
 }
 
@@ -46,7 +45,7 @@ void PageList::AddPage(TTXPageStream* page, bool noupdate)
             
             std::stringstream ss;
             ss << "[PageList::AddPage] Replacing page " << std::hex << num;
-            _debug->Log(vbit::Debug::LogLevels::logERROR,ss.str());
+            _debug->Log(Debug::LogLevels::logERROR,ss.str());
         }
 
         _pageList[mag].push_back(page);
@@ -71,7 +70,7 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
             {
                 std::stringstream ss;
                 ss << "[PageList::UpdatePageLists] page was normal, is now special " << std::hex << (page->GetPageNumber() >> 8);
-                _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
+                _debug->Log(Debug::LogLevels::logINFO,ss.str());
             }
             _mag[mag]->GetSpecialPages()->addPage(page);
         }
@@ -89,7 +88,7 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
             {
                 std::stringstream ss;
                 ss << "[PageList::UpdatePageLists] page was special, is now normal " << std::hex << (page->GetPageNumber() >> 8);
-                _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
+                _debug->Log(Debug::LogLevels::logINFO,ss.str());
             }
             
             _mag[mag]->GetNormalPages()->addPage(page);
@@ -103,7 +102,7 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
             {
                 std::stringstream ss;
                 ss << "[PageList::UpdatePageLists] page is now a carousel " << std::hex << (page->GetPageNumber() >> 8);
-                _debug->Log(vbit::Debug::LogLevels::logINFO,ss.str());
+                _debug->Log(Debug::LogLevels::logINFO,ss.str());
                 page->StepNextSubpage(); // ensure we're pointing at a subpage
                 _mag[mag]->GetCarousel()->addPage(page);
             }
@@ -125,6 +124,13 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
     }
 }
 
+void PageList::RemovePage(TTXPageStream* page)
+{
+    int mag=(page->GetPageNumber() >> 16) & 0x7;
+    _pageList[mag].remove(page);
+    _debug->SetMagazineSize(mag, _pageList[mag].size());
+}
+
 void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
 {
     if (page->IsCarousel()) // page mFF should never be a carousel and this code leads to a crash if it is so bail out now
@@ -140,7 +146,7 @@ void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
                 _mag[mag]->SetCustomHeader(page->GetTxRow(0)->GetLine().substr(8,32)); // set custom headers
                 
                 if (!page->GetCustomHeaderFlag())
-                    _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::CheckForPacket29OrCustomHeader] Added custom header for magazine " + std::to_string((mag == 0)?8:mag));
+                    _debug->Log(Debug::LogLevels::logINFO,"[PageList::CheckForPacket29OrCustomHeader] Added custom header for magazine " + std::to_string((mag == 0)?8:mag));
                 page->SetCustomHeaderFlag(true); // mark the page
             }
             else if (page->GetCustomHeaderFlag()) // page previously had custom header
@@ -188,7 +194,7 @@ void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
                 // loop until every row 29 is copied
             }
             if (Packet29Flag && !page->GetPacket29Flag())
-                _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::CheckForPacket29OrCustomHeader] Added packet 29 for magazine "+ std::to_string((mag == 0)?8:mag));
+                _debug->Log(Debug::LogLevels::logINFO,"[PageList::CheckForPacket29OrCustomHeader] Added packet 29 for magazine "+ std::to_string((mag == 0)?8:mag));
             
             page->SetPacket29Flag(Packet29Flag); // mark the page
             
@@ -224,175 +230,10 @@ bool PageList::Contains(TTXPageStream* page)
     return false;
 }
 
-int PageList::Match(char* pageNumber)
+int PageList::GetSize(int mag)
 {
-    int matchCount=0;
-
-    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::Match] Selecting " + std::string(pageNumber));
-    int begin=0;
-    int end=7;
-
-    for (int mag=begin;mag<end+1;mag++)
-    {
-        // For each page
-        for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
-        {
-            TTXPageStream* ptr;
-            char s[6];
-            char* ps=s;
-            bool match=true;
-            for (ptr=*p;ptr!=nullptr;ptr=(TTXPageStream*)ptr->Getm_SubPage()) // For all the subpages in a carousel
-            {
-                // Convert the page number into a string so we can compare it
-                std::stringstream ss;
-                ss << std::hex << std::uppercase << std::setw(5) << ptr->GetPageNumber();
-                strcpy(ps,ss.str().c_str());
-                //_debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::Match] matching " + std::string(ps));
-
-                for (int i=0;i<5;i++)
-                {
-                    if (pageNumber[i]!='*') // wildcard
-                    {
-                        if (pageNumber[i]!=ps[i])
-                        {
-                            match=false;
-                        }
-                    }
-                }
-                
-                if (match)
-                {
-                    matchCount++;
-                }
-                
-                ptr->SetSelected(match);
-            }
-        }
-    }
-    // Set up the iterator for commands that use pages selected by the Page Identity
-    _iterMag=0;
-    _iter=_pageList[_iterMag].begin();
-    
-    return matchCount; // final count
-}
-
-TTXPageStream* PageList::NextPage()
-{
-    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::NextPage] looking for a selected page, mag=" + std::to_string((int)_iterMag));
-    bool more=true;
-    if (_iterSubpage!=nullptr)
-    {
-        _debug->Log(vbit::Debug::LogLevels::logDEBUG,"A");
-        _iterSubpage=(TTXPageStream*) _iterSubpage->Getm_SubPage();
-        _debug->Log(vbit::Debug::LogLevels::logDEBUG,"B");
-    }
-    if (_iterSubpage!=nullptr)
-    {
-        _debug->Log(vbit::Debug::LogLevels::logDEBUG,"C");
-        return _iterSubpage;
-    }
-    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::NextPage] _iterSubpage is null, so checking next page");
-
-    if (_iter!=_pageList[_iterMag].end())
-    {
-        ++_iter; // Next page
-    }
-    if (_iter==_pageList[_iterMag].end()) // end of mag?
-    {
-        if (_iterMag<7)
-        {
-            _iterMag++; // next mag
-            _iter=_pageList[_iterMag].begin();
-        }
-        else
-        {
-            more=false; // End of last mag
-        }
-    }
-
-    if (more)
-    {
-        _iterSubpage=*_iter;
-        return _iterSubpage;
-    }
-    _iterSubpage=nullptr;
-    return nullptr; // Returned after the last page is iterated
-}
-
-TTXPageStream* PageList::PrevPage()
-{
-    //_debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::NextPage] looking for a selected page, mag=" + std::to_string((int)_iterMag));
-    bool more=true;
-    if (_iter!=_pageList[_iterMag].begin())
-    {
-        --_iter; // Previous page
-    }
-
-    if (_iter==_pageList[_iterMag].begin()) // beginning of mag?
-    {
-        if (_iterMag>0)
-        {
-            _iterMag--; // previous mag
-            _iter=_pageList[_iterMag].end();
-        }
-        else
-        {
-            more=false;
-        }
-    }
-
-    if (more)
-    {
-        return *_iter;
-    }
-    return nullptr; // Returned after the first page is iterated
-}
-
-TTXPageStream* PageList::FirstPage()
-{
-    // Reset the iterators
-    _iterMag=0;
-    _iter=_pageList[_iterMag].begin();
-    _iterSubpage=*_iter;
-    // Iterate through all the pages
-    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::FirstPage] about to find if there is a selected page");
-    for (TTXPageStream* p=_iterSubpage; p!=nullptr; p=NextPage())
-    {
-        if (p->Selected()) // If the page is selected, return a pointer to it
-        {
-            _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::FirstPage] selected page found");
-            return p;
-        }
-    }
-    _debug->Log(vbit::Debug::LogLevels::logDEBUG,"[PageList::FirstPage] no selected page");
-    return nullptr; // No selected page
-}
-
-TTXPageStream* PageList::LastPage()
-{
-    // Reset the iterators
-    _iterMag=7;
-    _iter=_pageList[_iterMag].end();
-    // Iterate through all the pages
-    for (TTXPageStream* p=*_iter; p!=nullptr; p=PrevPage())
-    {
-        if (p->Selected()) // If the page is selected, return a pointer to it
-        {
-            return p;
-        }
-    }
-    return nullptr; // No selected page
-}
-
-TTXPageStream* PageList::NextSelectedPage()
-{
-    TTXPageStream* page;
-    for(;;)
-    {
-        page=NextPage();
-        if (page==nullptr || page->Selected())
-        {
-            return page;
-        }
-    }
+    if (mag < 8 && mag >= 0)
+        return _pageList[mag].size();
+    else
+        return 0;
 }

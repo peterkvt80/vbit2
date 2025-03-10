@@ -3,9 +3,9 @@
 
 using namespace vbit;
 
-SpecialPages::SpecialPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug) :
+SpecialPages::SpecialPages(int mag, PageList *pageList, Debug *debug) :
     _mag(mag),
-    _pageSet(pageSet),
+    _pageList(pageList),
     _debug(debug)
 {
     ResetIter();
@@ -69,8 +69,7 @@ TTXPageStream* SpecialPages::NextPage()
                     if (!(_page->GetNormalFlag() || _page->GetCarouselFlag() || _page->GetUpdatedFlag()))
                     {
                         // we are last
-                        _pageSet->remove(_page); // and remove it from the pageSet
-                        _debug->SetMagazineSize(_mag, _pageSet->size());
+                        _pageList->RemovePage(_page); // remove it from the pagelist
                         
                         if (_page->GetStatusFlag()==TTXPageStream::REMOVE)
                             _page->SetState(TTXPageStream::FOUND);

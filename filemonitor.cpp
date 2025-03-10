@@ -25,7 +25,6 @@
 #include "filemonitor.h"
 
 using namespace vbit;
-using namespace ttx;
 
 FileMonitor::FileMonitor(Configure *configure, Debug *debug, PageList *pageList) :
     _configure(configure),
@@ -248,7 +247,7 @@ void FileMonitor::Delete29AndHeader(TTXPageStream* page)
     {
         // Packet 29 was loaded from this page, so remove it.
         _pageList->GetMagazines()[mag]->DeletePacket29();
-        _debug->Log(vbit::Debug::LogLevels::logINFO,"[PageList::DeleteOldPages] Removing packet 29 from magazine " + std::to_string((mag == 0)?8:mag));
+        _debug->Log(Debug::LogLevels::logINFO,"[PageList::DeleteOldPages] Removing packet 29 from magazine " + std::to_string((mag == 0)?8:mag));
     }
     if (page->GetCustomHeaderFlag())
     {

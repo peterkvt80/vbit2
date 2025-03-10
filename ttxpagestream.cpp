@@ -1,5 +1,7 @@
 #include "ttxpagestream.h"
 
+using namespace vbit;
+
 TTXPageStream::TTXPageStream() :
     _transitionTime(0),
     _CarouselPage(nullptr),
@@ -121,7 +123,7 @@ void TTXPageStream::SetTransitionTime(int cycleTime)
 {
     if (GetCycleTimeMode() == 'T')
     {
-        vbit::MasterClock *mc = mc->Instance();
+        MasterClock *mc = mc->Instance();
         _transitionTime = mc->GetMasterClock().seconds + cycleTime;
     }
     else
@@ -135,7 +137,7 @@ bool TTXPageStream::Expired(bool StepCycles)
     // Has carousel timer expired
     if (GetCycleTimeMode() == 'T')
     {
-        vbit::MasterClock *mc = mc->Instance();
+        MasterClock *mc = mc->Instance();
         return _transitionTime <= mc->GetMasterClock().seconds;
     }
     else

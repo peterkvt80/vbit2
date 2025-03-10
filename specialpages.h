@@ -5,6 +5,7 @@
 
 #include "debug.h"
 #include "ttxpagestream.h"
+#include "pagelist.h"
 
 // list of special pages
 
@@ -15,7 +16,7 @@ class SpecialPages
 {
     public:
         /** Default constructor */
-        SpecialPages(int mag, std::list<TTXPageStream*>* pageSet, Debug *debug);
+        SpecialPages(int mag, PageList *pageList, Debug *debug);
         /** Default destructor */
         virtual ~SpecialPages();
 
@@ -29,7 +30,7 @@ class SpecialPages
 
     private:
         int _mag;
-        std::list<TTXPageStream*>* _pageSet; // the parent pagelist for this magazine
+        PageList* _pageList;
         Debug* _debug;
         std::list<TTXPageStream*> _specialPagesList;
         std::list<TTXPageStream*>::iterator _iter;

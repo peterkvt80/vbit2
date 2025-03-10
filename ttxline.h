@@ -37,14 +37,6 @@ class TTXLine
          */
         bool IsBlank();
 
-        /** Place a character in a line. Must be an actual teletext code.
-         *  Bit 7 will be stripped off.
-         * @param x - Address of the character
-         & @param code - The character to set
-         * \return previous character at that location (for undo)
-         */
-        char SetCharAt(int x,int code);
-
         /** Get one character from this line.
          *  If there is no data set then return a space
          */
