@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <thread>
+#include <clocale>
 #include "service.h"
 #include "configure.h"
 #include "debug.h"

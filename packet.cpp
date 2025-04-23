@@ -212,7 +212,7 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx()
     struct tm * timeinfo;
     timeinfo=localtime(&t);
     
-    char tmpstr[] = "                    ";
+    char tmpstr[21];
     int off;
     
     if (_isHeader)
@@ -270,8 +270,8 @@ std::array<uint8_t, PACKETSIZE>* Packet::tx()
         off = Packet::GetOffsetOfSubstition("%%%%%%%%%%%%timedate");
         if (off > -1)
         {
-            strftime(tmpstr, 21, "\x02%a %d %b\x03%H:%M/%S", timeinfo);
-            std::copy_n(tmpstr,20,_packet.begin() + off);
+            int num = strftime(tmpstr, 21, "\x02%a %d %b\x03%H:%M/%S", timeinfo);
+            std::copy_n(tmpstr,num,_packet.begin() + off);
         }
         
         Parity(5); // redo the parity because substitutions will need processing
@@ -333,7 +333,7 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     struct tm * timeinfo;
     timeinfo=localtime(&t);
     
-    char tmpstr[] = "   ";
+    char tmpstr[4];
     int off;
     
     // mpp page number - %%#
@@ -357,27 +357,31 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     off = Packet::GetOffsetOfSubstition("%%a");
     if (off > -1)
     {
-        strftime(tmpstr,10,"%a",timeinfo);
-        _packet[off]=tmpstr[0];
-        _packet[off+1]=tmpstr[1];
-        _packet[off+2]=tmpstr[2];
+        int num = strftime(tmpstr,4,"%a",timeinfo);
+        if (num){
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=(num > 1)?tmpstr[1]:' ';
+            _packet[off+2]=(num > 2)?tmpstr[2]:' ';
+        }
     }
 
     // month name - %%b
     off = Packet::GetOffsetOfSubstition("%%b");
     if (off > -1)
     {
-        strftime(tmpstr,10,"%b",timeinfo);
-        _packet[off]=tmpstr[0];
-        _packet[off+1]=tmpstr[1];
-        _packet[off+2]=tmpstr[2];
+        int num = strftime(tmpstr,4,"%b",timeinfo);
+        if (num){
+            _packet[off]=tmpstr[0];
+            _packet[off+1]=(num > 1)?tmpstr[1]:' ';
+            _packet[off+2]=(num > 2)?tmpstr[2]:' ';
+        }
     }
     
     // day of month with leading zero - %d
     off = Packet::GetOffsetOfSubstition("%d");
     if (off > -1)
     {
-        strftime(tmpstr,10,"%d",timeinfo);
+        strftime(tmpstr,3,"%d",timeinfo);
         _packet[off]=tmpstr[0];
         _packet[off+1]=tmpstr[1];
     }
@@ -386,16 +390,12 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     off = Packet::GetOffsetOfSubstition("%e");
     if (off > -1)
     {
-        #ifndef WIN32
-        strftime(tmpstr,10,"%e",timeinfo);
-        _packet[off]=tmpstr[0];
-        #else
-        strftime(tmpstr,10,"%d",timeinfo);
+        // windows doesn't support %e so just use %d and blank leading zero
+        strftime(tmpstr,3,"%d",timeinfo);
         if (tmpstr[0] == '0')
             _packet[off]=' ';
         else
             _packet[off]=tmpstr[0];
-        #endif
         _packet[off+1]=tmpstr[1];
     }
     

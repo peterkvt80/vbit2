@@ -50,9 +50,18 @@ int main(int argc, char** argv)
     #ifdef WIN32
     _setmode(_fileno(stdout), _O_BINARY); // set stdout to binary mode stdout to avoid pesky line ending conversion
     #endif
+    
     Debug *debug=new Debug();
+    
     /// @todo option of adding a non standard config path
     Configure *configure=new Configure(debug, argc, argv);
+    
+    // attempt to use system locale for strftime
+    if (std::setlocale(LC_TIME, "") == nullptr)
+    {
+        debug->Log(Debug::LogLevels::logERROR,"[main] Unable to set locale");
+    }
+    
     PageList *pageList=new PageList(configure, debug);
     PacketServer *packetServer=new PacketServer(configure, debug);
     DatacastServer *datacastServer=new DatacastServer(configure, debug);
