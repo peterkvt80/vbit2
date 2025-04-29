@@ -8,9 +8,7 @@
 #include "pagelist.h"
 
 /** Carousel maintains a list of carousel pages.
- *  Each list entry is a page number, a page object and a time
- *  When pages are added and removed we must make sure that they are also updated here.
- *  When the actual time exceeds the nextPage value, we select the next page.
+ *  nextCarousel() iterates through the list to find pages which have hard cycle timings
  */
 
 namespace vbit

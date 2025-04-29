@@ -22,13 +22,12 @@
 namespace vbit
 {
     /** A Service creates a teletext stream from packet sources.
-     *  Packet sources are magazines, Packet 8/30, and databroadcast.
+     *  Packet sources are magazines, Packet 8/30, databroadcast, and debugging.
      *  Service:
      *    Instances the packet sources
      *    Sends them timing events (cues for field timing etc.)
      *    Polls the packet sources for packets to send
      *    Sends the packets.
-     *
      */
     class Service
     {

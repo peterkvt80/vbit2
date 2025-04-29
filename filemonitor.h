@@ -13,8 +13,7 @@
 #include "packetmag.h"
 
 /**
- * @brief Watches for changes to teletext page files and updates the page list as needed
- * www.ibm.com/developerworks/linux/library/l-ubuntu-inotify/index.html
+ * Watches for changes to teletext page files and adds them to the page list or marks them for removal
  */
 
 namespace vbit

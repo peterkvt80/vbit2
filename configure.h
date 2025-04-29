@@ -1,9 +1,6 @@
 #ifndef _CONFIGURE_H_
 #define _CONFIGURE_H_
-/** Configure holds settings like source folder, header info, packet 830 and magazine priority.
- *  It could also hold data about the teletext server that the client should connect to.
- *  /// @todo Rewrite this as a singleton
- *
+/** Configure processes settings related to the teletext service and vbit2 command line options.
  */
 
 #include <iostream>
