@@ -300,6 +300,12 @@ Configure::~Configure()
     
 }
 
+void Configure::SetHeaderTemplate(std::string str)
+{
+    str.resize(32,' ');
+    _headerTemplate.assign(str);
+}
+
 int Configure::LoadConfigFile(std::string filename)
 {
     std::ifstream filein(filename.c_str()); // Open the file
@@ -335,10 +341,8 @@ int Configure::LoadConfigFile(std::string filename)
                         {
                             case 0: // header_template
                             {
-                                header->Setm_textline(value,true);
-                                value = header->GetLine();
-                                value.resize(32,' ');
-                                _headerTemplate.assign(value);
+                                header->Setm_textline(value,true); // use to process escape codes
+                                SetHeaderTemplate(header->GetLine());
                                 break;
                             }
                             case 1: // initial_teletext_page
@@ -456,8 +460,7 @@ int Configure::LoadConfigFile(std::string filename)
                             }
                             case 6: // "status_display"
                             {
-                                value.resize(20,' '); // string must be 20 characters
-                                _serviceStatusString.assign(value);
+                                SetServiceStatusString(value);
                                 break;
                             }
                             case 7: // "lines_per_field"

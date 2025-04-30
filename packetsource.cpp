@@ -2,7 +2,7 @@
 
 using namespace vbit;
 
-PacketSource::PacketSource() :
+PacketSource::PacketSource()
 {
     //ctor
     // This could be in the initializer list BUT does not work in Visual C++

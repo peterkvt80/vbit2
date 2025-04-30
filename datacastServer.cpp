@@ -5,6 +5,7 @@
 using namespace vbit;
 
 DatacastServer::DatacastServer(Configure *configure, Debug *debug) :
+    _configure(configure),
     _debug(debug),
     _portNumber(configure->GetDatacastServerPort()),
     _isActive(false)
@@ -285,6 +286,106 @@ void DatacastServer::run()
                                     {
                                         res[0] = DCERR;
                                         res.push_back(0); // no bytes written
+                                    }
+                                    break;
+                                }
+                                
+                                case DCCONFIG:
+                                {
+                                    if (_clientChannel[i] == 0 && n > 2) /* VBIT2 configuration commands on datachannel 0 only */
+                                    {
+                                        switch(readBuffer[2]){ // byte 2 is configuration command number
+                                            case CONFRAFLAG: /* get/set row adaptive flag */
+                                            {
+                                                if (n == 4)
+                                                {
+                                                    _configure->SetRowAdaptive((readBuffer[3]&1)?true:false);
+                                                }
+                                                else if (n != 3)
+                                                {
+                                                    res[0] = DCERR;
+                                                }
+                                                res.push_back(_configure->GetRowAdaptive()?1:0);
+                                                
+                                                break;
+                                            }
+                                            
+                                            case CONFRBYTES: /* get/set BSDP reserved bytes */
+                                            {
+                                                if (n == 7) // set new bytes
+                                                {
+                                                    _configure->SetReservedBytes(std::array<uint8_t, 4>({(uint8_t)readBuffer[3],(uint8_t)readBuffer[4],(uint8_t)readBuffer[5],(uint8_t)readBuffer[6]}));
+                                                }
+                                                else if (n != 3)
+                                                {
+                                                    res[0] = DCERR;
+                                                }
+                                                
+                                                std::array<uint8_t, 4> bytes = _configure->GetReservedBytes();
+                                                res.push_back(bytes[0]);
+                                                res.push_back(bytes[1]);
+                                                res.push_back(bytes[2]);
+                                                res.push_back(bytes[3]); // read back reserved bytes
+                                                break;
+                                            }
+                                            
+                                            case CONFSTATUS: /* get/set BSDP status message */
+                                            {
+                                                if (n == 23) // set new status
+                                                {
+                                                    std::ostringstream tmp;
+                                                    for (int i = 3; i < 23; i++)
+                                                    {
+                                                        tmp << (char)readBuffer[i];
+                                                    }
+                                                    
+                                                    _configure->SetServiceStatusString(tmp.str());
+                                                }
+                                                else if (n != 3)
+                                                {
+                                                    res[0] = DCERR;
+                                                }
+                                                
+                                                for(char& c : _configure->GetServiceStatusString()) {
+                                                    res.push_back((uint8_t)c);
+                                                }
+                                                
+                                                break;
+                                            }
+                                            
+                                            case CONFHEADER: /* get/set header template */
+                                            {
+                                                if (n == 35) // set new header template
+                                                {
+                                                    std::ostringstream tmp;
+                                                    for (int i = 3; i < 35; i++)
+                                                    {
+                                                        /* strip to 7-bit values then add back high bit to control codes to match behaviour of templates loaded from config file */
+                                                        uint8_t c = readBuffer[i] & 0x7F;
+                                                        tmp << (char)((c<0x20)?(c|0x80):c);
+                                                    }
+                                                    
+                                                    _configure->SetHeaderTemplate(tmp.str());
+                                                }
+                                                else if (n != 3)
+                                                {
+                                                    res[0] = DCERR;
+                                                }
+                                                
+                                                for(char& c : _configure->GetHeaderTemplate()) {
+                                                    res.push_back((uint8_t)c);
+                                                }
+                                                
+                                                break;
+                                            }
+                                            
+                                            default:
+                                                res[0] = DCERR;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        res[0] = DCERR;
                                     }
                                     break;
                                 }

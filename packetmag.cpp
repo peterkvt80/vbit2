@@ -30,10 +30,8 @@ PacketMag::PacketMag(uint8_t mag, PageList *pageList, Configure *configure, Debu
     
     for (int i=0;i<MAXPACKET29TYPES;i++)
     {
-        _headerTemplate = configure->GetHeaderTemplate();
         _packet29[i]=nullptr;
     }
-
     _carousel=new Carousel(_magNumber, _pageList, _debug);
     _specialPages=new SpecialPages(_magNumber, _pageList, _debug);
     _normalPages=new NormalPages(_magNumber, _pageList, _debug);
@@ -170,7 +168,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                     _lastCycleTimestamp = t; // update timestamp
                     
                     // couldn't get a page to send so sent a time filling header
-                    p->Header(_magNumber,0xFF,0x0000,0x8010,_headerTemplate);
+                    p->Header(_magNumber,0xFF,0x0000,0x8010,_hasCustomHeader?_customHeaderTemplate:_configure->GetHeaderTemplate());
                     return p;
                 }
                 
@@ -235,7 +233,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
             
             // clear a flag we use to prevent duplicated X/28/0 packets
             _hasX28Region = false;
-            p->Header(_magNumber,thisPageNum,thisSubcode,_status,_headerTemplate);// loads of stuff to do here!
+            p->Header(_magNumber,thisPageNum,thisSubcode,_status,_hasCustomHeader?_customHeaderTemplate:_configure->GetHeaderTemplate());
             
             uint16_t tempCRC = p->PacketCRC(0); // calculate the crc of the new header
             
@@ -493,7 +491,6 @@ void PacketMag::DeletePacket29()
 
 void PacketMag::DeleteCustomHeader()
 {
-    _headerTemplate = _configure->GetHeaderTemplate(); // revert to service default template
     _hasCustomHeader = false;
-     _debug->Log(Debug::LogLevels::logINFO,"[PacketMag::DeleteCustomHeader] Removing custom header from magazine " + std::to_string(_magNumber));
+    _debug->Log(Debug::LogLevels::logINFO,"[PacketMag::DeleteCustomHeader] Removing custom header from magazine " + std::to_string(_magNumber));
 }
