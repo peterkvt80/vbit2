@@ -4,12 +4,12 @@
 
 using namespace vbit;
 
-Service::Service(Configure *configure, Debug *debug, PageList *pageList, PacketServer *packetServer, DatacastServer *datacastServer) :
+Service::Service(Configure *configure, Debug *debug, PageList *pageList, PacketServer *packetServer, InterfaceServer *interfaceServer) :
     _configure(configure),
     _debug(debug),
     _pageList(pageList),
     _packetServer(packetServer),
-    _datacastServer(datacastServer),
+    _interfaceServer(interfaceServer),
     _fieldCounter(49) // roll over immediately
 {
     _magList=_pageList->GetMagazines();
@@ -24,7 +24,7 @@ Service::Service(Configure *configure, Debug *debug, PageList *pageList, PacketS
     // register datacast sources
     _register(&_datacastSources, _packetDebug = new PacketDebug(_configure, _debug));
     
-    PacketDatacast** channels = _datacastServer->GetDatachannels();
+    PacketDatacast** channels = _interfaceServer->GetDatachannels();
     for (int dc=1; dc<16; dc++)
     {
         _register(&_datacastSources, channels[dc]);

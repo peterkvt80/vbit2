@@ -50,7 +50,7 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
     _PID = 0x20; // default PID is 0x20
     
     _packetServerPort = 0; // port 0 disables packet server
-    _datacastServerPort = 0;
+    _interfaceServerPort = 0;
     
     uint8_t priority[8]={9,3,3,6,3,3,5,6}; // 1=High priority,9=low. Note: priority[0] is mag 8
     
@@ -246,7 +246,7 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
                     long l = std::strtol(argv[++i], &end_ptr, 10);
                     if (errno == 0 && *end_ptr == '\0' && l > 0 && l < 65536)
                     {
-                        _datacastServerPort = (int)l;
+                        _interfaceServerPort = (int)l;
                     }
                     else
                     {

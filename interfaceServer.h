@@ -1,5 +1,5 @@
-#ifndef _DATACASTSERVER_H_
-#define _DATACASTSERVER_H_
+#ifndef _INTERFACESERVER_H_
+#define _INTERFACESERVER_H_
 
 #include "configure.h"
 #include "debug.h"
@@ -16,31 +16,37 @@
 #include <unistd.h>     /* for close() */
 #endif
 
-#define DCSET       0x00
-#define DCRAW       0x01
-#define DCFORMATA   0x02
+/* interface server command numbers */
+#define DCSET       0x00    /* set datachannel for subsequent commands */
+#define DCRAW       0x01    /* push raw packet data to datacast buffer */
+#define DCFORMATA   0x02    /* push format A packet to datacast buffer */
 #define DCFORMATB   0x03    /* placeholder - may never implement */
-#define DCCONFIG    0x04    /* vbit2 configuration API */
+#define CONFIGAPI   0x04    /* vbit2 configuration API command */
+#define PAGESAPI    0x05    /* page data API */
 
+/* interface server response codes */
 #define DCOK        0x00    /* command successful */
 #define DCTRUNC     0xfd    /* command completed but data was truncated */
 #define DCFULL      0xfe    /* command failed as buffer is full */
 #define DCERR       0xff    /* command failed */
 
-/* command numbers for configuration API */
+/* command numbers for vbit2 configuration API */
 #define CONFRAFLAG  0x00    /* get/set row adaptive flag */
 #define CONFRBYTES  0x01    /* get/set BSDP reserved bytes */
-#define CONFSTATUS  0x02    /* get/set BSDP status message */
-#define CONFHEADER  0x03    /* get/set header template */
+#define CONFSTATUS  0x02    /* get/set 20 byte BSDP status message */
+#define CONFHEADER  0x03    /* get/set 32 byte header template */
+
+/* command numbers for page data API */
+// no commands defined yet - this is just a statement of intent
 
 namespace vbit
 
 {
-    class DatacastServer
+    class InterfaceServer
     {
         public:
-            DatacastServer(Configure *configure, Debug *debug);
-            ~DatacastServer();
+            InterfaceServer(Configure *configure, Debug *debug);
+            ~InterfaceServer();
             
             void run();
             bool GetIsActive(){return _isActive;}; /* is the packet server running? */

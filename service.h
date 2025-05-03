@@ -11,7 +11,7 @@
 #include "debug.h"
 #include "pagelist.h"
 #include "packetServer.h"
-#include "datacastServer.h"
+#include "interfaceServer.h"
 #include "packet.h"
 #include "packetsource.h"
 #include "packetmag.h"
@@ -36,7 +36,7 @@ namespace vbit
              * @param configure A Configure object with all the settings
              * @param pageList A pageList object already loaded with pages
              */
-            Service(Configure* configure, Debug* debug, PageList* pageList, PacketServer* packetServer, DatacastServer *datacastServer);
+            Service(Configure* configure, Debug* debug, PageList* pageList, PacketServer* packetServer, InterfaceServer *interfaceServer);
             
             ~Service();
             
@@ -53,7 +53,7 @@ namespace vbit
             PageList* _pageList; /// Member reference to the pages list
             PacketMag** _magList;
             PacketServer* _packetServer;
-            DatacastServer* _datacastServer;
+            InterfaceServer* _interfaceServer;
 
             // Member variables for event management
             uint16_t _linesPerField;

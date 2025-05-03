@@ -1,13 +1,29 @@
-/* Provide a TCP server for injecting datacast packet streams */
+/** A TCP server for various configuration and teletext input interfaces
+    A network interface for the injection of databroadcast packets, which is extended to provide
+    configuration and page data APIs for multiple simultaneous clients.
+    
+    This is a binary message interface where the first byte of any message holds the message
+    length, and the second byte contains either a command number (for messages to the server) or an
+    error code (for server replies). A client should transmit a command and then read the server's
+    response to get the error state and any returned data.
+    
+    The command numbers and error codes are defined in interfaceServer.h
+    
+    The client must select which channel subsequent commands relate to using the DCSET command.
+    Databroadcast packet commands must be sent to any of channels 1-15, and only a single client
+    may select each of these datacast channels at one time.
+    Channel 0 is used for non databroadcast commands. It currently implements a configuration
+    interface, which can set and retrieve certain vbit2 configuration options.
+*/
 
-#include "datacastServer.h"
+#include "interfaceServer.h"
 
 using namespace vbit;
 
-DatacastServer::DatacastServer(Configure *configure, Debug *debug) :
+InterfaceServer::InterfaceServer(Configure *configure, Debug *debug) :
     _configure(configure),
     _debug(debug),
-    _portNumber(configure->GetDatacastServerPort()),
+    _portNumber(configure->GetInterfaceServerPort()),
     _isActive(false)
 {
     /* initialise sockets */
@@ -15,22 +31,22 @@ DatacastServer::DatacastServer(Configure *configure, Debug *debug) :
     
     for (int i=0; i < MAXCLIENTS; i++)
     {
-        _clientSocks[i] = -1;
-        _clientChannel[i] = -1; // no channel set
+        _clientSocks[i] = -1; // no socket connected
+        _clientChannel[i] = -1; // no channel set for connection
     }
     
-    _datachannel[0]=nullptr; // can't use datachannel 0
+    _datachannel[0]=nullptr; // do not create PacketDatacast for reserved data channel 0
     for (int dc=1; dc<16; dc++)
     {
-        _datachannel[dc] = new PacketDatacast(dc, configure); // create 15 datacast channels
+        _datachannel[dc] = new PacketDatacast(dc, configure); // initialise remaining 15 datacast channels
     }
 }
 
-DatacastServer::~DatacastServer()
+InterfaceServer::~InterfaceServer()
 {
 }
 
-void DatacastServer::SocketError(std::string errorMessage)
+void InterfaceServer::SocketError(std::string errorMessage)
 {
     if (_serverSock >= 0)
     {
@@ -52,12 +68,12 @@ void DatacastServer::SocketError(std::string errorMessage)
         _clientChannel[i] = -1; // no channel set
     }
     
-    std::cerr << errorMessage;
+    _debug->Log(Debug::LogLevels::logERROR,errorMessage);
 }
 
-void DatacastServer::run()
+void InterfaceServer::run()
 {
-    _debug->Log(Debug::LogLevels::logDEBUG,"[DatacastServer::run] Datacast server thread started");
+    _debug->Log(Debug::LogLevels::logDEBUG,"[InterfaceServer::run] Datacast server thread started");
     
     int newSock;
     int sock;
@@ -74,7 +90,7 @@ void DatacastServer::run()
     iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
     if (iResult != 0)
     {
-        SocketError("[DatacastServer::run] WSAStartup failed\n");
+        SocketError("[InterfaceServer::run] WSAStartup failed\n");
         return;
     }
 #else
@@ -84,7 +100,7 @@ void DatacastServer::run()
     /* Create socket */
     if ((_serverSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
     {
-        SocketError("[DatacastServer::run] socket() failed\n");
+        SocketError("[InterfaceServer::run] socket() failed\n");
         return;
     }
     
@@ -93,7 +109,7 @@ void DatacastServer::run()
     /* Allow multiple connnections */
     if(setsockopt(_serverSock, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse, sizeof(reuse)) < 0)
     {
-        SocketError("[DatacastServer::run] setsockopt() SO_REUSEADDR failed\n");
+        SocketError("[InterfaceServer::run] setsockopt() SO_REUSEADDR failed\n");
         return;
     }
     
@@ -104,14 +120,14 @@ void DatacastServer::run()
     /* bind socked */
     if (bind(_serverSock, (struct sockaddr *) &address, sizeof(address)) < 0)
     {
-        SocketError("[DatacastServer::run] bind() failed\n");
+        SocketError("[InterfaceServer::run] bind() failed\n");
         return;
     }
     
     /* Listen for incoming connections */
     if (listen(_serverSock, MAXPENDING) < 0)
     {
-        SocketError("[DatacastServer::run] listen() failed\n");
+        SocketError("[InterfaceServer::run] listen() failed\n");
         return;
     }
     
@@ -136,14 +152,14 @@ void DatacastServer::run()
         
         /* wait for activity on any socket */
         if ((select(FD_SETSIZE, &readfds, NULL, NULL, NULL) < 0) && (errno!=EINTR))
-            SocketError("[DatacastServer::run] select() failed");
+            SocketError("[InterfaceServer::run] select() failed");
         
         if (FD_ISSET(_serverSock, &readfds))
         {
             /* incoming connection to server */
             if ((newSock = accept(_serverSock, (struct sockaddr *)&address, &addrlen))<0)
             {
-                SocketError("[DatacastServer::run] accept() failed");
+                SocketError("[InterfaceServer::run] accept() failed");
                 return;
             }
             
@@ -151,13 +167,13 @@ void DatacastServer::run()
                 u_long ul = 1;
                 if (ioctlsocket(newSock, FIONBIO, &ul) < 0)
                 {
-                    SocketError("[DatacastServer::run] ioctlsocket() failed");
+                    SocketError("[InterfaceServer::run] ioctlsocket() failed");
                     return;
                 }
             #else
                 if (fcntl(newSock, F_SETFL, fcntl(newSock, F_GETFL, 0) | O_NONBLOCK) < 0)
                 {
-                    SocketError("[DatacastServer::run] fcntl() failed");
+                    SocketError("[InterfaceServer::run] fcntl() failed");
                     return;
                 }
             #endif
@@ -172,7 +188,7 @@ void DatacastServer::run()
                     #else
                         close(newSock);
                     #endif
-                    _debug->Log(Debug::LogLevels::logWARN,"[DatacastServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
+                    _debug->Log(Debug::LogLevels::logWARN,"[InterfaceServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
                     break;
                 }
                 
@@ -182,7 +198,7 @@ void DatacastServer::run()
                     /* add to active sockets */
                     _clientSocks[i] = newSock;
                     _clientChannel[i] = -1; // no channel set
-                    _debug->Log(Debug::LogLevels::logINFO,"[DatacastServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
+                    _debug->Log(Debug::LogLevels::logINFO,"[InterfaceServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
                     break;
                 }
             }
@@ -206,9 +222,9 @@ void DatacastServer::run()
                         n = recv(sock, readBuffer, len, 0); // try to read whole message
                         if (n == len)
                         {
-                            std::vector<uint8_t> res = {DCOK};
+                            std::vector<uint8_t> res = {DCOK}; // create "OK" response
                             
-                            // byte 1 of message is command number
+                            // byte 1 of message is interface server command number
                             switch (readBuffer[1]){
                                 case DCSET: // set datacast channel
                                 {
@@ -217,10 +233,14 @@ void DatacastServer::run()
                                     {
                                         _clientChannel[i] = -1; // release a current datachannel
                                         
-                                        // check if another client is using desired datachannel
-                                        for (int j=0; j<MAXCLIENTS; j++){
-                                            if (_clientChannel[j] == ch)
-                                                goto DCSETError; // jump out to return error
+                                        
+                                        if (ch) // allow multiple connections for channel 0
+                                        {
+                                            // check if another client is using desired datachannel
+                                            for (int j=0; j<MAXCLIENTS; j++){
+                                                if (_clientChannel[j] == ch)
+                                                    goto DCSETError; // jump out to return error
+                                            }
                                         }
                                         
                                         _clientChannel[i] = ch; // use requested channel
@@ -290,9 +310,10 @@ void DatacastServer::run()
                                     break;
                                 }
                                 
-                                case DCCONFIG:
+                                case CONFIGAPI:
                                 {
-                                    if (_clientChannel[i] == 0 && n > 2) /* VBIT2 configuration commands on datachannel 0 only */
+                                    /* vbit2 configuration API */
+                                    if (_clientChannel[i] == 0 && n > 2) /* allow VBIT2 configuration commands on channel 0 only */
                                     {
                                         switch(readBuffer[2]){ // byte 2 is configuration command number
                                             case CONFRAFLAG: /* get/set row adaptive flag */
@@ -379,7 +400,27 @@ void DatacastServer::run()
                                                 break;
                                             }
                                             
-                                            default:
+                                            default: // unknown configuration command
+                                                res[0] = DCERR;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        res[0] = DCERR;
+                                    }
+                                    break;
+                                }
+                                
+                                case PAGESAPI:
+                                {
+                                    /* page data API */
+                                    if (_clientChannel[i] == 0 && n > 2) /* allow page data commands on channel 0 only */
+                                    {
+                                        switch(readBuffer[2]){ // byte 2 is page data API command number
+                                            
+                                            /* no commands implemented yet */
+                                            
+                                            default: // unknown page data command
                                                 res[0] = DCERR;
                                         }
                                     }
@@ -399,7 +440,7 @@ void DatacastServer::run()
                             
                             if (res.size() > 254)
                             {
-                                _debug->Log(Debug::LogLevels::logERROR,"[DatacastServer::run] Response too long");
+                                _debug->Log(Debug::LogLevels::logERROR,"[InterfaceServer::run] Response too long");
                                 res.resize(254); // truncate!
                             }
                             
@@ -416,7 +457,7 @@ void DatacastServer::run()
                     if (n == 0)
                     {
                         /* client disconnected */
-                        _debug->Log(Debug::LogLevels::logINFO,"[DatacastServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " on socket " + std::to_string(sock));
+                        _debug->Log(Debug::LogLevels::logINFO,"[InterfaceServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " on socket " + std::to_string(sock));
                     }
                     else
                     {
@@ -426,7 +467,7 @@ void DatacastServer::run()
                             int e = errno;
                         #endif
                         
-                        _debug->Log(Debug::LogLevels::logWARN,"[DatacastServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " recv error " + std::to_string(e) + " on socket " + std::to_string(sock));
+                        _debug->Log(Debug::LogLevels::logWARN,"[InterfaceServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " recv error " + std::to_string(e) + " on socket " + std::to_string(sock));
                     }
                     
                     /* close the socket when any error occurs */

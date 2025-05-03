@@ -66,8 +66,8 @@ class Configure
         uint16_t GetPacketServerPort(){return _packetServerPort;}
         bool GetPacketServerEnabled(){return _packetServerPort != 0;}
         
-        uint16_t GetDatacastServerPort(){return _datacastServerPort;}
-        bool GetDatacastServerEnabled(){return _datacastServerPort != 0;}
+        uint16_t GetInterfaceServerPort(){return _interfaceServerPort;}
+        bool GetInterfaceServerEnabled(){return _interfaceServerPort != 0;}
         
     private:
         Debug* _debug;
@@ -101,7 +101,7 @@ class Configure
         uint16_t _PID;
         
         uint16_t _packetServerPort;
-        uint16_t _datacastServerPort;
+        uint16_t _interfaceServerPort;
     };
 }
 

@@ -28,9 +28,9 @@ int main(int argc, char** argv)
     
     PageList *pageList=new PageList(configure, debug);
     PacketServer *packetServer=new PacketServer(configure, debug);
-    DatacastServer *datacastServer=new DatacastServer(configure, debug);
+    InterfaceServer *interfaceServer=new InterfaceServer(configure, debug);
 
-    Service* svc=new Service(configure, debug, pageList, packetServer, datacastServer); // Need to copy the subtitle packet source for Newfor
+    Service* svc=new Service(configure, debug, pageList, packetServer, interfaceServer); // Need to copy the subtitle packet source for Newfor
 
     std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, debug, pageList));
     std::thread serviceThread(&Service::run, svc);
@@ -42,11 +42,11 @@ int main(int argc, char** argv)
         packetServerThread.detach();
     }
 
-    if (configure->GetDatacastServerEnabled())
+    if (configure->GetInterfaceServerEnabled())
     {
-        // only start datacast server thread if required
-        std::thread datacastServerThread(&DatacastServer::run, datacastServer );
-        datacastServerThread.detach();
+        // only start interface server thread if required
+        std::thread interfaceServerThread(&InterfaceServer::run, interfaceServer );
+        interfaceServerThread.detach();
     }
 
     // The threads should never stop, but just in case...
