@@ -39,17 +39,10 @@ TTXPageStream* Carousel::nextCarousel()
                 _debug->Log(Debug::LogLevels::logINFO,"[Carousel::nextCarousel] Deleted " + p->GetFilename());
                 
                 p->SetCarouselFlag(false);
-                if (!(p->GetNormalFlag() || p->GetSpecialFlag() || p->GetUpdatedFlag()))
-                {
-                    // we are last
-                    _pageList->RemovePage(p); // remove it from the pagelist
-                    
-                    if (p->GetStatusFlag()==TTXPageStream::REMOVE)
-                        p->SetState(TTXPageStream::FOUND);
-                    else // MARKED
-                        p->SetState(TTXPageStream::GONE);
-                }
                 _carouselList.erase(it--);
+                
+                _pageList->RemovePage(p); // try to remove it from the pagelist immediately - will free the lock
+                continue; // jump back to loop
             }
             else if ((!(p->IsCarousel())) || (p->Special()))
             {

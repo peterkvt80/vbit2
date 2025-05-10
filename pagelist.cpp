@@ -126,9 +126,23 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
 
 void PageList::RemovePage(TTXPageStream* page)
 {
-    int mag=(page->GetPageNumber() >> 16) & 0x7;
-    _pageList[mag].remove(page);
-    _debug->SetMagazineSize(mag, _pageList[mag].size());
+    if (!(page->GetCarouselFlag() || page->GetNormalFlag() || page->GetSpecialFlag() || page->GetUpdatedFlag()))
+    {
+        // page has been removed from all of the page type lists
+        
+        // before removing page from pagelist set its filestatus
+        if (page->GetStatusFlag()==TTXPageStream::REMOVE)
+            page->SetState(TTXPageStream::FOUND);
+        else // MARKED
+            page->SetState(TTXPageStream::GONE);
+        
+        int mag=(page->GetPageNumber() >> 16) & 0x7;
+        _pageList[mag].remove(page);
+        _debug->SetMagazineSize(mag, _pageList[mag].size());
+        
+        _debug->Log(Debug::LogLevels::logINFO,"[PageList::RemovePage] Deleted " + page->GetFilename());
+    }
+    page->FreeLock(); // free the lock on page
 }
 
 void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)

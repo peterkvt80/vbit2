@@ -43,37 +43,21 @@ TTXPageStream* UpdatedPages::NextPage()
             _page = nullptr;
             return _page;
         }
+        else
+        {
+            _page = *_iter;
+        }
         
         if (_page)
         {
             if (_page->GetLock()) // try to lock this page against changes
             {
-                /* remove pointers from this list if the pages are marked for deletion */
-                if ((_page->GetStatusFlag()==TTXPageStream::MARKED || _page->GetStatusFlag()==TTXPageStream::REMOVE) && _page->GetUpdatedFlag()) // only remove it once
-                {
-                    _debug->Log(Debug::LogLevels::logINFO,"[UpdatedPages::NextPage] Deleted " + _page->GetFilename());
-                    _iter = _UpdatedPagesList.erase(_iter);
-                    _page->SetUpdatedFlag(false);
-                    if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetNormalFlag()))
-                    {
-                        // we are last
-                        _pageList->RemovePage(_page); // remove it from the pagelist
-                        
-                        if (_page->GetStatusFlag()==TTXPageStream::REMOVE)
-                            _page->SetState(TTXPageStream::FOUND);
-                        else // MARKED
-                            _page->SetState(TTXPageStream::GONE);
-                    }
-                }
-                else
-                {
-                    _iter = _UpdatedPagesList.erase(_iter); // remove page from this list after transmitting it
-                    _page->SetUpdatedFlag(false);
-                    return _page; // return locked page
-                }
+                // don't care if page has been marked for deletion/removal
+                // if we were put into this list, we want to get transmitted regardless
                 
-                _page->FreeLock(); // must unlock page again
-                _page = *_iter;
+                _iter = _UpdatedPagesList.erase(_iter); // remove page from this list after transmitting it
+                _page->SetUpdatedFlag(false);
+                return _page; // return locked page
             }
         }
     }

@@ -63,16 +63,9 @@ TTXPageStream* NormalPages::NextPage()
                     _debug->Log(Debug::LogLevels::logINFO,"[NormalPages::NextPage] Removed " + _page->GetFilename());
                     _iter = _NormalPagesList.erase(_iter);
                     _page->SetNormalFlag(false);
-                    if (!(_page->GetSpecialFlag() || _page->GetCarouselFlag() || _page->GetUpdatedFlag()))
-                    {
-                        // we are last
-                        _pageList->RemovePage(_page); // remove it from the pagelist
-                        
-                        if (_page->GetStatusFlag()==TTXPageStream::REMOVE)
-                            _page->SetState(TTXPageStream::FOUND);
-                        else // MARKED
-                            _page->SetState(TTXPageStream::GONE);
-                    }
+                    _pageList->RemovePage(_page); // try to remove it from the pagelist immediately - will free the lock
+                    _page = *_iter;
+                    continue; // jump back to loop
                 } 
                 else if (_page->Special())
                 {

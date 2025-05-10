@@ -348,7 +348,8 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 // otherwise we end the page here
                 _state=PACKETSTATE_HEADER;
                 _thisRow=0;
-                _page->FreeLock(); // Must free the lock or we can never use this page again!
+                _pageList->RemovePage(_page); // remove from page list if no longer in any type lists - will free the lock
+                // this is to handle the case where an UpdatedPages is the only copy of a page left and must be removed now it's been transmitted.
                 goto loopback;
             }
             /* fallthrough */
