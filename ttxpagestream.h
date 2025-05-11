@@ -16,25 +16,13 @@
 class TTXPageStream : public TTXPage
 {
     public:
-        /** Used to mark pages for deleting
-         *  Pages are set to NOTFOUND at the start of each pass
-         *  As pages are matched with files on drive they are set to FOUND
-         *  At the end of a pass the file status is set to MARKED. The Service thread can now delete the page object.
-         */
-        enum Status
-        {
-          NEW,      // Just created
-          NOTFOUND, // Not found yet
-          FOUND,    // Matched on drive
-          MARKED,   // To be deleted
-          GONE,     // Safe to delete
-          REMOVE    // To be removed from service
-        };
-
         /** Default constructor. */
         TTXPageStream();
         /** Default destructor */
         virtual ~TTXPageStream();
+        
+        void MarkForDeletion() { _deleteFlag = true; }
+        bool GetIsMarked() { return _deleteFlag; }
 
         bool GetCarouselFlag() { return _isCarousel; }
         void SetCarouselFlag(bool val) { _isCarousel = val; }
@@ -85,27 +73,10 @@ class TTXPageStream : public TTXPage
         */
         std::shared_ptr<TTXLine> GetTxRow(uint8_t row);
 
-        // The time that the file was modified.
-        time_t GetModifiedTime(){return _modifiedTime;};
-        void SetModifiedTime(time_t timeVal){_modifiedTime=timeVal;};
-
         bool LoadPage(std::string filename);
-        bool ReloadPage(std::string filename);
         
         bool GetLock();
         void FreeLock();
-
-        /**
-         * @brief Set the flag used to detect file updates
-         * All files that are not MARKED are set NOT FOUND the start of a pass
-         * As files are matched with those on the drive are marked as FOUND
-         * At the end of the pass, any pages that are NOT FOUND are MARKED for delete
-         */
-        void SetState(Status state){_fileStatus=state;};
-        /**
-         * @return Flag used to monitor file status
-         */
-        Status GetStatusFlag(){return _fileStatus;};
 
         /** Used to enable list->remove
          */
@@ -130,10 +101,6 @@ class TTXPageStream : public TTXPage
         int _cyclesRemaining; // As above for cycle mode
 
         std::shared_ptr<TTXPage> _CarouselPage; /// Pointer to the current subpage of a carousel
-
-        // Things that affect the display list
-        time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
-        Status _fileStatus; /// Used to mark if we found the file. (Used to detect deletions)
         
         bool _loadedPacket29; // Packet 29 for magazine was loaded from this page. Should only be set on one page in each magazine.
         
@@ -147,6 +114,8 @@ class TTXPageStream : public TTXPage
         bool _isUpdated;
 
         int _updateCount; // update counter for special pages.
+        
+        bool _deleteFlag; // marks a page for deletion from the service and cannot be undone
         
         std::shared_ptr<std::mutex> _mtx;
 };

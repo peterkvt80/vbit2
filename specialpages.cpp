@@ -61,9 +61,11 @@ std::shared_ptr<TTXPageStream> SpecialPages::NextPage()
                     _page->StepNextSubpageNoLoop(); // ensure we don't point at a null subpage
                 }
                 
-                if ((_page->GetStatusFlag()==TTXPageStream::MARKED || _page->GetStatusFlag()==TTXPageStream::REMOVE) && _page->GetSpecialFlag()) // only remove it once
+                if (_page->GetIsMarked() && _page->GetSpecialFlag()) // only remove it once
                 {
-                    _debug->Log(Debug::LogLevels::logINFO,"[SpecialPages::NextPage] Deleted " + _page->GetFilename());
+                    std::stringstream ss;
+                    ss << "[SpecialPages::NextPage] Deleted " << std::hex << (_page->GetPageNumber() >> 8);
+                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
                     _iter = _specialPagesList.erase(_iter);
                     _page->SetSpecialFlag(false);
                     _pageList->RemovePage(_page); // try to remove it from the pagelist immediately - will free the lock

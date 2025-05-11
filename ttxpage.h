@@ -81,8 +81,6 @@ class TTXPage : public std::enable_shared_from_this<TTXPage>
          char GetCycleTimeMode() {return m_cycletimetype;}
          void SetCycleTimeMode(char mode){m_cycletimetype=mode;}
 
-         std::string GetFilename() const {return m_filename;}
-
         /** Get a row of text
          * \return The TTXLine object of the required row. Check result for NULL if there isn't an actual row.
          */
@@ -158,7 +156,6 @@ class TTXPage : public std::enable_shared_from_this<TTXPage>
         int m_PageNumber;           // PN
         std::shared_ptr<TTXPage> m_SubPage;
         std::shared_ptr<TTXLine> m_pLine[MAXROW+1];
-        std::string m_filename;
         char m_cycletimetype;       // CT
         unsigned int m_subcode;     // SC
         int m_pagestatus;           // PS

@@ -4,7 +4,6 @@ TTXPage::TTXPage() :
     m_cycletimeseconds(1), /* default to cycling carousels every page cycle */
     m_PageNumber(FIRSTPAGE),
     m_SubPage(nullptr),
-    m_filename("none"),
     m_cycletimetype('C'),
     m_subcode(0),
     m_pagestatus(0), /* default to not sending page to ignore malformed/blank tti files */
@@ -63,7 +62,6 @@ bool TTXPage::m_LoadTTI(std::string filename)
     int lines=0;
     // Open the file
     std::ifstream filein(filename.c_str());
-    m_filename = filename;
     std::shared_ptr<TTXPage> p(this->getptr());
     p->m_Init(); // reset page
     char * ptr;

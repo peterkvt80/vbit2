@@ -5,14 +5,14 @@ using namespace vbit;
 TTXPageStream::TTXPageStream() :
     _transitionTime(0),
     _CarouselPage(nullptr),
-    _fileStatus(NEW),
     _loadedPacket29(false),
     _loadedCustomHeader(false),
     _isCarousel(false),
     _isSpecial(false),
     _isNormal(false),
     _isUpdated(false),
-    _updateCount(0)
+    _updateCount(0),
+    _deleteFlag(false)
 {
     //ctor
     _mtx.reset(new std::mutex());
@@ -62,22 +62,6 @@ void TTXPageStream::StepNextSubpage()
 bool TTXPageStream::LoadPage(std::string filename)
 {
     bool Loaded = m_LoadTTI(filename);
-    
-    return Loaded;
-}
-
-bool TTXPageStream::ReloadPage(std::string filename)
-{
-    std::cerr << "reload " << filename << std::endl;
-    _mtx->lock();
-    int num = GetPageNumber()>>8;
-    bool Loaded = LoadPage(filename);
-    if (num != GetPageNumber()>>8)
-    {
-        // page number has changed so mark this page to get deleted and reloaded
-        _fileStatus = MARKED;
-    }
-    
     return Loaded;
 }
 
@@ -91,13 +75,6 @@ bool TTXPageStream::GetLock()
 void TTXPageStream::FreeLock()
 {
     _mtx->unlock();
-}
-
-bool TTXPageStream::operator==(const TTXPageStream& rhs) const
-{
-    if (this->GetFilename()==rhs.GetFilename())
-        return true;
-    return false;
 }
 
 void TTXPageStream::IncrementUpdateCount()

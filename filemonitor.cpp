@@ -2,6 +2,14 @@
 
 using namespace vbit;
 
+File::File(std::string filename) :
+    _page(new TTXPageStream()),
+    _filename(filename),
+    _fileStatus(NEW)
+{
+    _page->LoadPage(filename);
+}
+
 FileMonitor::FileMonitor(Configure *configure, Debug *debug, PageList *pageList) :
     _configure(configure),
     _debug(debug),
@@ -90,57 +98,70 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
         {
             // Now we want to process changes
             // 1) Is it a new page? Then add it.
-            std::shared_ptr<TTXPageStream> q = Locate(name);
-            if (q) // File was found
+            std::shared_ptr<File> f = Locate(name);
+            if (f) // File was found
             {
-                if (!(q->GetStatusFlag()==TTXPageStream::MARKED || q->GetStatusFlag()==TTXPageStream::REMOVE || q->GetStatusFlag()==TTXPageStream::GONE)) // file is not mid-deletion
+                f->SetState(File::FOUND); // Mark this page as existing on the drive
+                std::shared_ptr<TTXPageStream> page = f->GetPage();
+                if (!(page->GetIsMarked())) // file is not mid-deletion
                 {
-                    q->SetState(TTXPageStream::FOUND); // Mark this page as existing on the drive
-                    if (attrib.st_mtime!=q->GetModifiedTime()) // File exists. Has it changed?
+                    if (attrib.st_mtime!=f->GetModifiedTime()) // File exists. Has it changed?
                     {
                         // We just load the new page and update the modified time
                         
-                        q->ReloadPage(name); // waits for mutex
-                        q->IncrementUpdateCount();
-                        int status = q->GetPageStatus();
-                        if (!(_pageList->Contains(q)))
+                        if (page->GetLock()) // try to lock page
                         {
-                            // this page is not currently in pagelist
-                            _pageList->AddPage(q, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                            int curnum = page->GetPageNumber()>>8;
+                            page->LoadPage(name);
+                            if (page->GetPageNumber()>>8 != curnum)
+                            {
+                                // page number changed
+                                page->MarkForDeletion(); // mark page for deletion from service
+                                f->SetState(File::NOTFOUND); // let this file object get deleted and reloaded
+                            }
+                            else
+                            {
+                                page->IncrementUpdateCount();
+                                int status = page->GetPageStatus();
+                                if (!(_pageList->Contains(page)))
+                                {
+                                    // this page is not currently in pagelist
+                                    _pageList->AddPage(page, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                                }
+                                else
+                                {
+                                    _pageList->UpdatePageLists(page, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                                }
+                                page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an updated page
+                                
+                                _pageList->CheckForPacket29OrCustomHeader(page);
+                                
+                                f->SetModifiedTime(attrib.st_mtime);
+                            }
+                            page->FreeLock(); // must unlock or everything will grind to a halt
                         }
-                        else
-                        {
-                            _pageList->UpdatePageLists(q, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
-                        }
-                        q->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an updated page
-                        
-                        _pageList->CheckForPacket29OrCustomHeader(q);
-                        
-                        q->SetModifiedTime(attrib.st_mtime);
-                        
-                        q->FreeLock(); // must unlock or everything will grind to a halt
-                        
                     }
                 }
             }
             else
             {
-                if (!firstrun){ // suppress logspam on first run
+                //if (!firstrun){ // suppress logspam on first run
                     _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Adding a new page " + std::string(dirp->d_name));
-                }
+                //}
                 // A new file. Create the page object and add it to the page list.
                 
-                std::shared_ptr<TTXPageStream> q(new TTXPageStream());
-                if (q->LoadPage(name))
+                std::shared_ptr<File> f(new File(name));
+                if (f)
                 {
-                    q->SetModifiedTime(attrib.st_mtime); // set timestamp
+                    f->SetModifiedTime(attrib.st_mtime); // set timestamp
+                    std::shared_ptr<TTXPageStream> page = f->GetPage();
                     
                     // don't add to updated pages list if this is the initial load
-                    int status = q->GetPageStatus();
-                    _pageList->AddPage(q, firstrun || !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
-                    q->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an newly loaded page
+                    int status = page->GetPageStatus();
+                    _pageList->AddPage(page, firstrun || !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                    page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an newly loaded page
                     
-                    _FilesList.push_back(q);
+                    _FilesList.push_back(f);
                 }
                 else
                 {
@@ -155,12 +176,12 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
 }
 
 
-// Find a page by filename
-std::shared_ptr<TTXPageStream> FileMonitor::Locate(std::string filename)
+// Find a file by filename
+std::shared_ptr<File> FileMonitor::Locate(std::string filename)
 {
-    for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    for (std::list<std::shared_ptr<File>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
     {
-        std::shared_ptr<TTXPageStream> ptr = *p;
+        std::shared_ptr<File> ptr = *p;
         if (filename==ptr->GetFilename())
             return ptr;
     }
@@ -173,46 +194,26 @@ std::shared_ptr<TTXPageStream> FileMonitor::Locate(std::string filename)
 // As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
 void FileMonitor::ClearFlags()
 {
-    for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    for (std::list<std::shared_ptr<File>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
     {
-        std::shared_ptr<TTXPageStream> ptr = *p;
-        // Don't unmark a file that was MARKED. Once condemned it won't be pardoned
-        if (ptr->GetStatusFlag()==TTXPageStream::FOUND || ptr->GetStatusFlag()==TTXPageStream::NEW)
-        {
-            ptr->SetState(TTXPageStream::NOTFOUND);
-        }
+        std::shared_ptr<File> ptr = *p;
+
+        ptr->SetState(File::NOTFOUND);
     }
 }
 
 void FileMonitor::DeleteOldPages()
 {
-    for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    for (std::list<std::shared_ptr<File>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
     {
-        std::shared_ptr<TTXPageStream> ptr = *p;
-        if (ptr->GetStatusFlag()==TTXPageStream::GONE)
+        std::shared_ptr<File> ptr = *p;
+        if (ptr->GetStatusFlag()==File::NOTFOUND)
         {
-            Delete29AndHeader(ptr);
-            
-            _FilesList.remove(*p--);
-            // page has been removed from lists
-        }
-        else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
-        {
-            if (!(_pageList->Contains(ptr)))
-            {
-                // Page is not in pagelist so won't be seen by service thread
-                // delete it directly
-                _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::DeleteOldPages] Deleted " + ptr->GetFilename());
+            ptr->GetPage()->MarkForDeletion(); // mark page for deletion from service
+            _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::DeleteOldPages] Deleted " + ptr->GetFilename());
                 
-                Delete29AndHeader(ptr);
-                _FilesList.remove(*p--);
-                // page has been removed from all lists
-            }
-            else
-            {
-                // Pages marked here get deleted in the Service thread
-                ptr->SetState(TTXPageStream::MARKED);
-            }
+            Delete29AndHeader(ptr->GetPage());
+            _FilesList.remove(*p--); // remove file from filelist
         }
     }
 }

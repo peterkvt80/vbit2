@@ -34,9 +34,11 @@ std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
         p=*it;
         if (p->GetLock()) // try to lock this page against changes
         {
-            if ((p->GetStatusFlag()==TTXPageStream::MARKED || p->GetStatusFlag()==TTXPageStream::REMOVE) && p->GetCarouselFlag()) // only remove it once
+            if (p->GetIsMarked() && p->GetCarouselFlag()) // only remove it once
             {
-                _debug->Log(Debug::LogLevels::logINFO,"[Carousel::nextCarousel] Deleted " + p->GetFilename());
+                std::stringstream ss;
+                ss << "[Carousel::nextCarousel] Deleted " << std::hex << (p->GetPageNumber() >> 8);
+                _debug->Log(Debug::LogLevels::logINFO,ss.str());
                 
                 p->SetCarouselFlag(false);
                 _carouselList.erase(it--);

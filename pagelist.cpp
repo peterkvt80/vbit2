@@ -41,7 +41,7 @@ void PageList::AddPage(std::shared_ptr<TTXPageStream> page, bool noupdate)
         if (q)
         {
             _pageList[mag].remove(q);
-            q->SetState(TTXPageStream::REMOVE);
+            q->MarkForDeletion();
             
             std::stringstream ss;
             ss << "[PageList::AddPage] Replacing page " << std::hex << num;
@@ -130,17 +130,13 @@ void PageList::RemovePage(std::shared_ptr<TTXPageStream> page)
     {
         // page has been removed from all of the page type lists
         
-        // before removing page from pagelist set its filestatus
-        if (page->GetStatusFlag()==TTXPageStream::REMOVE)
-            page->SetState(TTXPageStream::FOUND);
-        else // MARKED
-            page->SetState(TTXPageStream::GONE);
-        
         int mag=(page->GetPageNumber() >> 16) & 0x7;
         _pageList[mag].remove(page);
         _debug->SetMagazineSize(mag, _pageList[mag].size());
         
-        _debug->Log(Debug::LogLevels::logINFO,"[PageList::RemovePage] Deleted " + page->GetFilename());
+        std::stringstream ss;
+        ss << "[PageList::RemovePage] Deleted " << std::hex << (page->GetPageNumber() >> 8);
+        _debug->Log(Debug::LogLevels::logINFO,ss.str());
     }
     page->FreeLock(); // free the lock on page
 }

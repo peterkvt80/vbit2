@@ -58,9 +58,11 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
             {
                 /* remove pointers from this list if the pages are marked for deletion */
                 
-                if ((_page->GetStatusFlag()==TTXPageStream::MARKED || _page->GetStatusFlag()==TTXPageStream::REMOVE) && _page->GetNormalFlag()) // only remove it once
+                if (_page->GetIsMarked() && _page->GetNormalFlag()) // only remove it once
                 {
-                    _debug->Log(Debug::LogLevels::logINFO,"[NormalPages::NextPage] Removed " + _page->GetFilename());
+                    std::stringstream ss;
+                    ss << "[NormalPages::NextPage] Deleted " << std::hex << (_page->GetPageNumber() >> 8);
+                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
                     _iter = _NormalPagesList.erase(_iter);
                     _page->SetNormalFlag(false);
                     _pageList->RemovePage(_page); // try to remove it from the pagelist immediately - will free the lock
