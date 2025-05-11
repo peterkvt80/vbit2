@@ -3,6 +3,7 @@
 
 #include <mutex>
 #include <sys/stat.h>
+#include <memory>
 
 #include "ttxpage.h"
 #include "packet.h"
@@ -30,14 +31,10 @@ class TTXPageStream : public TTXPage
           REMOVE    // To be removed from service
         };
 
-        /** Default constructor. Don't call this */
+        /** Default constructor. */
         TTXPageStream();
         /** Default destructor */
         virtual ~TTXPageStream();
-
-        /** The normal constructor
-         */
-        TTXPageStream(std::string filename);
 
         bool GetCarouselFlag() { return _isCarousel; }
         void SetCarouselFlag(bool val) { _isCarousel = val; }
@@ -81,18 +78,19 @@ class TTXPageStream : public TTXPage
         void StepNextSubpageNoLoop();
 
         /** This is used by mag */
-        TTXPage* GetCarouselPage(){return _CarouselPage;};
+        std::shared_ptr<TTXPage> GetCarouselPage(){return _CarouselPage;};
 
         /** Get the row from the page.
         * Carousels and main sequence pages are managed differently
         */
-        TTXLine* GetTxRow(uint8_t row);
+        std::shared_ptr<TTXLine> GetTxRow(uint8_t row);
 
         // The time that the file was modified.
         time_t GetModifiedTime(){return _modifiedTime;};
         void SetModifiedTime(time_t timeVal){_modifiedTime=timeVal;};
 
         bool LoadPage(std::string filename);
+        bool ReloadPage(std::string filename);
         
         bool GetLock();
         void FreeLock();
@@ -127,12 +125,11 @@ class TTXPageStream : public TTXPage
 
     private:
         // Carousel control
-        // TTXPageStream* _CurrentPage; //!< Member variable "_currentPage" points to the subpage being transmitted
 
         time_t _transitionTime; // Records when the next carousel transition is due
         int _cyclesRemaining; // As above for cycle mode
 
-        TTXPage* _CarouselPage; /// Pointer to the current subpage of a carousel
+        std::shared_ptr<TTXPage> _CarouselPage; /// Pointer to the current subpage of a carousel
 
         // Things that affect the display list
         time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
@@ -151,7 +148,7 @@ class TTXPageStream : public TTXPage
 
         int _updateCount; // update counter for special pages.
         
-        std::mutex* _mtx;
+        std::shared_ptr<std::mutex> _mtx;
 };
 
 #endif // _TTXPAGESTREAM_H_

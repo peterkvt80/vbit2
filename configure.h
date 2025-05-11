@@ -13,6 +13,7 @@
 #include <array>
 #include <algorithm>
 #include <stdexcept>
+#include <memory>
 
 #include "debug.h"
 #include "ttxline.h"

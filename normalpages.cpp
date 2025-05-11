@@ -18,14 +18,14 @@ NormalPages::~NormalPages()
 
 }
 
-void NormalPages::addPage(TTXPageStream* p)
+void NormalPages::addPage(std::shared_ptr<TTXPageStream> p)
 {
     p->SetNormalFlag(true);
     _NormalPagesList.push_front(p);
     _needSorting = true; // set flag to indicate that list should be sorted before next cycle
 }
 
-TTXPageStream* NormalPages::NextPage()
+std::shared_ptr<TTXPageStream> NormalPages::NextPage()
 {
     if (_page == nullptr)
     {

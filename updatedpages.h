@@ -20,9 +20,9 @@ class UpdatedPages
         /** Default destructor */
         virtual ~UpdatedPages();
 
-        TTXPageStream* NextPage();
+        std::shared_ptr<TTXPageStream> NextPage();
 
-        void addPage(TTXPageStream* p);
+        void addPage(std::shared_ptr<TTXPageStream> p);
         
         bool waiting(){ return _UpdatedPagesList.size() > 0; };
 
@@ -32,9 +32,9 @@ class UpdatedPages
         int _mag;
         PageList* _pageList;
         Debug* _debug;
-        std::list<TTXPageStream*> _UpdatedPagesList;
-        std::list<TTXPageStream*>::iterator _iter;
-        TTXPageStream* _page;
+        std::list<std::shared_ptr<TTXPageStream>> _UpdatedPagesList;
+        std::list<std::shared_ptr<TTXPageStream>>::iterator _iter;
+        std::shared_ptr<TTXPageStream> _page;
         
 };
 

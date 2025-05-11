@@ -16,13 +16,13 @@ SpecialPages::~SpecialPages()
 
 }
 
-void SpecialPages::addPage(TTXPageStream* p)
+void SpecialPages::addPage(std::shared_ptr<TTXPageStream> p)
 {
     p->SetSpecialFlag(true);
     _specialPagesList.push_front(p);
 }
 
-TTXPageStream* SpecialPages::NextPage()
+std::shared_ptr<TTXPageStream> SpecialPages::NextPage()
 {
     if (_page == nullptr)
     {

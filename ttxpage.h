@@ -4,7 +4,7 @@
 #include "string.h"
 #include <iostream>
 #include <sstream>
-
+#include <memory>
 #include <fstream>
 #include <string>
 
@@ -37,7 +37,7 @@
 enum PageCoding {CODING_7BIT_TEXT,CODING_8BIT_DATA,CODING_13_TRIPLETS,CODING_HAMMING_8_4,CODING_HAMMING_7BIT_GROUPS,CODING_PER_PACKET};
 enum PageFunction {LOP, DATABROADCAST, GPOP, POP, GDRCS, DRCS, MOT, MIP, BTT, AIT, MPT, MPT_EX};
 
-class TTXPage
+class TTXPage : public std::enable_shared_from_this<TTXPage>
 {
     public:
         /** Default constructor */
@@ -45,16 +45,21 @@ class TTXPage
 
         /** Default destructor */
         virtual ~TTXPage();
+        
+        std::shared_ptr<TTXPage> getptr()
+        {
+            return shared_from_this();
+        }
 
         /** Access m_SubPage which is the next page in a carousel
          * \return The current value of m_SubPage
          */
-        TTXPage* Getm_SubPage() { return m_SubPage; }
+        std::shared_ptr<TTXPage> Getm_SubPage() { return m_SubPage; }
 
         /** Set m_SubPage
          * \param val New value to set
          */
-        void Setm_SubPage(TTXPage* val) { m_SubPage = val; }
+        void Setm_SubPage(std::shared_ptr<TTXPage> val) { m_SubPage = val; }
 
          /** Setter/Getter for m_pageNumber
           */
@@ -81,7 +86,7 @@ class TTXPage
         /** Get a row of text
          * \return The TTXLine object of the required row. Check result for NULL if there isn't an actual row.
          */
-         TTXLine* GetRow(unsigned int rowNumber);
+         std::shared_ptr<TTXLine> GetRow(unsigned int rowNumber);
 
         /** Set row rownumber with text line.
          * \return nowt
@@ -151,8 +156,8 @@ class TTXPage
         // Private variables
         // Private objects
         int m_PageNumber;           // PN
-        TTXPage* m_SubPage;
-        TTXLine* m_pLine[MAXROW+1];
+        std::shared_ptr<TTXPage> m_SubPage;
+        std::shared_ptr<TTXLine> m_pLine[MAXROW+1];
         std::string m_filename;
         char m_cycletimetype;       // CT
         unsigned int m_subcode;     // SC

@@ -17,13 +17,13 @@ UpdatedPages::~UpdatedPages()
 
 }
 
-void UpdatedPages::addPage(TTXPageStream* p)
+void UpdatedPages::addPage(std::shared_ptr<TTXPageStream> p)
 {
     p->SetUpdatedFlag(true);
     _UpdatedPagesList.push_front(p);
 }
 
-TTXPageStream* UpdatedPages::NextPage()
+std::shared_ptr<TTXPageStream> UpdatedPages::NextPage()
 {
     if (_page == nullptr)
     {

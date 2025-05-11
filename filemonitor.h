@@ -39,13 +39,13 @@ namespace vbit
             Configure* _configure; /// Member reference to the configuration settings
             Debug* _debug;
             PageList* _pageList;
-            std::list<TTXPageStream*> _FilesList;
+            std::list<std::shared_ptr<TTXPageStream>> _FilesList;
             int readDirectory(std::string path, bool firstrun=false);
             
-            TTXPageStream* Locate(std::string filename);
+            std::shared_ptr<TTXPageStream> Locate(std::string filename);
             void ClearFlags();
             void DeleteOldPages();
-            void Delete29AndHeader(TTXPageStream* page);
+            void Delete29AndHeader(std::shared_ptr<TTXPageStream> page);
     };
 }
 

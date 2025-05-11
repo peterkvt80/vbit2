@@ -15,27 +15,7 @@ TTXPageStream::TTXPageStream() :
     _updateCount(0)
 {
     //ctor
-    _mtx = new std::mutex();
-}
-
-TTXPageStream::TTXPageStream(std::string filename) :
-    TTXPage(),
-    _transitionTime(0),
-    _CarouselPage(nullptr),
-    _fileStatus(NEW),
-    _loadedPacket29(false),
-    _loadedCustomHeader(false),
-    _isCarousel(false),
-    _isSpecial(false),
-    _isNormal(false),
-    _isUpdated(false),
-    _updateCount(0)
-{
-    _mtx = new std::mutex();
-    struct stat attrib;               // create a file attribute structure
-    stat(filename.c_str(), &attrib);  // get the attributes of the file
-    _modifiedTime=attrib.st_mtime;
-    m_LoadTTI(filename);
+    _mtx.reset(new std::mutex());
 }
 
 TTXPageStream::~TTXPageStream()
@@ -44,10 +24,10 @@ TTXPageStream::~TTXPageStream()
     //std::cerr << "TTXPageStream dtor\n";
 }
 
-TTXLine* TTXPageStream::GetTxRow(uint8_t row)
+std::shared_ptr<TTXLine> TTXPageStream::GetTxRow(uint8_t row)
 {
     // Return a line or nullptr if the row does not exist
-    TTXLine* line=nullptr;
+    std::shared_ptr<TTXLine> line=nullptr;
     if (IsCarousel())
     {
         line=_CarouselPage->GetRow(row);
@@ -67,7 +47,7 @@ TTXLine* TTXPageStream::GetTxRow(uint8_t row)
 void TTXPageStream::StepNextSubpageNoLoop()
 {
     if (_CarouselPage==nullptr)
-        _CarouselPage=this;
+        _CarouselPage=this->getptr();
     else
         _CarouselPage=_CarouselPage->Getm_SubPage();
 }
@@ -76,21 +56,27 @@ void TTXPageStream::StepNextSubpage()
 {
     StepNextSubpageNoLoop();
     if (_CarouselPage==nullptr) // Last carousel subpage? Loop to beginning
-        _CarouselPage=this;
+        _CarouselPage=this->getptr();
 }
 
 bool TTXPageStream::LoadPage(std::string filename)
 {
+    bool Loaded = m_LoadTTI(filename);
+    
+    return Loaded;
+}
+
+bool TTXPageStream::ReloadPage(std::string filename)
+{
+    std::cerr << "reload " << filename << std::endl;
     _mtx->lock();
     int num = GetPageNumber()>>8;
-    bool Loaded = m_LoadTTI(filename);
+    bool Loaded = LoadPage(filename);
     if (num != GetPageNumber()>>8)
     {
         // page number has changed so mark this page to get deleted and reloaded
         _fileStatus = MARKED;
     }
-    
-    _CarouselPage=this;
     
     return Loaded;
 }

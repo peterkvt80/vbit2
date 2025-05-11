@@ -29,7 +29,7 @@ PageList::~PageList()
 {
 }
 
-void PageList::AddPage(TTXPageStream* page, bool noupdate)
+void PageList::AddPage(std::shared_ptr<TTXPageStream> page, bool noupdate)
 {
     int num = page->GetPageNumber() >> 8;
     int mag = (num >> 8) & 7;
@@ -37,7 +37,7 @@ void PageList::AddPage(TTXPageStream* page, bool noupdate)
     if ((num & 0xFF) != 0xFF)
     {
         // never load page mFF into page lists
-        TTXPageStream* q = Locate(num);
+        std::shared_ptr<TTXPageStream> q = Locate(num);
         if (q)
         {
             _pageList[mag].remove(q);
@@ -57,7 +57,7 @@ void PageList::AddPage(TTXPageStream* page, bool noupdate)
     }
 }
 
-void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
+void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdate)
 {
     int mag=(page->GetPageNumber() >> 16) & 0x7;
     
@@ -124,7 +124,7 @@ void PageList::UpdatePageLists(TTXPageStream* page, bool noupdate)
     }
 }
 
-void PageList::RemovePage(TTXPageStream* page)
+void PageList::RemovePage(std::shared_ptr<TTXPageStream> page)
 {
     if (!(page->GetCarouselFlag() || page->GetNormalFlag() || page->GetSpecialFlag() || page->GetUpdatedFlag()))
     {
@@ -145,7 +145,7 @@ void PageList::RemovePage(TTXPageStream* page)
     page->FreeLock(); // free the lock on page
 }
 
-void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
+void PageList::CheckForPacket29OrCustomHeader(std::shared_ptr<TTXPageStream> page)
 {
     if (page->IsCarousel()) // page mFF should never be a carousel and this code leads to a crash if it is so bail out now
         return;
@@ -178,7 +178,7 @@ void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
             if (page->GetPacket29Flag())
                 _mag[mag]->DeletePacket29(); // clear previous packet 29
             
-            TTXLine* tempLine = page->GetTxRow(29);
+            std::shared_ptr<TTXLine> tempLine = page->GetTxRow(29);
             
             while (tempLine != nullptr)
             {
@@ -187,19 +187,19 @@ void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
                     case '@':
                     {
                         Packet29Flag = true;
-                        _mag[mag]->SetPacket29(0, new TTXLine(tempLine->GetLine(), true));
+                        _mag[mag]->SetPacket29(0, std::shared_ptr<TTXLine>(new TTXLine(tempLine->GetLine(), true)));
                         break;
                     }
                     case 'A':
                     {
                         Packet29Flag = true;
-                        _mag[mag]->SetPacket29(1, new TTXLine(tempLine->GetLine(), true));
+                        _mag[mag]->SetPacket29(1, std::shared_ptr<TTXLine>(new TTXLine(tempLine->GetLine(), true)));
                         break;
                     }
                     case 'D':
                     {
                         Packet29Flag = true;
-                        _mag[mag]->SetPacket29(2, new TTXLine(tempLine->GetLine(), true));
+                        _mag[mag]->SetPacket29(2, std::shared_ptr<TTXLine>(new TTXLine(tempLine->GetLine(), true)));
                         break;
                     }
                 }
@@ -218,13 +218,13 @@ void PageList::CheckForPacket29OrCustomHeader(TTXPageStream* page)
 }
 
 // Find a page by number - Warning: this will only find the first match so don't let multiples into the list!
-TTXPageStream* PageList::Locate(int PageNumber)
+std::shared_ptr<TTXPageStream> PageList::Locate(int PageNumber)
 {
     // This is called from the FileMonitor thread
     int mag = (PageNumber >> 8) & 7;
-    for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
     {
-        TTXPageStream* ptr = *p;
+        std::shared_ptr<TTXPageStream> ptr = *p;
         if (PageNumber==ptr->GetPageNumber() >> 8)
             return ptr;
     }
@@ -232,11 +232,11 @@ TTXPageStream* PageList::Locate(int PageNumber)
 }
 
 // Does the page list contain a particular TTXPageStream
-bool PageList::Contains(TTXPageStream* page)
+bool PageList::Contains(std::shared_ptr<TTXPageStream> page)
 {
     // This is called from the FileMonitor thread
     int mag = (page->GetPageNumber() >> 16) & 7;
-    for (std::list<TTXPageStream*>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
     {
         if (*p==page)
             return true;

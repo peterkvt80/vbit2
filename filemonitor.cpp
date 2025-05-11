@@ -90,7 +90,7 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
         {
             // Now we want to process changes
             // 1) Is it a new page? Then add it.
-            TTXPageStream* q = Locate(name);
+            std::shared_ptr<TTXPageStream> q = Locate(name);
             if (q) // File was found
             {
                 if (!(q->GetStatusFlag()==TTXPageStream::MARKED || q->GetStatusFlag()==TTXPageStream::REMOVE || q->GetStatusFlag()==TTXPageStream::GONE)) // file is not mid-deletion
@@ -100,7 +100,7 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                     {
                         // We just load the new page and update the modified time
                         
-                        q->LoadPage(name); // waits for mutex
+                        q->ReloadPage(name); // waits for mutex
                         q->IncrementUpdateCount();
                         int status = q->GetPageStatus();
                         if (!(_pageList->Contains(q)))
@@ -130,8 +130,11 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                 }
                 // A new file. Create the page object and add it to the page list.
                 
-                if ((q=new TTXPageStream(name)))
+                std::shared_ptr<TTXPageStream> q(new TTXPageStream());
+                if (q->LoadPage(name))
                 {
+                    q->SetModifiedTime(attrib.st_mtime); // set timestamp
+                    
                     // don't add to updated pages list if this is the initial load
                     int status = q->GetPageStatus();
                     _pageList->AddPage(q, firstrun || !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
@@ -153,11 +156,11 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
 
 
 // Find a page by filename
-TTXPageStream* FileMonitor::Locate(std::string filename)
+std::shared_ptr<TTXPageStream> FileMonitor::Locate(std::string filename)
 {
-    for (std::list<TTXPageStream*>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
     {
-        TTXPageStream* ptr = *p;
+        std::shared_ptr<TTXPageStream> ptr = *p;
         if (filename==ptr->GetFilename())
             return ptr;
     }
@@ -170,9 +173,9 @@ TTXPageStream* FileMonitor::Locate(std::string filename)
 // As we scan through the list, set the "exists" flag as we match up the drive to the loaded page
 void FileMonitor::ClearFlags()
 {
-    for (std::list<TTXPageStream*>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
     {
-        TTXPageStream* ptr = *p;
+        std::shared_ptr<TTXPageStream> ptr = *p;
         // Don't unmark a file that was MARKED. Once condemned it won't be pardoned
         if (ptr->GetStatusFlag()==TTXPageStream::FOUND || ptr->GetStatusFlag()==TTXPageStream::NEW)
         {
@@ -183,16 +186,15 @@ void FileMonitor::ClearFlags()
 
 void FileMonitor::DeleteOldPages()
 {
-    for (std::list<TTXPageStream*>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_FilesList.begin();p!=_FilesList.end();++p)
     {
-        TTXPageStream* ptr = *p;
+        std::shared_ptr<TTXPageStream> ptr = *p;
         if (ptr->GetStatusFlag()==TTXPageStream::GONE)
         {
             Delete29AndHeader(ptr);
             
             _FilesList.remove(*p--);
-            // page has been removed from lists so safe to delete
-            delete ptr; // this finally deletes the pagestream/page object
+            // page has been removed from lists
         }
         else if (ptr->GetStatusFlag()==TTXPageStream::NOTFOUND)
         {
@@ -204,8 +206,7 @@ void FileMonitor::DeleteOldPages()
                 
                 Delete29AndHeader(ptr);
                 _FilesList.remove(*p--);
-                // page has been removed from all lists so safe to delete
-                delete ptr; // this finally deletes the pagestream/page object
+                // page has been removed from all lists
             }
             else
             {
@@ -216,7 +217,7 @@ void FileMonitor::DeleteOldPages()
     }
 }
 
-void FileMonitor::Delete29AndHeader(TTXPageStream* page)
+void FileMonitor::Delete29AndHeader(std::shared_ptr<TTXPageStream> page)
 {
     int mag=(page->GetPageNumber() >> 16) & 0x7;
     if (page->GetPacket29Flag())

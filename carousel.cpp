@@ -16,7 +16,7 @@ Carousel::~Carousel()
     //dtor
 }
 
-void Carousel::addPage(TTXPageStream* p)
+void Carousel::addPage(std::shared_ptr<TTXPageStream> p)
 {
     // @todo Don't allow duplicate entries
     p->SetCarouselFlag(true);
@@ -24,12 +24,12 @@ void Carousel::addPage(TTXPageStream* p)
     _carouselList.push_front(p);
 }
 
-TTXPageStream* Carousel::nextCarousel()
+std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
 {
-    TTXPageStream* p;
+    std::shared_ptr<TTXPageStream> p;
     if (_carouselList.size()==0) return NULL;
     
-    for (std::list<TTXPageStream*>::iterator it=_carouselList.begin();it!=_carouselList.end();++it)
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator it=_carouselList.begin();it!=_carouselList.end();++it)
     {
         p=*it;
         if (p->GetLock()) // try to lock this page against changes

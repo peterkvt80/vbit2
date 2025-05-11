@@ -30,26 +30,26 @@ namespace vbit
             PacketMag **GetMagazines(){PacketMag **p=_mag;return p;};
 
             /** Return the page object with the specified page number */
-            TTXPageStream* Locate(int PageNumber);
+            std::shared_ptr<TTXPageStream> Locate(int PageNumber);
             
-            bool Contains(TTXPageStream* page);
+            bool Contains(std::shared_ptr<TTXPageStream> page);
 
             /** Add a teletext page to the proper magazine */
-            void AddPage(TTXPageStream* page, bool noupdate=false);
+            void AddPage(std::shared_ptr<TTXPageStream> page, bool noupdate=false);
             
-            void RemovePage(TTXPageStream* page);
+            void RemovePage(std::shared_ptr<TTXPageStream> page);
             
             /** Add a teletext page to the correct list for its type */
-            void UpdatePageLists(TTXPageStream* page, bool noupdate=false);
+            void UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdate=false);
 
-            void CheckForPacket29OrCustomHeader(TTXPageStream* page);
+            void CheckForPacket29OrCustomHeader(std::shared_ptr<TTXPageStream> page);
             
             int GetSize(int mag);
 
         private:
             Configure* _configure; // The configuration object
             Debug* _debug;
-            std::list<TTXPageStream*> _pageList[8]; /// The list of Pages in this service. One list per magazine
+            std::list<std::shared_ptr<TTXPageStream>> _pageList[8]; /// The list of Pages in this service. One list per magazine
             PacketMag* _mag[8];
     };
 }

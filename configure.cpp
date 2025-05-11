@@ -321,7 +321,7 @@ int Configure::LoadConfigFile(std::string filename)
         std::string line;
         std::string name;
         std::string value;
-        TTXLine* header = new TTXLine();
+        std::shared_ptr<TTXLine> header(new TTXLine());
         while (std::getline(filein >> std::ws, line))
         {
             if (line.front() != ';') // ignore comments

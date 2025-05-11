@@ -53,8 +53,6 @@ Packet* PacketMag::GetPacket(Packet* p)
     unsigned int thisSubcode;
     int* links=NULL;
     bool updatedFlag=false;
-    
-    static Packet* TempPacket=new Packet(8,25,"                                        "); // a temporary packet for checksum calculation
 
     // We should only call GetPacket if IsReady has returned true
 
@@ -243,11 +241,11 @@ loopback: // jump back point to avoid returning null packets when we could send 
             {
                 // the content of the header has changed or the page has been reloaded
                 // we must now CRC the whole page
-                
+                Packet TempPacket(8,25,"                                        "); // a temporary packet for checksum calculation
                 for (int i=1; i<26; i++)
                 {
-                    TempPacket->SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _subpage->GetPageCoding());
-                    tempCRC = TempPacket->PacketCRC(tempCRC);
+                    TempPacket.SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _subpage->GetPageCoding());
+                    tempCRC = TempPacket.PacketCRC(tempCRC);
                 }
                 
                 _subpage->SetPageCRC(tempCRC);
@@ -460,7 +458,7 @@ bool PacketMag::IsReady(bool force)
     }
 };
 
-void PacketMag::SetPacket29(int i, TTXLine *line)
+void PacketMag::SetPacket29(int i, std::shared_ptr<TTXLine> line)
 {
     _packet29[i] = line;
     _hasPacket29 = true;
@@ -480,11 +478,7 @@ void PacketMag::DeletePacket29()
     _mtx.lock();
     for (int i=0;i<MAXPACKET29TYPES;i++)
     {
-        if (_packet29[i] != nullptr)
-        {
-            delete _packet29[i]; // delete TTXLine created in PageList::CheckForPacket29
-            _packet29[i] = nullptr;
-        }
+        _packet29[i] = nullptr;
     }
     _hasPacket29 = false;
     _mtx.unlock();

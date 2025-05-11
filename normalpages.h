@@ -21,9 +21,9 @@ class NormalPages
         /** Default destructor */
         virtual ~NormalPages();
 
-        TTXPageStream* NextPage();
+        std::shared_ptr<TTXPageStream> NextPage();
 
-        void addPage(TTXPageStream* p);
+        void addPage(std::shared_ptr<TTXPageStream> p);
 
     protected:
 
@@ -31,15 +31,15 @@ class NormalPages
         int _mag;
         PageList* _pageList;
         Debug* _debug;
-        std::list<TTXPageStream*> _NormalPagesList;
-        std::list<TTXPageStream*>::iterator _iter;
-        TTXPageStream* _page;
+        std::list<std::shared_ptr<TTXPageStream>> _NormalPagesList;
+        std::list<std::shared_ptr<TTXPageStream>>::iterator _iter;
+        std::shared_ptr<TTXPageStream> _page;
         bool _needSorting;
         
         template <typename TTXPageStream>
         struct pageLessThan
         {
-            bool operator()(const TTXPageStream *a, const TTXPageStream *b) const{
+            bool operator()(const std::shared_ptr<TTXPageStream>a, const std::shared_ptr<TTXPageStream>b) const{
                 return a->GetPageNumber() < b->GetPageNumber();
             }
         };

@@ -25,20 +25,6 @@ TTXPage::TTXPage() :
 TTXPage::~TTXPage()
 {
     //std::cerr << "TTXPage dtor\n";
-    for (int i=0;i<=MAXROW;i++)
-    {
-        if (m_pLine[i]!=nullptr)
-        {
-            delete m_pLine[i];
-            m_pLine[i]=nullptr;
-        }
-    }
-    
-    if (Getm_SubPage()!=nullptr)
-    {
-        delete m_SubPage;
-        m_SubPage=nullptr;
-    }
 }
 
 void TTXPage::m_Init()
@@ -47,16 +33,11 @@ void TTXPage::m_Init()
     // deleted old lines and subpages
     for (int i=0;i<=MAXROW;i++)
     {
-        if (m_pLine[i]!=nullptr)
-        {
-            delete m_pLine[i];
-        }
         m_pLine[i]=nullptr;
     }
     
     if (m_SubPage!=nullptr)
     {
-        delete m_SubPage;
         m_SubPage=nullptr;
     }
     
@@ -83,7 +64,7 @@ bool TTXPage::m_LoadTTI(std::string filename)
     // Open the file
     std::ifstream filein(filename.c_str());
     m_filename = filename;
-    TTXPage* p=this;
+    std::shared_ptr<TTXPage> p(this->getptr());
     p->m_Init(); // reset page
     char * ptr;
     unsigned int subcode;
@@ -143,8 +124,8 @@ bool TTXPage::m_LoadTTI(std::string filename)
                         if (p->m_PageNumber!=FIRSTPAGE) // Subsequent pages need new page instances
                         {
                             int pagestatus = p->GetPageStatus();
-                            TTXPage* newSubPage=new TTXPage();  // Create a new instance for the subpage
-                            p->Setm_SubPage(newSubPage);            // Put in a link to it
+                            std::shared_ptr<TTXPage> newSubPage(new TTXPage()); // Create a new instance for the subpage
+                            p->Setm_SubPage(newSubPage);        // Put in a link to it
                             p=newSubPage;                       // And jump to the next subpage ready to populate
                             p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
                             p->SetCycleTimeMode(m_cycletimetype); // inherit cycle time
@@ -241,19 +222,18 @@ bool TTXPage::m_LoadTTI(std::string filename)
     return (lines>0);
 }
 
-TTXLine* TTXPage::GetRow(unsigned int row)
+std::shared_ptr<TTXLine> TTXPage::GetRow(unsigned int row)
 {
     if (row>MAXROW)
     {
         return nullptr;
     }
-    TTXLine* line=m_pLine[row];
-    if (line==nullptr && row>0 && row<26)
+    
+    if (m_pLine[row]==nullptr && row>0 && row<26)
     {
-        line=new TTXLine("                                        "); // return a blank row for X/1-X/25
-        m_pLine[row] = line; // remember it for next time and so it can be destroyed!
+        m_pLine[row].reset(new TTXLine("                                        ")); // return a blank row for X/1-X/25
     }
-    return line;
+    return m_pLine[row];
 }
 
 void TTXPage::SetRow(unsigned int rownumber, std::string line)
@@ -291,7 +271,9 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
     }
 
     if (m_pLine[rownumber]==nullptr)
-        m_pLine[rownumber]=new TTXLine(line,true); // Didn't exist before
+    {
+        m_pLine[rownumber].reset(new TTXLine(line,true)); // Didn't exist before
+    }
     else
     {
         if (rownumber<26) // Ordinary line
@@ -328,7 +310,7 @@ void TTXPage::RenumberSubpages()
     {
         // Page has subpages. Renumber according to Annex A.1.
         for (int i=0;i<4;i++) code[i]=0;
-        for (TTXPage* p=this;p!=nullptr;p=p->m_SubPage)
+        for (std::shared_ptr<TTXPage> p(this->getptr());p!=nullptr;p=p->m_SubPage)
         {
             if (Special())
             {

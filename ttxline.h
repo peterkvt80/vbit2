@@ -4,21 +4,26 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <memory>
 
 /** TTXLine - a single line of teletext
  *  The line is always stored in 40 bytes in transmission ready format
  * (but with the parity bit set to 0).
  */
 
-class TTXLine
+class TTXLine : public std::enable_shared_from_this<TTXLine>
 {
     public:
         /** Constructors */
         TTXLine();
         TTXLine(std::string const& line, bool validate=true);
-        // TTXLine(std::string const& line);
         /** Default destructor */
         virtual ~TTXLine();
+
+        std::shared_ptr<TTXLine> getptr()
+        {
+            return shared_from_this();
+        }
 
         /** Set the teletext line contents
          * \param val - New value to set
@@ -47,14 +52,14 @@ class TTXLine
          */
         void AppendLine(std::string  const& line);
 
-        TTXLine* GetNextLine(){return _nextLine;}
+        std::shared_ptr<TTXLine> GetNextLine(){return _nextLine;}
 
     protected:
     private:
         std::string validate(std::string const& test);
 
         std::string m_textline;
-        TTXLine* _nextLine;
+        std::shared_ptr<TTXLine> _nextLine;
 };
 
 #endif // TTXLINE_H

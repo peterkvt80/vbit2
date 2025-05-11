@@ -17,9 +17,7 @@ TTXLine::TTXLine():m_textline("                                        "),
 
 TTXLine::~TTXLine()
 {
-    //std::cerr << "TTXLine dtor\n";
-    if (_nextLine!=nullptr)
-        delete _nextLine;
+    //std::cerr << "TTXLine dtor " << m_textline << std::endl;
 }
 
 void TTXLine::Setm_textline(std::string const& val, bool validateLine)
@@ -103,7 +101,7 @@ std::string TTXLine::GetLine()
 void TTXLine::AppendLine(std::string  const& line)
 {
     // Seek the end of the list
-    TTXLine* p;
-    for (p=this;p->_nextLine;p=p->_nextLine);
-    p->_nextLine=new TTXLine(line,true);
+    std::shared_ptr<TTXLine> p;
+    for (p=this->getptr();p->_nextLine;p=p->_nextLine);
+    p->_nextLine.reset(new TTXLine(line,true));
 }

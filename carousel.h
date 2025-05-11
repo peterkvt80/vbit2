@@ -24,12 +24,12 @@ class Carousel
 
         /** Add a page to the list
          */
-        void addPage(TTXPageStream* p);
+        void addPage(std::shared_ptr<TTXPageStream> p);
 
         /** Find the next carousel page that needs to be transmitted
          *  @return The next carousel if it is time to go or NULL
          */
-        TTXPageStream* nextCarousel();
+        std::shared_ptr<TTXPageStream> nextCarousel();
 
 
     protected:
@@ -39,7 +39,7 @@ class Carousel
         PageList* _pageList;
         Debug* _debug;
 
-        std::list<TTXPageStream*> _carouselList; /// The list of carousel pages
+        std::list<std::shared_ptr<TTXPageStream>> _carouselList; /// The list of carousel pages
 };
 
 }
