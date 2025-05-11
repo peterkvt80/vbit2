@@ -7,7 +7,190 @@ File::File(std::string filename) :
     _filename(filename),
     _fileStatus(NEW)
 {
-    _page->LoadPage(filename);
+    LoadFile(filename);
+}
+
+void File::LoadFile(std::string filename)
+{
+    _loaded = false;
+    if (filename.size() >= 4)
+    {
+        std::string ext = filename.substr(filename.size() - 4); // get last four characters of string
+        
+        if (ext == ".tti")
+        {
+            _loaded = LoadTTI(filename);
+        }
+        // else other types of file we might want to load in future
+    }
+}
+
+bool File::LoadTTI(std::string filename)
+{
+    const std::string cmd[]={"DS","SP","DE","CT","PN","SC","PS","MS","OL","FL","RD","RE","PF"};
+    const int cmdCount = 13; // There are 13 possible commands, maybe DT and RT too on really old files
+    unsigned int lineNumber;
+    int lines=0;
+    // Open the file
+    std::ifstream filein(filename.c_str());
+    std::shared_ptr<TTXPage> p(_page->getptr());
+    _page->ClearPage(); // reset to blank page
+    char * ptr;
+    unsigned int subcode;
+    std::string subpage;
+    int pageNumber;
+    char cycletimetype = _page->GetCycleTimeMode();
+    int cycletimeseconds = _page->GetCycleTime();
+    char m;
+    for (std::string line; std::getline(filein, line, ','); )
+    {
+        // This shows the command code:
+        bool found=false;
+        for (int i=0;i<cmdCount && !found; i++)
+        {
+            if (!line.compare(cmd[i]))
+            {
+                found=true;
+                switch (i)
+                {
+                    case 0 : // "DS"
+                    case 1 : // "SP"
+                    case 2 : // "DE"
+                    {
+                        std::getline(filein, line); // consume line
+                        break;
+                    }
+                    case 3 : // "CT" - Cycle time (seconds)
+                    {
+                        // CT,8,T
+                        std::getline(filein, line, ',');
+                        cycletimeseconds = (atoi(line.c_str()));
+                        p->SetCycleTime(cycletimeseconds);
+                        std::getline(filein, line);
+                        cycletimetype = (line[0]=='T'?'T':'C');
+                        p->SetCycleTimeMode(cycletimetype);
+                        break;
+                    }
+                    case 4 : // "PN" - Page Number mppss
+                    {
+                        // Where m=1..8
+                        // pp=00 to ff (hex)
+                        // ss=00 to 99 (decimal)
+                        // PN,10000
+                        std::getline(filein, line);
+                        if (line.length()<3) // Must have at least three characters for a page number
+                            break;
+                        m=line[0];
+                        if (m<'1' || m>'8') // Magazine must be 1 to 8
+                            break;
+                        pageNumber=std::strtol(line.c_str(), &ptr, 16);
+                        if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
+                        {
+                            pageNumber*=0x100;
+                        }
+                        else   // Normally has subpage digits
+                        {
+                            subpage=line.substr(3,2);
+                            pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),nullptr,10);
+                        }
+                        if (p->GetPageNumber()!=FIRSTPAGE) // Subsequent pages need new page instances
+                        {
+                            int pagestatus = p->GetPageStatus();
+                            std::shared_ptr<TTXPage> newSubPage(new TTXPage()); // Create a new instance for the subpage
+                            p->Setm_SubPage(newSubPage);        // Put in a link to it
+                            p=newSubPage;                       // And jump to the next subpage ready to populate
+                            p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
+                            p->SetCycleTimeMode(cycletimetype); // inherit cycle time
+                            p->SetCycleTime(cycletimeseconds);
+                        }
+                        p->SetPageNumber(pageNumber);
+
+                        break;
+                    }
+                    case 5 : // "SC" - Subcode
+                    {
+                        // SC,0000
+                        std::getline(filein, line);
+                        subcode=std::strtol(line.c_str(), &ptr, 16);
+
+                        p->SetSubCode(subcode);
+                        break;
+                    }
+                    case 6 : // "PS" - Page status flags
+                    {
+                        // PS,8000
+                        std::getline(filein, line);
+                        p->SetPageStatus(std::strtol(line.c_str(), &ptr, 16));
+                        break;
+                    }
+                    case 7 : // "MS" - Mask
+                    {
+                        // MS,0
+                        std::getline(filein, line); // Mask is intended for TED to protecting regions from editing.
+                        break;
+                    }
+                    case 8 : // "OL" - Output line
+                    {
+                        std::getline(filein, line, ',');
+                        lineNumber=atoi(line.c_str());
+                        std::getline(filein, line);
+                        if (lineNumber>MAXROW) break;
+                        p->SetRow(lineNumber,line);
+                        lines++;
+                        break;
+                    }
+                    case 9 : // "FL"; - Fastext links
+                    {
+                        // FL,104,104,105,106,F,100
+                        for (int fli=0;fli<6;fli++)
+                        {
+                            if (fli<5)
+                                std::getline(filein, line, ',');
+                            else
+                                std::getline(filein, line); // Last parameter no comma
+                            p->SetFastextLink(fli,std::strtol(line.c_str(), &ptr, 16));
+                        }
+                        break;
+                    }
+                    case 10 : // "RD"; - not sure!
+                    {
+                        std::getline(filein, line);
+                        break;
+                    }
+                    case 11 : // "RE"; - Set page region code 0..f
+                    {
+                        std::getline(filein, line);
+                        p->SetRegion(std::strtol(line.c_str(), &ptr, 16));
+                        break;
+                    }
+                    case 12 : // "PF"; - not in the tti spec, page function and coding
+                    {
+                        std::getline(filein, line);
+                        if (line.length()<3)
+                        {
+                            // invalid page function/coding
+                        }
+                        else
+                        {
+                            _page->SetPageFunctionInt(std::strtol(line.substr(0,1).c_str(), &ptr, 16));
+                            _page->SetPageCodingInt(std::strtol(line.substr(2,1).c_str(), &ptr, 16));
+                        }
+                        break;
+                    }
+                    default:
+                    {
+                        // line not understood
+                    }
+                } // switch
+            } // if matched command
+            // If the command was not found then skip the rest of the line
+        } // seek command
+        if (!found) std::getline(filein, line);
+    }
+    filein.close(); // Not sure that we need to close it
+    p->Setm_SubPage(nullptr);
+    _page->RenumberSubpages();
+    return (lines>0);
 }
 
 FileMonitor::FileMonitor(Configure *configure, Debug *debug, PageList *pageList) :
@@ -94,78 +277,95 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
             continue;
         }
         
-        if (std::string(dirp->d_name).find(".tti") != std::string::npos)
+        const std::vector<std::string> filetypes{".tti"}; // the filetypes we will attempt to load
+        if (name.size() >= 4)
         {
-            // Now we want to process changes
-            // 1) Is it a new page? Then add it.
-            std::shared_ptr<File> f = Locate(name);
-            if (f) // File was found
+            std::string ext = name.substr(name.size() - 4); // get last four characters of string
+            if (find(filetypes.begin(), filetypes.end(), ext) != filetypes.end())
             {
-                f->SetState(File::FOUND); // Mark this page as existing on the drive
-                std::shared_ptr<TTXPageStream> page = f->GetPage();
-                if (!(page->GetIsMarked())) // file is not mid-deletion
+                // Now we want to process changes
+                // 1) Is it a new page? Then add it.
+                std::shared_ptr<File> f = Locate(name);
+                if (f) // File was found
                 {
+                    f->SetState(File::FOUND); // Mark this page as existing on the drive
+                    std::shared_ptr<TTXPageStream> page = f->GetPage();
                     if (attrib.st_mtime!=f->GetModifiedTime()) // File exists. Has it changed?
                     {
-                        // We just load the new page and update the modified time
-                        
-                        if (page->GetLock()) // try to lock page
+                        if (page->GetIsMarked()) // file is mid-deletion
                         {
-                            int curnum = page->GetPageNumber()>>8;
-                            page->LoadPage(name);
-                            if (page->GetPageNumber()>>8 != curnum)
+                            f->SetState(File::NOTFOUND); // let this file object get deleted and reloaded
+                        }
+                        else
+                        {
+                            // We just load the new page and update the modified time
+                            
+                            if (page->GetLock()) // try to lock page
                             {
-                                // page number changed
-                                page->MarkForDeletion(); // mark page for deletion from service
-                                f->SetState(File::NOTFOUND); // let this file object get deleted and reloaded
-                            }
-                            else
-                            {
-                                page->IncrementUpdateCount();
-                                int status = page->GetPageStatus();
-                                if (!(_pageList->Contains(page)))
+                                int curnum = page->GetPageNumber()>>8;
+                                f->LoadFile(name);
+                                if (page->GetPageNumber()>>8 != curnum)
                                 {
-                                    // this page is not currently in pagelist
-                                    _pageList->AddPage(page, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                                    // page number changed
+                                    page->MarkForDeletion(); // mark page for deletion from service
+                                    f->SetState(File::NOTFOUND); // let this file object get deleted and reloaded
                                 }
                                 else
                                 {
-                                    _pageList->UpdatePageLists(page, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                                    page->IncrementUpdateCount();
+                                    int status = page->GetPageStatus();
+                                    
+                                    if (f->Loaded())
+                                    {
+                                        if (!(_pageList->Contains(page)))
+                                        {
+                                            // this page is not currently in pagelist
+                                            _pageList->AddPage(page, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                                        }
+                                        else
+                                        {
+                                            _pageList->UpdatePageLists(page, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                                        }
+                                        page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an updated page
+                                    }
+                                    else
+                                    {
+                                        _debug->Log(Debug::LogLevels::logWARN,"[FileMonitor::run] Failed to load " + std::string(dirp->d_name));
+                                        page->MarkForDeletion(); // mark page for deletion from service
+                                    }
+                                    
+                                    _pageList->CheckForPacket29OrCustomHeader(page);
+                                    
+                                    f->SetModifiedTime(attrib.st_mtime);
                                 }
-                                page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an updated page
-                                
-                                _pageList->CheckForPacket29OrCustomHeader(page);
-                                
-                                f->SetModifiedTime(attrib.st_mtime);
+                                page->FreeLock(); // must unlock or everything will grind to a halt
                             }
-                            page->FreeLock(); // must unlock or everything will grind to a halt
                         }
                     }
                 }
-            }
-            else
-            {
-                //if (!firstrun){ // suppress logspam on first run
-                    _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Adding a new page " + std::string(dirp->d_name));
-                //}
-                // A new file. Create the page object and add it to the page list.
-                
-                std::shared_ptr<File> f(new File(name));
-                if (f)
-                {
-                    f->SetModifiedTime(attrib.st_mtime); // set timestamp
-                    std::shared_ptr<TTXPageStream> page = f->GetPage();
-                    
-                    // don't add to updated pages list if this is the initial load
-                    int status = page->GetPageStatus();
-                    _pageList->AddPage(page, firstrun || !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
-                    page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an newly loaded page
-                    
-                    _FilesList.push_back(f);
-                }
                 else
                 {
-                    _debug->Log(Debug::LogLevels::logWARN,"[FileMonitor::run] Failed to load" + std::string(dirp->d_name));
+                    //if (!firstrun){ // suppress logspam on first run
+                        _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Adding a new page " + std::string(dirp->d_name));
+                    //}
+                    // A new file. Create the page object and add it to the page list.
+                    
+                    std::shared_ptr<File> f(new File(name));
+                    f->SetModifiedTime(attrib.st_mtime); // set timestamp
+                    if (f->Loaded())
+                    {
+                        std::shared_ptr<TTXPageStream> page = f->GetPage();
+                        
+                        // don't add to updated pages list if this is the initial load
+                        int status = page->GetPageStatus();
+                        _pageList->AddPage(page, firstrun || !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                        page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an newly loaded page
+                    }
+                    else
+                    {
+                        _debug->Log(Debug::LogLevels::logWARN,"[FileMonitor::run] Failed to load " + std::string(dirp->d_name));
+                    }
+                    _FilesList.push_back(f);
                 }
             }
         }

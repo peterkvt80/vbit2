@@ -1,23 +1,14 @@
  #include "ttxpage.h"
 
 TTXPage::TTXPage() :
-    m_cycletimeseconds(1), /* default to cycling carousels every page cycle */
-    m_PageNumber(FIRSTPAGE),
-    m_SubPage(nullptr),
-    m_cycletimetype('C'),
-    m_subcode(0),
-    m_pagestatus(0), /* default to not sending page to ignore malformed/blank tti files */
-    m_region(0),
-    m_lastpacket(0),
-    m_pagecoding(CODING_7BIT_TEXT),
-    m_pagefunction(LOP),
-    _Selected(false),
     _headerCRC(0),
     _pageCRC(0)
 {
-    for (int i=0;i<=MAXROW;i++)
+    ClearPage(); // initialises variables
+    
+    for (int i=0;i<6;i++)
     {
-        m_pLine[i]=nullptr;
+        SetFastextLink(i,0x8ff);
     }
 }
 
@@ -26,198 +17,33 @@ TTXPage::~TTXPage()
     //std::cerr << "TTXPage dtor\n";
 }
 
-void TTXPage::m_Init()
+void TTXPage::ClearPage()
 {
     m_PageNumber = FIRSTPAGE;
-    // deleted old lines and subpages
-    for (int i=0;i<=MAXROW;i++)
-    {
-        m_pLine[i]=nullptr;
-    }
-    
-    if (m_SubPage!=nullptr)
-    {
-        m_SubPage=nullptr;
-    }
-    
-    m_region=0;
-    for (int i=0;i<6;i++)
-    {
-        SetFastextLink(i,0x8ff);
-    }
-    // Member variables
-    m_cycletimeseconds=1; /* default to cycling carousels every page cycle */
     m_cycletimetype='C';
+    m_cycletimeseconds=1; /* default to cycling carousels every page cycle */
+    m_subcode=0;
     m_pagestatus=0; /* default to not sending page to ignore malformed/blank tti files */
+    m_region=0;
     m_lastpacket=0;
     m_pagecoding=CODING_7BIT_TEXT;
     m_pagefunction=LOP;
-}
-
-bool TTXPage::m_LoadTTI(std::string filename)
-{
-    const std::string cmd[]={"DS","SP","DE","CT","PN","SC","PS","MS","OL","FL","RD","RE","PF"};
-    const int cmdCount = 13; // There are 13 possible commands, maybe DT and RT too on really old files
-    unsigned int lineNumber;
-    int lines=0;
-    // Open the file
-    std::ifstream filein(filename.c_str());
-    std::shared_ptr<TTXPage> p(this->getptr());
-    p->m_Init(); // reset page
-    char * ptr;
-    unsigned int subcode;
-    std::string subpage;
-    int pageNumber;
-    char m;
-    for (std::string line; std::getline(filein, line, ','); )
+    
+    if (m_SubPage!=nullptr)
     {
-        // This shows the command code:
-        bool found=false;
-        for (int i=0;i<cmdCount && !found; i++)
-        {
-            if (!line.compare(cmd[i]))
-            {
-                found=true;
-                switch (i)
-                {
-                    case 0 : // "DS"
-                    case 1 : // "SP"
-                    case 2 : // "DE"
-                    {
-                        std::getline(filein, line); // consume line
-                        break;
-                    }
-                    case 3 : // "CT" - Cycle time (seconds)
-                    {
-                        // CT,8,T
-                        std::getline(filein, line, ',');
-                        p->SetCycleTime(atoi(line.c_str()));
-                        std::getline(filein, line);
-                        m_cycletimetype=line[0]=='T'?'T':'C';
-                        p->SetCycleTimeMode(m_cycletimetype);
-                        break;
-                    }
-                    case 4 : // "PN" - Page Number mppss
-                    {
-                        // Where m=1..8
-                        // pp=00 to ff (hex)
-                        // ss=00 to 99 (decimal)
-                        // PN,10000
-                        std::getline(filein, line);
-                        if (line.length()<3) // Must have at least three characters for a page number
-                            break;
-                        m=line[0];
-                        if (m<'1' || m>'8') // Magazine must be 1 to 8
-                            break;
-                        pageNumber=std::strtol(line.c_str(), &ptr, 16);
-                        if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
-                        {
-                            pageNumber*=0x100;
-                        }
-                        else   // Normally has subpage digits
-                        {
-                            subpage=line.substr(3,2);
-                            pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),nullptr,10);
-                        }
-                        if (p->m_PageNumber!=FIRSTPAGE) // Subsequent pages need new page instances
-                        {
-                            int pagestatus = p->GetPageStatus();
-                            std::shared_ptr<TTXPage> newSubPage(new TTXPage()); // Create a new instance for the subpage
-                            p->Setm_SubPage(newSubPage);        // Put in a link to it
-                            p=newSubPage;                       // And jump to the next subpage ready to populate
-                            p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
-                            p->SetCycleTimeMode(m_cycletimetype); // inherit cycle time
-                            p->SetCycleTime(m_cycletimeseconds);
-                        }
-                        p->SetPageNumber(pageNumber);
-                        p->SetFileChangedFlag();
-
-                        break;
-                    }
-                    case 5 : // "SC" - Subcode
-                    {
-                        // SC,0000
-                        std::getline(filein, line);
-                        subcode=std::strtol(line.c_str(), &ptr, 16);
-
-                        p->SetSubCode(subcode);
-                        break;
-                    }
-                    case 6 : // "PS" - Page status flags
-                    {
-                        // PS,8000
-                        std::getline(filein, line);
-                        p->SetPageStatus(std::strtol(line.c_str(), &ptr, 16));
-                        break;
-                    }
-                    case 7 : // "MS" - Mask
-                    {
-                        // MS,0
-                        std::getline(filein, line); // Mask is intended for TED to protecting regions from editing.
-                        break;
-                    }
-                    case 8 : // "OL" - Output line
-                    {
-                        std::getline(filein, line, ',');
-                        lineNumber=atoi(line.c_str());
-                        std::getline(filein, line);
-                        if (lineNumber>MAXROW) break;
-                        p->SetRow(lineNumber,line);
-                        lines++;
-                        break;
-                    }
-                    case 9 : // "FL"; - Fastext links
-                    {
-                        // FL,104,104,105,106,F,100
-                        for (int fli=0;fli<6;fli++)
-                        {
-                            if (fli<5)
-                                std::getline(filein, line, ',');
-                            else
-                                std::getline(filein, line); // Last parameter no comma
-                            p->SetFastextLink(fli,std::strtol(line.c_str(), &ptr, 16));
-                        }
-                        break;
-                    }
-                    case 10 : // "RD"; - not sure!
-                    {
-                        std::getline(filein, line);
-                        break;
-                    }
-                    case 11 : // "RE"; - Set page region code 0..f
-                    {
-                        std::getline(filein, line);
-                        p->SetRegion(std::strtol(line.c_str(), &ptr, 16));
-                        break;
-                    }
-                    case 12 : // "PF"; - not in the tti spec, page function and coding
-                    {
-                        std::getline(filein, line);
-                        if (line.length()<3)
-                        {
-                            // invalid page function/coding
-                        }
-                        else
-                        {
-                            SetPageFunctionInt(std::strtol(line.substr(0,1).c_str(), &ptr, 16));
-                            SetPageCodingInt(std::strtol(line.substr(2,1).c_str(), &ptr, 16));
-                        }
-                        break;
-                    }
-                    default:
-                    {
-                        // line not understood
-                    }
-                } // switch
-            } // if matched command
-            // If the command was not found then skip the rest of the line
-        } // seek command
-        if (!found) std::getline(filein, line);
+        m_SubPage=nullptr; // delete subpages
     }
-    filein.close(); // Not sure that we need to close it
-    p->Setm_SubPage(nullptr);
-    this->RenumberSubpages();
-    return (lines>0);
+    
+    for (int i=0;i<=MAXROW;i++)
+    {
+        m_pLine[i]=nullptr; // delete rows
+        _pageChanged = true; // page content within scope of CRC was changed
+    }
+    
+    for (int i=0;i<6;i++)
+    {
+        SetFastextLink(i,0x8ff); // clear links
+    }
 }
 
 std::shared_ptr<TTXLine> TTXPage::GetRow(unsigned int row)
@@ -264,6 +90,8 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
     }
     else if (rownumber < 26)
     {
+        _pageChanged = true; // page content within scope of CRC was changed
+        
         if (rownumber > m_lastpacket)
             m_lastpacket = rownumber;
     }

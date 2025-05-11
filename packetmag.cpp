@@ -236,8 +236,8 @@ loopback: // jump back point to avoid returning null packets when we could send 
             uint16_t tempCRC = p->PacketCRC(0); // calculate the crc of the new header
             
             bool headerChanged = _subpage->HasHeaderChanged(tempCRC);
-            bool fileChanged = _subpage->HasFileChanged();
-            if (headerChanged || fileChanged)
+            bool pageChanged = _subpage->HasPageChanged();
+            if (headerChanged || pageChanged)
             {
                 // the content of the header has changed or the page has been reloaded
                 // we must now CRC the whole page

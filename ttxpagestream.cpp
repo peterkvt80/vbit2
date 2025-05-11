@@ -59,12 +59,6 @@ void TTXPageStream::StepNextSubpage()
         _CarouselPage=this->getptr();
 }
 
-bool TTXPageStream::LoadPage(std::string filename)
-{
-    bool Loaded = m_LoadTTI(filename);
-    return Loaded;
-}
-
 bool TTXPageStream::GetLock()
 {
     if (_mtx->try_lock())

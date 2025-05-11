@@ -37,11 +37,16 @@ namespace vbit
             
             std::string GetFilename() const {return _filename;}
             
+            void LoadFile(std::string filename);
+            bool Loaded(){return _loaded;}
+            
         private:
             std::shared_ptr<TTXPageStream> _page; // the page loaded from this file
             std::string _filename;
             time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
             Status _fileStatus; /// Used to mark if we found the file. (Used to detect deletions)
+            bool LoadTTI(std::string filename);
+            bool _loaded;
     };
     
     /**

@@ -135,20 +135,17 @@ class TTXPage : public std::enable_shared_from_this<TTXPage>
 
         bool Special() {return (m_pagefunction == GPOP || m_pagefunction == POP || m_pagefunction == GDRCS || m_pagefunction == DRCS || m_pagefunction == MOT || m_pagefunction == MIP);} // more convenient way to tell if a page is 'special'.
         
-        bool HasFileChanged(){bool t = _fileChanged; _fileChanged = false; return t; }; // clears the flag for this subpage
-
-        void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
-        bool Selected(){return _Selected;}; /// Return the selected state
+        bool HasPageChanged(){bool t = _pageChanged; _pageChanged = false; return t; }; // clears the flag for this subpage
         
         bool HasHeaderChanged(uint16_t crc); // updates the header crc for this subpage
         
         void SetPageCRC(uint16_t crc){_pageCRC = crc;}; // update the stored crc
         uint16_t GetPageCRC(){return _pageCRC;}; // retrieve the stored crc
         
+        void ClearPage();
+        void RenumberSubpages();
+        
     protected:
-        bool m_LoadTTI(std::string filename);
-        int m_cycletimeseconds;     // CT
-        int m_fastextlinks[6];      // FL
         
     private:
         // Private variables
@@ -157,22 +154,20 @@ class TTXPage : public std::enable_shared_from_this<TTXPage>
         std::shared_ptr<TTXPage> m_SubPage;
         std::shared_ptr<TTXLine> m_pLine[MAXROW+1];
         char m_cycletimetype;       // CT
+        int m_cycletimeseconds;     // CT
+        int m_fastextlinks[6];      // FL
         unsigned int m_subcode;     // SC
         int m_pagestatus;           // PS
         int m_region;               // RE
         unsigned int m_lastpacket;
         PageCoding m_pagecoding;
         PageFunction m_pagefunction;
-        bool _Selected; /// True if this page has been selected.
-        bool _fileChanged; // page was reloaded
+        bool _pageChanged; // page was reloaded
         
         uint16_t _headerCRC; // holds the last calculated CRC of the page header
         uint16_t _pageCRC; // holds the calculated CRC of the page
         
         // Private functions
-        void m_Init();
-        void RenumberSubpages();
-        void SetFileChangedFlag(){_fileChanged = true;};
 
 };
 

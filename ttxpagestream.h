@@ -91,12 +91,10 @@ class TTXPageStream : public TTXPage
         
         void SetCustomHeaderFlag(bool value){_loadedCustomHeader=value;}; // Used by PageList::CheckForPacket29OrCustomHeader
         bool GetCustomHeaderFlag(){return _loadedCustomHeader;};
-
+        
     protected:
-
+        
     private:
-        // Carousel control
-
         time_t _transitionTime; // Records when the next carousel transition is due
         int _cyclesRemaining; // As above for cycle mode
 
