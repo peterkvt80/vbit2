@@ -37,7 +37,7 @@ std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
             if (p->GetIsMarked() && p->GetCarouselFlag()) // only remove it once
             {
                 std::stringstream ss;
-                ss << "[Carousel::nextCarousel] Deleted " << std::hex << (p->GetPageNumber() >> 8);
+                ss << "[Carousel::nextCarousel] Deleted " << std::hex << (p->GetPageNumber());
                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
                 
                 p->SetCarouselFlag(false);
@@ -49,7 +49,7 @@ std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
             else if ((!(p->IsCarousel())) || (p->Special()))
             {
                 std::stringstream ss;
-                ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << (p->GetPageNumber() >> 8);
+                ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << (p->GetPageNumber());
                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
                 
                 p->SetCarouselFlag(false);
@@ -60,7 +60,7 @@ std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
                 if (p->Expired())
                 {
                     // We found a carousel that is ready to step
-                    if (p->GetCarouselPage()->GetPageStatus() & PAGESTATUS_C9_INTERRUPTED)
+                    if (p->GetSubpage()->GetPageStatus() & PAGESTATUS_C9_INTERRUPTED)
                     {
                         // carousel should go out now out of sequence
                         return p; // return page locked

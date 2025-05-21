@@ -5,15 +5,17 @@
 #include <sys/stat.h>
 #include <memory>
 
-#include "ttxpage.h"
+#include "page.h"
 #include "packet.h"
 #include "masterClock.h"
 
-/** @brief Extends TTXPage to allow Service to iterate through this page.
+/** @brief Extends Page to allow Service to iterate through this page.
  *  It adds iterators to the page and also timing control if it is a carousel.
  *  It also has features to help add, remove and update pages in a service.
  */
-class TTXPageStream : public TTXPage
+namespace vbit
+{
+class TTXPageStream : public Page
 {
     public:
         /** Default constructor. */
@@ -66,7 +68,7 @@ class TTXPageStream : public TTXPage
         void StepNextSubpageNoLoop();
 
         /** This is used by mag */
-        std::shared_ptr<TTXPage> GetCarouselPage(){return _CarouselPage;};
+        std::shared_ptr<Page> GetSubpage(){return (_CarouselPage==nullptr)?this->getptr():_CarouselPage;};
 
         /** Get the row from the page.
         * Carousels and main sequence pages are managed differently
@@ -82,7 +84,7 @@ class TTXPageStream : public TTXPage
          */
         bool operator==(const TTXPageStream& rhs) const;
 
-        // Todo: These are migrating to TTXPage
+        // Todo: These are migrating to Page
         void SetSelected(bool value){_Selected=value;}; /// Set the selected state to value
         bool Selected(){return _Selected;}; /// Return the selected state
         
@@ -98,7 +100,7 @@ class TTXPageStream : public TTXPage
         time_t _transitionTime; // Records when the next carousel transition is due
         int _cyclesRemaining; // As above for cycle mode
 
-        std::shared_ptr<TTXPage> _CarouselPage; /// Pointer to the current subpage of a carousel
+        std::shared_ptr<Page> _CarouselPage; /// Pointer to the current subpage of a carousel
         
         bool _loadedPacket29; // Packet 29 for magazine was loaded from this page. Should only be set on one page in each magazine.
         
@@ -117,5 +119,5 @@ class TTXPageStream : public TTXPage
         
         std::shared_ptr<std::mutex> _mtx;
 };
-
+};
 #endif // _TTXPAGESTREAM_H_

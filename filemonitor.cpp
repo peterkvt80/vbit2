@@ -33,15 +33,21 @@ bool File::LoadTTI(std::string filename)
     int lines=0;
     // Open the file
     std::ifstream filein(filename.c_str());
-    std::shared_ptr<TTXPage> p(_page->getptr());
+    std::shared_ptr<Page> p(_page->getptr());
     _page->ClearPage(); // reset to blank page
     char * ptr;
     unsigned int subcode;
     std::string subpage;
     int pageNumber;
+    int pagestatus = _page->GetPageStatus();
     char cycletimetype = _page->GetCycleTimeMode();
     int cycletimeseconds = _page->GetCycleTime();
+    int region = _page->GetRegion();
     char m;
+    
+    /* We're going to create subpages in parallel with the old system for a moment... */
+    std::shared_ptr<Subpage> s = nullptr;
+    
     for (std::string line; std::getline(filein, line, ','); )
     {
         // This shows the command code:
@@ -56,6 +62,8 @@ bool File::LoadTTI(std::string filename)
                     case 0 : // "DS"
                     case 1 : // "SP"
                     case 2 : // "DE"
+                    case 7 : // "MS" - Mask
+                    case 10 : // "RD" - not sure!
                     {
                         std::getline(filein, line); // consume line
                         break;
@@ -65,10 +73,18 @@ bool File::LoadTTI(std::string filename)
                         // CT,8,T
                         std::getline(filein, line, ',');
                         cycletimeseconds = (atoi(line.c_str()));
-                        p->SetCycleTime(cycletimeseconds);
                         std::getline(filein, line);
                         cycletimetype = (line[0]=='T'?'T':'C');
+                        
+                        p->SetCycleTime(cycletimeseconds);
                         p->SetCycleTimeMode(cycletimetype);
+                        
+                        if (s != nullptr)
+                        {
+                            s->SetTimedMode(cycletimetype=='T');
+                            s->SetCycleTime(cycletimeseconds);
+                        }
+                        
                         break;
                     }
                     case 4 : // "PN" - Page Number mppss
@@ -86,22 +102,32 @@ bool File::LoadTTI(std::string filename)
                         pageNumber=std::strtol(line.c_str(), &ptr, 16);
                         if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
                         {
-                            pageNumber*=0x100;
+                            // leave it alone
                         }
                         else   // Normally has subpage digits
                         {
                             subpage=line.substr(3,2);
-                            pageNumber=(pageNumber & 0xfff00) + std::strtol(subpage.c_str(),nullptr,10);
+                            pageNumber=(pageNumber & 0xfff00) >> 8;
                         }
+                        
+                        std::shared_ptr<Subpage> s(new Subpage()); // create a new subpage
+                        // inherit settings from previous subpage
+                        s->SetTimedMode(cycletimetype=='T');
+                        s->SetCycleTime(cycletimeseconds);
+                        s->SetSubpageStatus(pagestatus);
+                        s->SetRegion(region);
+                        _page->AppendSubpage(s); // add it to the page
+                        
                         if (p->GetPageNumber()!=FIRSTPAGE) // Subsequent pages need new page instances
                         {
-                            int pagestatus = p->GetPageStatus();
-                            std::shared_ptr<TTXPage> newSubPage(new TTXPage()); // Create a new instance for the subpage
+                            std::shared_ptr<Page> newSubPage(new Page()); // Create a new instance for the subpage
                             p->Setm_SubPage(newSubPage);        // Put in a link to it
                             p=newSubPage;                       // And jump to the next subpage ready to populate
                             p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
                             p->SetCycleTimeMode(cycletimetype); // inherit cycle time
                             p->SetCycleTime(cycletimeseconds);
+                            p->SetRegion(region); // inherit region
+                            
                         }
                         p->SetPageNumber(pageNumber);
 
@@ -114,19 +140,22 @@ bool File::LoadTTI(std::string filename)
                         subcode=std::strtol(line.c_str(), &ptr, 16);
 
                         p->SetSubCode(subcode);
+                        
+                        if (s != nullptr)
+                            s->SetSubCode(subcode); // set subcode explicitly
+                        
                         break;
                     }
                     case 6 : // "PS" - Page status flags
                     {
                         // PS,8000
                         std::getline(filein, line);
-                        p->SetPageStatus(std::strtol(line.c_str(), &ptr, 16));
-                        break;
-                    }
-                    case 7 : // "MS" - Mask
-                    {
-                        // MS,0
-                        std::getline(filein, line); // Mask is intended for TED to protecting regions from editing.
+                        pagestatus = std::strtol(line.c_str(), &ptr, 16);
+                        p->SetPageStatus(pagestatus);
+                        
+                        if (s != nullptr)
+                            s->SetSubpageStatus(pagestatus);
+                        
                         break;
                     }
                     case 8 : // "OL" - Output line
@@ -137,30 +166,53 @@ bool File::LoadTTI(std::string filename)
                         if (lineNumber>MAXROW) break;
                         p->SetRow(lineNumber,line);
                         lines++;
+                        
+                        if (s != nullptr)
+                            s->SetRow(lineNumber,line);
+                        
+                        // check for and decode OL,28 page function and coding
+                        if (lineNumber == 28 && line.length() >= 40)
+                        {
+                            uint8_t dc = line.at(0) & 0x0F;
+                            if (dc == 0 || dc == 2 || dc == 3 || dc == 4)
+                            {
+                                // packet is X/28/0, X/28/2, X/28/3, or X/28/4
+                                int triplet = line.at(1) & 0x3F;
+                                triplet |= (line.at(2) & 0x3F) << 6;
+                                triplet |= (line.at(3) & 0x3F) << 12; // first triplet contains page function and coding
+                                
+                                // Page function and coding override previous values
+                                _page->SetPageFunctionInt(triplet & 0x0F);
+                                _page->SetPageCodingInt((triplet & 0x70) >> 4);
+                            }
+                        }
+                        
                         break;
                     }
                     case 9 : // "FL"; - Fastext links
                     {
-                        // FL,104,104,105,106,F,100
                         for (int fli=0;fli<6;fli++)
                         {
                             if (fli<5)
                                 std::getline(filein, line, ',');
                             else
                                 std::getline(filein, line); // Last parameter no comma
-                            p->SetFastextLink(fli,std::strtol(line.c_str(), &ptr, 16));
+                            int link = std::strtol(line.c_str(), &ptr, 16);
+                            p->SetFastextLink(fli, link);
+                            
+                            if (s != nullptr)
+                                s->SetFastextLink(fli, link, 0x3f7f);
                         }
-                        break;
-                    }
-                    case 10 : // "RD"; - not sure!
-                    {
-                        std::getline(filein, line);
                         break;
                     }
                     case 11 : // "RE"; - Set page region code 0..f
                     {
                         std::getline(filein, line);
-                        p->SetRegion(std::strtol(line.c_str(), &ptr, 16));
+                        int region = std::strtol(line.c_str(), &ptr, 16);
+                        p->SetRegion(region);
+                        
+                        if (s != nullptr)
+                            s->SetRegion(region);
                         break;
                     }
                     case 12 : // "PF"; - not in the tti spec, page function and coding
@@ -302,9 +354,9 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                             
                             if (page->GetLock()) // try to lock page
                             {
-                                int curnum = page->GetPageNumber()>>8;
+                                int curnum = page->GetPageNumber();
                                 f->LoadFile(name);
-                                if (page->GetPageNumber()>>8 != curnum)
+                                if (page->GetPageNumber() != curnum)
                                 {
                                     // page number changed
                                     page->MarkForDeletion(); // mark page for deletion from service
@@ -360,6 +412,7 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                         int status = page->GetPageStatus();
                         _pageList->AddPage(page, firstrun || !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
                         page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an newly loaded page
+                        _pageList->CheckForPacket29OrCustomHeader(page);
                     }
                     else
                     {
@@ -420,7 +473,7 @@ void FileMonitor::DeleteOldPages()
 
 void FileMonitor::Delete29AndHeader(std::shared_ptr<TTXPageStream> page)
 {
-    int mag=(page->GetPageNumber() >> 16) & 0x7;
+    int mag=(page->GetPageNumber() >> 8) & 0x7;
     if (page->GetPacket29Flag())
     {
         // Packet 29 was loaded from this page, so remove it.

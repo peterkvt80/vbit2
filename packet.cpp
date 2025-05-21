@@ -26,7 +26,7 @@ void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
     {
         case CODING_PER_PACKET:
         {
-            _coding = TTXPage::ReturnPageCoding(_packet[5] & 0xF); // set packet coding based on first byte of packet
+            _coding = Page::ReturnPageCoding(_packet[5] & 0xF); // set packet coding based on first byte of packet
             /* fallthrough */
             [[gnu::fallthrough]];
         }
@@ -461,9 +461,9 @@ void Packet::Parity(uint8_t offset)
     }
 }
 
-void Packet::Fastext(int* links, int mag)
+void Packet::Fastext(std::array<FastextLink, 6> links, int mag)
 {
-    unsigned long nLink;
+    uint16_t lp, ls;
     uint8_t p=5;
     
     _packet[p++]=Hamming8EncodeTable[0]; // Designation code 0
@@ -479,17 +479,17 @@ void Packet::Fastext(int* links, int mag)
     // for each of the six links
     for (uint8_t i=0; i<6; i++)
     {
-        nLink=links[i];
-        if (nLink == 0) nLink = 0x8ff; // turn zero into 8FF to be ignored
+        lp=links[i].page;
+        if (lp == 0) lp = 0x8ff; // turn zero into 8FF to be ignored
+        ls=links[i].subpage;
 
-        // calculate the relative magazine
-        uint8_t cRelMag=(nLink/0x100 ^ mag);
-        _packet[p++]=Hamming8EncodeTable[nLink & 0xF];              // page units
-        _packet[p++]=Hamming8EncodeTable[(nLink & 0xF0) >> 4];      // page tens
-        _packet[p++]=Hamming8EncodeTable[0xF];                      // subcode S1
-        _packet[p++]=Hamming8EncodeTable[((cRelMag & 1) << 3) | 7]; // subcode S2 + M1
-        _packet[p++]=Hamming8EncodeTable[0xF];                      // subcode S3
-        _packet[p++]=Hamming8EncodeTable[((cRelMag & 6) << 1) | 3]; // subcode S4 + M2, M3
+        uint8_t m=(lp/0x100 ^ mag); // calculate the relative magazine
+        _packet[p++]=Hamming8EncodeTable[lp & 0xF];             // page units
+        _packet[p++]=Hamming8EncodeTable[(lp & 0xF0) >> 4];     // page tens
+        _packet[p++]=Hamming8EncodeTable[ls & 0xF];             // S1
+        _packet[p++]=Hamming8EncodeTable[((m & 1) << 3) | ((ls >> 4) & 0xF)]; // S2 + M1
+        _packet[p++]=Hamming8EncodeTable[((ls >> 8) & 0xF)];    // S3
+        _packet[p++]=Hamming8EncodeTable[((m & 6) << 1) | ((ls >> 4) & 0x3)]; // S4 + M2, M3
     }
 }
 

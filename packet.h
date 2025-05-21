@@ -11,7 +11,7 @@
 #include <ctime>
 #include "tables.h"
 #include <cassert>
-#include "ttxpage.h"
+#include "page.h"
 #include "masterClock.h"
 
 /**
@@ -85,7 +85,7 @@ namespace vbit
              * @param mag - Magazine number
              *
              */
-            void Fastext(int* links, int mag);
+            void Fastext(std::array<FastextLink, 6>links, int mag);
             
             enum IDLAFormatFlags : uint8_t
             {

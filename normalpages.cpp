@@ -61,7 +61,7 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
                 if (_page->GetIsMarked() && _page->GetNormalFlag()) // only remove it once
                 {
                     std::stringstream ss;
-                    ss << "[NormalPages::NextPage] Deleted " << std::hex << (_page->GetPageNumber() >> 8);
+                    ss << "[NormalPages::NextPage] Deleted " << std::hex << (_page->GetPageNumber());
                     _debug->Log(Debug::LogLevels::logINFO,ss.str());
                     _iter = _NormalPagesList.erase(_iter);
                     _page->SetNormalFlag(false);
@@ -72,12 +72,12 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
                 else if (_page->Special())
                 {
                     std::stringstream ss;
-                    ss << "[NormalPages::NextPage] page became Special "  << std::hex << (_page->GetPageNumber() >> 8);
+                    ss << "[NormalPages::NextPage] page became Special "  << std::hex << (_page->GetPageNumber());
                     _debug->Log(Debug::LogLevels::logINFO,ss.str());
                     _iter = _NormalPagesList.erase(_iter);
                     _page->SetNormalFlag(false);
                 }
-                else if (((_page->GetPageNumber()>>8) & 0xFF) == 0xFF) // never return page mFF from the page list
+                else if ((_page->GetPageNumber() & 0xFF) == 0xFF) // never return page mFF from the page list
                 {
                     ++_iter;
                 }

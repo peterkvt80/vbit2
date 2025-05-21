@@ -49,9 +49,8 @@ PacketMag::~PacketMag()
 
 Packet* PacketMag::GetPacket(Packet* p)
 {
-    int thisPageNum;
     unsigned int thisSubcode;
-    int* links=NULL;
+    std::array<FastextLink, 6> links;
     bool updatedFlag=false;
 
     // We should only call GetPacket if IsReady has returned true
@@ -107,10 +106,8 @@ loopback: // jump back point to avoid returning null packets when we could send 
                         _waitingForField = false; // don't need a page erasure interval
                     }
                     
-                    if (_page->IsCarousel())
-                        _subpage = _page->GetCarouselPage();
-                    else
-                        _subpage = _page;
+                    
+                    _subpage = _page->GetSubpage();
                     
                     _status = _subpage->GetPageStatus() & 0x8000; // get transmit flag
                     _region = _subpage->GetRegion();
@@ -178,23 +175,23 @@ loopback: // jump back point to avoid returning null packets when we could send 
                     {
                         // cycle if timer has expired
                         _page->StepNextSubpage();
-                        _page->SetTransitionTime(_page->GetCarouselPage()->GetCycleTime());
-                        _status=_page->GetCarouselPage()->GetPageStatus();
+                        _page->SetTransitionTime(_page->GetSubpage()->GetCycleTime());
+                        _status=_page->GetSubpage()->GetPageStatus();
                     }
                     else
                     {
                         // clear any ERASE bit if page hasn't cycled to minimise flicker, and the interrupted status bit
-                        _status=_page->GetCarouselPage()->GetPageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
+                        _status=_page->GetSubpage()->GetPageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
                     }
                     
-                    _subpage = _page->GetCarouselPage();
+                    _subpage = _page->GetSubpage();
                     
                     thisSubcode=_subpage->GetSubCode();
                     _region=_subpage->GetRegion();
                 }
                 else
                 {
-                    _subpage = _page;
+                    _subpage = _page->GetSubpage();
                     
                     thisSubcode=_subpage->GetSubCode();
                     _status=_subpage->GetPageStatus();
@@ -219,10 +216,6 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 }
             }
             
-            // Assemble the header. (we can simplify this code or leave it for the optimiser)
-            thisPageNum=_page->GetPageNumber();
-            thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
-            
             if (!(_status & 0x8000))
             {
                 _page->FreeLock(); // Must free the lock or we can never use this page again!
@@ -231,7 +224,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
             
             // clear a flag we use to prevent duplicated X/28/0 packets
             _hasX28Region = false;
-            p->Header(_magNumber,thisPageNum,thisSubcode,_status,_hasCustomHeader?_customHeaderTemplate:_configure->GetHeaderTemplate());
+            p->Header(_magNumber,_page->GetPageNumber(),thisSubcode,_status,_hasCustomHeader?_customHeaderTemplate:_configure->GetHeaderTemplate());
             
             uint16_t tempCRC = p->PacketCRC(0); // calculate the crc of the new header
             
@@ -244,7 +237,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 Packet TempPacket(8,25,"                                        "); // a temporary packet for checksum calculation
                 for (int i=1; i<26; i++)
                 {
-                    TempPacket.SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _subpage->GetPageCoding());
+                    TempPacket.SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _page->GetPageCoding());
                     tempCRC = TempPacket.PacketCRC(tempCRC);
                 }
                 
@@ -256,7 +249,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
             assert(p!=NULL);
 
             links=_subpage->GetLinkSet();
-            if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF) // only create if links were initialised
+            if ((links[0].page & links[1].page & links[2].page & links[3].page & links[4].page & links[5].page) != 0x8FF) // only create if links were initialised
             {
                 _state=PACKETSTATE_FASTEXT;
                 break;

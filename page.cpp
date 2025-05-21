@@ -1,6 +1,30 @@
- #include "ttxpage.h"
+ #include "page.h"
 
-TTXPage::TTXPage() :
+using namespace vbit;
+
+Subpage::Subpage() :
+    _subcode(0),
+    _status(0),
+    _cycleTime(1),
+    _timedMode(false),
+    _region(0),
+    _lastPacket(0),
+    _subpageChanged(true),
+    _headerCRC(0),
+    _subpageCRC(0)
+{
+    for (int i=0;i<=MAXROW;i++)
+    {
+        _lines[i]=nullptr; // delete rows
+    }
+}
+
+Subpage::~Subpage()
+{
+    std::cerr << "Subpage dtor\n";
+}
+
+Page::Page() :
     _headerCRC(0),
     _pageCRC(0)
 {
@@ -12,27 +36,30 @@ TTXPage::TTXPage() :
     }
 }
 
-TTXPage::~TTXPage()
+Page::~Page()
 {
-    //std::cerr << "TTXPage dtor\n";
+    //std::cerr << "Page dtor\n";
 }
 
-void TTXPage::ClearPage()
+void Page::ClearPage()
 {
-    m_PageNumber = FIRSTPAGE;
+    _pageNumber = FIRSTPAGE;
+    _pageCoding=CODING_7BIT_TEXT;
+    _pageFunction=LOP;
+    
     m_cycletimetype='C';
     m_cycletimeseconds=1; /* default to cycling carousels every page cycle */
     m_subcode=0;
     m_pagestatus=0; /* default to not sending page to ignore malformed/blank tti files */
     m_region=0;
     m_lastpacket=0;
-    m_pagecoding=CODING_7BIT_TEXT;
-    m_pagefunction=LOP;
     
     if (m_SubPage!=nullptr)
     {
         m_SubPage=nullptr; // delete subpages
     }
+    
+    _subpages.clear(); // empty subpage list
     
     for (int i=0;i<=MAXROW;i++)
     {
@@ -46,7 +73,7 @@ void TTXPage::ClearPage()
     }
 }
 
-std::shared_ptr<TTXLine> TTXPage::GetRow(unsigned int row)
+std::shared_ptr<TTXLine> Page::GetRow(unsigned int row)
 {
     if (row>MAXROW)
     {
@@ -60,27 +87,12 @@ std::shared_ptr<TTXLine> TTXPage::GetRow(unsigned int row)
     return m_pLine[row];
 }
 
-void TTXPage::SetRow(unsigned int rownumber, std::string line)
+void Page::SetRow(unsigned int rownumber, std::string line)
 {
     unsigned int dc;
     
     // assert(rownumber<=MAXROW);
     if (rownumber>MAXROW) return;
-
-    if (rownumber == 28 && line.length() >= 40)
-    {
-        dc = line.at(0) & 0x0F;
-        if (dc == 0 || dc == 2 || dc == 3 || dc == 4)
-        {
-            // packet is X/28/0, X/28/2, X/28/3, or X/28/4
-            int triplet = line.at(1) & 0x3F;
-            triplet |= (line.at(2) & 0x3F) << 6;
-            triplet |= (line.at(3) & 0x3F) << 12; // first triplet contains page function and coding
-            // function and coding packet 28 override values set by an earlier PF row
-            SetPageCodingInt((triplet & 0x70) >> 4);
-            SetPageFunctionInt(triplet & 0x0F);
-        }
-    }
     
     if (rownumber == 26 && line.length() >= 40)
     {
@@ -114,7 +126,7 @@ void TTXPage::SetRow(unsigned int rownumber, std::string line)
     }
 }
 
-void TTXPage::RenumberSubpages()
+void Page::RenumberSubpages()
 {
     int count=0;
     unsigned int subcode;
@@ -136,7 +148,7 @@ void TTXPage::RenumberSubpages()
     {
         // Page has subpages. Renumber according to Annex A.1.
         for (int i=0;i<4;i++) code[i]=0;
-        for (std::shared_ptr<TTXPage> p(this->getptr());p!=nullptr;p=p->m_SubPage)
+        for (std::shared_ptr<Page> p(this->getptr());p!=nullptr;p=p->m_SubPage)
         {
             if (Special())
             {
@@ -183,89 +195,91 @@ void TTXPage::RenumberSubpages()
     }
 }
 
-void TTXPage::SetPageNumber(int page)
+void Page::SetPageNumber(int page)
 {
-    if ((page<0x10000) || (page>0x8ff99))
+    if ((page<0x100) || (page>0x8ff))
     {
-        page = 0x8FF00;
+        page = 0x8FF;
     }
-    m_PageNumber=page;
+    _pageNumber=page;
 }
 
-void TTXPage::SetFastextLink(int link, int value)
+void Page::SetFastextLink(int link, int value)
 {
     if (link<0 || link>5 || value>0x8ff)
     {
-        m_fastextlinks[link]=0x8ff; // When no particular page is specified
+        m_fastextlinks[link].page=0x8ff; // When no particular page is specified
+        m_fastextlinks[link].subpage=0x3f7f;
         return;
     }
-    m_fastextlinks[link]=value;
+    m_fastextlinks[link].page=value;
+    m_fastextlinks[link].subpage=0x3f7f;
 }
 
-void TTXPage::SetPageFunctionInt(int pageFunction)
+void Page::SetPageFunctionInt(int pageFunction)
 {
     switch (pageFunction)
     {
         default: // treat page functions we don't know as level one pages
         case 0:
         {
-            m_pagefunction = LOP;
+            _pageFunction = LOP;
             break;
         }
         case 2:
         {
-            m_pagefunction = GPOP;
+            _pageFunction = GPOP;
             break;
         }
         case 3:
         {
-            m_pagefunction = POP;
+            _pageFunction = POP;
             break;
         }
         case 4:
         {
-            m_pagefunction = GDRCS;
+            _pageFunction = GDRCS;
             break;
         }
         case 5:
         {
-            m_pagefunction = DRCS;
+            _pageFunction = DRCS;
             break;
         }
         case 6:
         {
-            m_pagefunction = MOT;
+            _pageFunction = MOT;
             break;
         }
         case 7:
         {
-            m_pagefunction = MIP;
+            _pageFunction = MIP;
             break;
         }
         case 8:
         {
-            m_pagefunction = BTT;
+            _pageFunction = BTT;
             break;
         }
         case 9:
         {
-            m_pagefunction = AIT;
+            _pageFunction = AIT;
             break;
         }
         case 10:
         {
-            m_pagefunction = MPT;
+            _pageFunction = MPT;
             break;
         }
         case 11:
         {
-            m_pagefunction = MPT_EX;
+            _pageFunction = MPT_EX;
             break;
         }
     }
 }
 
-PageCoding TTXPage::ReturnPageCoding(int pageCoding)
+PageCoding Page::ReturnPageCoding(int pageCoding)
 {
     switch (pageCoding)
     {
@@ -285,7 +299,74 @@ PageCoding TTXPage::ReturnPageCoding(int pageCoding)
     }
 }
 
-bool TTXPage::HasHeaderChanged(uint16_t crc)
+bool Page::HasHeaderChanged(uint16_t crc)
+{
+    if (_headerCRC != crc)
+    {
+        // update stored CRC and signal change
+        _headerCRC = crc;
+        return true;
+    }
+    
+    return false; // no change
+}
+
+/** MOVING STUFF TO SUBPAGE CLASS HERE **/
+
+void Subpage::SetRow(unsigned int rownumber, std::string line)
+{
+    unsigned int dc;
+    
+    // assert(rownumber<=MAXROW);
+    if (rownumber>MAXROW) return;
+    
+    if (rownumber == 26 && line.length() >= 40)
+    {
+        dc = line.at(0) & 0x0F;
+        if ((dc + 26) > _lastPacket)
+            _lastPacket = dc + 26;
+    }
+    else if (rownumber < 26)
+    {
+        _subpageChanged = true; // page content within scope of CRC was changed
+        
+        if (rownumber > _lastPacket)
+            _lastPacket = rownumber;
+    }
+
+    if (_lines[rownumber]==nullptr)
+    {
+        _lines[rownumber].reset(new TTXLine(line,true)); // Didn't exist before
+    }
+    else
+    {
+        if (rownumber<26) // Ordinary line
+        {
+            _lines[rownumber]->Setm_textline(line, true);
+        }
+        else // Enhanced packet
+        {
+            // If the line already exists we want to add the packet rather than overwrite what is already there
+            _lines[rownumber]->AppendLine(line);
+        }
+    }
+}
+
+void Subpage::SetFastextLink(uint8_t link, uint16_t page, uint16_t subpage)
+{
+    if (link>5 || page<0x100 || page>0x8ff)
+    {
+        _fastextLinks[link].page = 0x8ff;
+        _fastextLinks[link].subpage = 0x3f7f;
+    }
+    else
+    {
+        _fastextLinks[link].page = page;
+        _fastextLinks[link].subpage = subpage & 0x3f7f;
+    }
+}
+
+bool Subpage::HasHeaderChanged(uint16_t crc)
 {
     if (_headerCRC != crc)
     {

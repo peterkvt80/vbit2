@@ -31,7 +31,7 @@ PageList::~PageList()
 
 void PageList::AddPage(std::shared_ptr<TTXPageStream> page, bool noupdate)
 {
-    int num = page->GetPageNumber() >> 8;
+    int num = page->GetPageNumber();
     int mag = (num >> 8) & 7;
     
     if ((num & 0xFF) != 0xFF)
@@ -52,14 +52,12 @@ void PageList::AddPage(std::shared_ptr<TTXPageStream> page, bool noupdate)
         UpdatePageLists(page, noupdate);
     
         _debug->SetMagazineSize(mag, _pageList[mag].size());
-    } else {
-        CheckForPacket29OrCustomHeader(page);
     }
 }
 
 void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdate)
 {
-    int mag=(page->GetPageNumber() >> 16) & 0x7;
+    int mag=(page->GetPageNumber() >> 8) & 0x7;
     
     if (page->Special())
     {
@@ -69,7 +67,7 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
             if (page->GetNormalFlag())
             {
                 std::stringstream ss;
-                ss << "[PageList::UpdatePageLists] page was normal, is now special " << std::hex << (page->GetPageNumber() >> 8);
+                ss << "[PageList::UpdatePageLists] page was normal, is now special " << std::hex << (page->GetPageNumber());
                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
             }
             _mag[mag]->GetSpecialPages()->addPage(page);
@@ -87,7 +85,7 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
             if (page->GetSpecialFlag())
             {
                 std::stringstream ss;
-                ss << "[PageList::UpdatePageLists] page was special, is now normal " << std::hex << (page->GetPageNumber() >> 8);
+                ss << "[PageList::UpdatePageLists] page was special, is now normal " << std::hex << (page->GetPageNumber());
                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
             }
             
@@ -101,7 +99,7 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
             if (!(page->GetCarouselFlag()))
             {
                 std::stringstream ss;
-                ss << "[PageList::UpdatePageLists] page is now a carousel " << std::hex << (page->GetPageNumber() >> 8);
+                ss << "[PageList::UpdatePageLists] page is now a carousel " << std::hex << (page->GetPageNumber());
                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
                 page->StepNextSubpage(); // ensure we're pointing at a subpage
                 _mag[mag]->GetCarousel()->addPage(page);
@@ -130,12 +128,12 @@ void PageList::RemovePage(std::shared_ptr<TTXPageStream> page)
     {
         // page has been removed from all of the page type lists
         
-        int mag=(page->GetPageNumber() >> 16) & 0x7;
+        int mag=(page->GetPageNumber() >> 8) & 0x7;
         _pageList[mag].remove(page);
         _debug->SetMagazineSize(mag, _pageList[mag].size());
         
         std::stringstream ss;
-        ss << "[PageList::RemovePage] Deleted " << std::hex << (page->GetPageNumber() >> 8);
+        ss << "[PageList::RemovePage] Deleted " << std::hex << (page->GetPageNumber());
         _debug->Log(Debug::LogLevels::logINFO,ss.str());
     }
     page->FreeLock(); // free the lock on page
@@ -146,8 +144,8 @@ void PageList::CheckForPacket29OrCustomHeader(std::shared_ptr<TTXPageStream> pag
     if (page->IsCarousel()) // page mFF should never be a carousel and this code leads to a crash if it is so bail out now
         return;
     
-    int mag=(page->GetPageNumber() >> 16) & 0x7;
-    if (((page->GetPageNumber() >> 8) & 0xFF) == 0xFF) // Only read from page mFF
+    int mag=(page->GetPageNumber() >> 8) & 0x7;
+    if ((page->GetPageNumber() & 0xFF) == 0xFF) // Only read from page mFF
     {
         /* attempt to load custom header from the page */
         if ((!_mag[mag]->GetCustomHeaderFlag()) || page->GetCustomHeaderFlag()) // Only allow one file to set header per magazine
@@ -221,7 +219,7 @@ std::shared_ptr<TTXPageStream> PageList::Locate(int PageNumber)
     for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
     {
         std::shared_ptr<TTXPageStream> ptr = *p;
-        if (PageNumber==ptr->GetPageNumber() >> 8)
+        if (PageNumber==ptr->GetPageNumber())
             return ptr;
     }
     return nullptr;
@@ -231,7 +229,7 @@ std::shared_ptr<TTXPageStream> PageList::Locate(int PageNumber)
 bool PageList::Contains(std::shared_ptr<TTXPageStream> page)
 {
     // This is called from the FileMonitor thread
-    int mag = (page->GetPageNumber() >> 16) & 7;
+    int mag = (page->GetPageNumber() >> 8) & 7;
     for (std::list<std::shared_ptr<TTXPageStream>>::iterator p=_pageList[mag].begin();p!=_pageList[mag].end();++p)
     {
         if (*p==page)
