@@ -41,12 +41,6 @@ class TTXPageStream : public Page
         int GetUpdateCount() {return _updateCount;}
         void IncrementUpdateCount();
 
-        /** Is the page a carousel?
-         *  Don't confuse this with the _isCarousel flag which is used to mark when a page changes between single/carousel
-         * \return True if there are subpages
-         */
-        bool IsCarousel();
-
         /** Set the time when this carousel expires
          *  which is the current time plus the cycle time
          *  or the number of page cycles remaining
@@ -58,22 +52,6 @@ class TTXPageStream : public Page
          *  @return true if it is time to change carousel page
          */
         bool Expired(bool StepCycles=false);
-
-        /** Step to the next page in a carousel
-         *  Updates _CarouselPage;
-         */
-        void StepNextSubpage();
-
-        // step to next subpage but don't loop back to the start
-        void StepNextSubpageNoLoop();
-
-        /** This is used by mag */
-        std::shared_ptr<Page> GetSubpage(){return (_CarouselPage==nullptr)?this->getptr():_CarouselPage;};
-
-        /** Get the row from the page.
-        * Carousels and main sequence pages are managed differently
-        */
-        std::shared_ptr<TTXLine> GetTxRow(uint8_t row);
 
         bool LoadPage(std::string filename);
         
@@ -99,8 +77,6 @@ class TTXPageStream : public Page
     private:
         time_t _transitionTime; // Records when the next carousel transition is due
         int _cyclesRemaining; // As above for cycle mode
-
-        std::shared_ptr<Page> _CarouselPage; /// Pointer to the current subpage of a carousel
         
         bool _loadedPacket29; // Packet 29 for magazine was loaded from this page. Should only be set on one page in each magazine.
         

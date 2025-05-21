@@ -18,8 +18,6 @@
 
 #include "ttxline.h"
 
-#define FIRSTPAGE 0x1ff
-
 // TTI format Page Status word
 #define PAGESTATUS_C4_ERASEPAGE     0x4000
 #define PAGESTATUS_C5_NEWSFLASH     0x0001
@@ -47,7 +45,7 @@ class FastextLink
         uint16_t subpage;
 };
 
-class Subpage : public std::enable_shared_from_this<Subpage>
+class Subpage
 {
     public:
         Subpage();
@@ -56,7 +54,7 @@ class Subpage : public std::enable_shared_from_this<Subpage>
         uint16_t GetSubCode() {return _subcode;}
         void SetSubCode(uint16_t subcode) {_subcode=subcode;}
         
-        uint16_t GetSubageStatus() {return _status;}
+        uint16_t GetSubpageStatus() {return _status;}
         void SetSubpageStatus(uint16_t ps){_status=ps;}
         
         int GetCycleTime() {return _cycleTime;}
@@ -72,6 +70,7 @@ class Subpage : public std::enable_shared_from_this<Subpage>
         void SetRow(unsigned int rownumber, std::string line);
         
         void SetFastextLink(uint8_t link, uint16_t page, uint16_t subpage);
+        std::array<FastextLink, 6> GetLinkSet(){return _fastextLinks;};
         
         unsigned int GetLastPacket() {return _lastPacket;};
         
@@ -99,7 +98,7 @@ class Subpage : public std::enable_shared_from_this<Subpage>
         uint16_t _subpageCRC;   // holds the last calculated CRC of the page
 };
 
-class Page : public std::enable_shared_from_this<Page>
+class Page
 {
     public:
         /** Default constructor */
@@ -108,12 +107,7 @@ class Page : public std::enable_shared_from_this<Page>
         /** Default destructor */
         virtual ~Page();
         
-        std::shared_ptr<Page> getptr()
-        {
-            return shared_from_this();
-        }
-        
-        void AppendSubpage(std::shared_ptr<Subpage> s) { _subpages.push_back(s); }
+        void AppendSubpage(std::shared_ptr<Subpage> s);
         
         int GetPageNumber() const {return _pageNumber;}
         void SetPageNumber(int page);
@@ -132,44 +126,14 @@ class Page : public std::enable_shared_from_this<Page>
         void ClearPage();
         void RenumberSubpages();
         
-        /* TO BE DISPOSED OF WHEN MIGRATION TO SUBPAGE LIST DONE */
-        std::shared_ptr<Page> Getm_SubPage() { return m_SubPage; }
+        bool IsCarousel();
 
-        void Setm_SubPage(std::shared_ptr<Page> val) { m_SubPage = val; }
-
-        int GetPageStatus() {return m_pagestatus;}
-        void SetPageStatus(int ps){m_pagestatus=ps;}
-
-        int GetCycleTime() {return m_cycletimeseconds;}
-        void SetCycleTime(int time){m_cycletimeseconds=time;}
-
-        char GetCycleTimeMode() {return m_cycletimetype;}
-        void SetCycleTimeMode(char mode){m_cycletimetype=mode;}
-
-        std::shared_ptr<TTXLine> GetRow(unsigned int rowNumber);
-
-        void SetRow(unsigned int rownumber, std::string line);
-
-        void SetSubCode(unsigned int subcode) {m_subcode=subcode;}
-
-        unsigned int GetSubCode() {return m_subcode;}
-
-        void SetRegion(int region){m_region=region;}
-
-        int GetRegion(){return m_region;}
-
-        void SetFastextLink(int link, int value);
+        void StepNextSubpage();
+        void StepNextSubpageNoLoop();
         
-        std::array<FastextLink, 6> GetLinkSet(){return m_fastextlinks;};
+        std::shared_ptr<Subpage> GetSubpage(){return _carouselPage;};
         
-        unsigned int GetLastPacket() {return m_lastpacket;};
-        
-        bool HasPageChanged(){bool t = _pageChanged; _pageChanged = false; return t; }; // clears the flag for this subpage
-        
-        bool HasHeaderChanged(uint16_t crc); // updates the header crc for this subpage
-        
-        void SetPageCRC(uint16_t crc){_pageCRC = crc;}; // update the stored crc
-        uint16_t GetPageCRC(){return _pageCRC;}; // retrieve the stored crc
+        std::shared_ptr<TTXLine> GetTxRow(uint8_t row);
         
     protected:
         
@@ -180,20 +144,8 @@ class Page : public std::enable_shared_from_this<Page>
         bool _pageChanged; // page was reloaded
         
         std::list<std::shared_ptr<Subpage>> _subpages; // list of subpages
-        
-        /* TO BE DISPOSED OF WHEN MIGRATION TO SUBPAGE LIST DONE */
-        std::shared_ptr<Page> m_SubPage;
-        std::shared_ptr<TTXLine> m_pLine[MAXROW+1];
-        char m_cycletimetype;
-        int m_cycletimeseconds;
-        std::array<FastextLink, 6>m_fastextlinks;
-        unsigned int m_subcode;
-        int m_pagestatus;
-        int m_region;
-        unsigned int m_lastpacket;
-        
-        uint16_t _headerCRC; // holds the last calculated CRC of the page header
-        uint16_t _pageCRC; // holds the calculated CRC of the page
+        std::list<std::shared_ptr<Subpage>>::iterator _iter;
+        std::shared_ptr<Subpage> _carouselPage;
 };
 };
 #endif // PAGE_H

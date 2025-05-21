@@ -60,7 +60,7 @@ namespace vbit
             Configure* _configure;
             Debug* _debug;
             std::shared_ptr<TTXPageStream> _page; //!< The current page being output
-            std::shared_ptr<Page> _subpage; // pointer to the actual subpage
+            std::shared_ptr<Subpage> _subpage; // pointer to the actual subpage
             int _magNumber; //!< The number of this magazine. (where 0 is mag 8)
             uint8_t _priority; //!< Priority of transmission where 1 is highest
 

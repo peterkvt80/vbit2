@@ -4,7 +4,6 @@ using namespace vbit;
 
 TTXPageStream::TTXPageStream() :
     _transitionTime(0),
-    _CarouselPage(nullptr),
     _loadedPacket29(false),
     _loadedCustomHeader(false),
     _isCarousel(false),
@@ -22,41 +21,6 @@ TTXPageStream::~TTXPageStream()
 {
     //dtor
     //std::cerr << "TTXPageStream dtor\n";
-}
-
-std::shared_ptr<TTXLine> TTXPageStream::GetTxRow(uint8_t row)
-{
-    // Return a line or nullptr if the row does not exist
-    std::shared_ptr<TTXLine> line=nullptr;
-    if (IsCarousel())
-    {
-        line=_CarouselPage->GetRow(row);
-    }
-    else // single page
-    {
-        line=GetRow(row); // _lineCounter is implied
-    }
-    if (line!=nullptr) // Found a line
-    {
-        return line;
-    }
-    // No more lines? return NULL.
-    return nullptr;
-}
-
-void TTXPageStream::StepNextSubpageNoLoop()
-{
-    if (_CarouselPage==nullptr)
-        _CarouselPage=this->getptr();
-    else
-        _CarouselPage=_CarouselPage->Getm_SubPage();
-}
-
-void TTXPageStream::StepNextSubpage()
-{
-    StepNextSubpageNoLoop();
-    if (_CarouselPage==nullptr) // Last carousel subpage? Loop to beginning
-        _CarouselPage=this->getptr();
 }
 
 bool TTXPageStream::GetLock()
@@ -78,48 +42,36 @@ void TTXPageStream::IncrementUpdateCount()
 
 void TTXPageStream::SetTransitionTime(int cycleTime)
 {
-    if (GetCycleTimeMode() == 'T')
+    if (std::shared_ptr<Subpage> s = GetSubpage())
     {
-        MasterClock *mc = mc->Instance();
-        _transitionTime = mc->GetMasterClock().seconds + cycleTime;
-    }
-    else
-    {
-        _cyclesRemaining=cycleTime;
+        if (s->GetTimedMode())
+        {
+            MasterClock *mc = mc->Instance();
+            _transitionTime = mc->GetMasterClock().seconds + cycleTime;
+        }
+        else
+        {
+            _cyclesRemaining=cycleTime;
+        }
     }
 }
 
 bool TTXPageStream::Expired(bool StepCycles)
 {
     // Has carousel timer expired
-    if (GetCycleTimeMode() == 'T')
+    if (std::shared_ptr<Subpage> s = GetSubpage())
     {
-        MasterClock *mc = mc->Instance();
-        return _transitionTime <= mc->GetMasterClock().seconds;
-    }
-    else
-    {
-        if (StepCycles)
+        if (s->GetTimedMode())
         {
-            _cyclesRemaining--;
-            _cyclesRemaining = (_cyclesRemaining<0)?0:_cyclesRemaining;
+            MasterClock *mc = mc->Instance();
+            return _transitionTime <= mc->GetMasterClock().seconds;
         }
-        return _cyclesRemaining == 0;
-    }
-}
-
-bool TTXPageStream::IsCarousel()
-{
-    if (Getm_SubPage()!=nullptr) // has subpages
-    {
-        return true;
     }
     
-    if (GetCycleTimeMode() == 'T' && GetPageStatus() & PAGESTATUS_C9_INTERRUPTED)
+    if (StepCycles)
     {
-        // no subpages, but interrupted sequence flag is set, and page is in timed mode, so treat as a 1 page carousel
-        return true;
+        _cyclesRemaining--;
+        _cyclesRemaining = (_cyclesRemaining<0)?0:_cyclesRemaining;
     }
-
-    return false;
+    return _cyclesRemaining == 0;
 }

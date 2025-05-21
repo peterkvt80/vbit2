@@ -2,38 +2,10 @@
 
 using namespace vbit;
 
-Subpage::Subpage() :
-    _subcode(0),
-    _status(0),
-    _cycleTime(1),
-    _timedMode(false),
-    _region(0),
-    _lastPacket(0),
-    _subpageChanged(true),
-    _headerCRC(0),
-    _subpageCRC(0)
-{
-    for (int i=0;i<=MAXROW;i++)
-    {
-        _lines[i]=nullptr; // delete rows
-    }
-}
-
-Subpage::~Subpage()
-{
-    std::cerr << "Subpage dtor\n";
-}
-
 Page::Page() :
-    _headerCRC(0),
-    _pageCRC(0)
+    _carouselPage(nullptr)
 {
     ClearPage(); // initialises variables
-    
-    for (int i=0;i<6;i++)
-    {
-        SetFastextLink(i,0x8ff);
-    }
 }
 
 Page::~Page()
@@ -41,89 +13,22 @@ Page::~Page()
     //std::cerr << "Page dtor\n";
 }
 
+void Page::AppendSubpage(std::shared_ptr<Subpage> s)
+{
+    _subpages.push_back(s);
+    if (_carouselPage == nullptr)
+        StepNextSubpage();
+}
+
 void Page::ClearPage()
 {
-    _pageNumber = FIRSTPAGE;
+    _pageNumber = 0; // an invalid page number
     _pageCoding=CODING_7BIT_TEXT;
     _pageFunction=LOP;
-    
-    m_cycletimetype='C';
-    m_cycletimeseconds=1; /* default to cycling carousels every page cycle */
-    m_subcode=0;
-    m_pagestatus=0; /* default to not sending page to ignore malformed/blank tti files */
-    m_region=0;
-    m_lastpacket=0;
-    
-    if (m_SubPage!=nullptr)
-    {
-        m_SubPage=nullptr; // delete subpages
-    }
+    _carouselPage=nullptr;
     
     _subpages.clear(); // empty subpage list
-    
-    for (int i=0;i<=MAXROW;i++)
-    {
-        m_pLine[i]=nullptr; // delete rows
-        _pageChanged = true; // page content within scope of CRC was changed
-    }
-    
-    for (int i=0;i<6;i++)
-    {
-        SetFastextLink(i,0x8ff); // clear links
-    }
-}
-
-std::shared_ptr<TTXLine> Page::GetRow(unsigned int row)
-{
-    if (row>MAXROW)
-    {
-        return nullptr;
-    }
-    
-    if (m_pLine[row]==nullptr && row>0 && row<26)
-    {
-        m_pLine[row].reset(new TTXLine("                                        ")); // return a blank row for X/1-X/25
-    }
-    return m_pLine[row];
-}
-
-void Page::SetRow(unsigned int rownumber, std::string line)
-{
-    unsigned int dc;
-    
-    // assert(rownumber<=MAXROW);
-    if (rownumber>MAXROW) return;
-    
-    if (rownumber == 26 && line.length() >= 40)
-    {
-        dc = line.at(0) & 0x0F;
-        if ((dc + 26) > m_lastpacket)
-            m_lastpacket = dc + 26;
-    }
-    else if (rownumber < 26)
-    {
-        _pageChanged = true; // page content within scope of CRC was changed
-        
-        if (rownumber > m_lastpacket)
-            m_lastpacket = rownumber;
-    }
-
-    if (m_pLine[rownumber]==nullptr)
-    {
-        m_pLine[rownumber].reset(new TTXLine(line,true)); // Didn't exist before
-    }
-    else
-    {
-        if (rownumber<26) // Ordinary line
-        {
-            m_pLine[rownumber]->Setm_textline(line, true);
-        }
-        else // Enhanced packet
-        {
-            // If the line already exists we want to add the packet rather than overwrite what is already there
-            m_pLine[rownumber]->AppendLine(line);
-        }
-    }
+    _iter=_subpages.begin(); // reset iterator
 }
 
 void Page::RenumberSubpages()
@@ -131,9 +36,9 @@ void Page::RenumberSubpages()
     int count=0;
     unsigned int subcode;
     int code[4];
-    if (this->m_SubPage == nullptr)
+    if (_subpages.size() == 1)
     {
-        // A single page (no subpages).
+        // A single page
         
         // Annex A.1 states that pages with no sub-pages should be coded Mxx-0000. This is the default when no subcode is specified in tti file.
         // Annex E.2 states that the subcode may be used to transmit a BCD time code, e.g for an alarm clock. Where a non zero subcode is specified in the tti file keep it.
@@ -141,14 +46,15 @@ void Page::RenumberSubpages()
         if (Special())
         {
             // "Special" pages (e.g. MOT, POP, GPOP, DRCS, GDRCS, MIP) should be coded sequentially in hexadecimal 0000-000F
-            this->SetSubCode(0);
+            _subpages.front()->SetSubCode(0);
         }
     }
-    else
+    else if (_subpages.size() > 1)
     {
         // Page has subpages. Renumber according to Annex A.1.
         for (int i=0;i<4;i++) code[i]=0;
-        for (std::shared_ptr<Page> p(this->getptr());p!=nullptr;p=p->m_SubPage)
+        std::list<std::shared_ptr<Subpage>>::iterator it;
+        for (it = _subpages.begin(); it != _subpages.end(); ++it)
         {
             if (Special())
             {
@@ -188,8 +94,7 @@ void Page::RenumberSubpages()
                 subcode=(code[0]<<12) + (code[1]<<8) + (code[2]<<4) + code[3];
             }
             
-            if (p!=nullptr)
-                p->SetSubCode(subcode); // modify the subcode
+            (*it)->SetSubCode(subcode); // modify the subcode
             count++;
         }
     }
@@ -202,18 +107,6 @@ void Page::SetPageNumber(int page)
         page = 0x8FF;
     }
     _pageNumber=page;
-}
-
-void Page::SetFastextLink(int link, int value)
-{
-    if (link<0 || link>5 || value>0x8ff)
-    {
-        m_fastextlinks[link].page=0x8ff; // When no particular page is specified
-        m_fastextlinks[link].subpage=0x3f7f;
-        return;
-    }
-    m_fastextlinks[link].page=value;
-    m_fastextlinks[link].subpage=0x3f7f;
 }
 
 void Page::SetPageFunctionInt(int pageFunction)
@@ -299,19 +192,132 @@ PageCoding Page::ReturnPageCoding(int pageCoding)
     }
 }
 
-bool Page::HasHeaderChanged(uint16_t crc)
+bool Page::IsCarousel()
 {
-    if (_headerCRC != crc)
+    if (_subpages.size() > 1) // has multiple subpages
     {
-        // update stored CRC and signal change
-        _headerCRC = crc;
         return true;
     }
     
-    return false; // no change
+    if (std::shared_ptr<Subpage> s = GetSubpage())
+    {
+        if (s->GetTimedMode() && s->GetSubpageStatus() & PAGESTATUS_C9_INTERRUPTED)
+        {
+            // interrupted sequence flag is set, and page is in timed mode, so treat as a 1 page carousel
+            return true;
+        }
+    }
+    
+    return false;
 }
 
-/** MOVING STUFF TO SUBPAGE CLASS HERE **/
+void Page::StepNextSubpageNoLoop()
+{
+    if (_subpages.empty())
+    {
+        _carouselPage==nullptr;
+    }
+    else
+    {
+        if (_carouselPage==nullptr)
+        {
+            _iter=_subpages.begin();
+            _carouselPage = *_iter;
+        }
+        else
+        {
+            ++_iter;
+            _carouselPage = *_iter;
+        }
+        if (_iter == _subpages.end())
+        {
+            _carouselPage = nullptr;
+        }
+    }
+}
+
+void Page::StepNextSubpage()
+{
+    if (_subpages.empty())
+    {
+        _carouselPage==nullptr;
+    }
+    else
+    {
+        if (_carouselPage==nullptr)
+        {
+            _iter=_subpages.begin();
+            _carouselPage = *_iter;
+        }
+        else
+        {
+            ++_iter;
+            _carouselPage = *_iter;
+        }
+        if (_iter == _subpages.end())
+        {
+            _iter = _subpages.begin();
+            _carouselPage = *_iter;
+        }
+    }
+}
+
+std::shared_ptr<TTXLine> Page::GetTxRow(uint8_t row)
+{
+    // Return a line or nullptr if the row does not exist
+    std::shared_ptr<TTXLine> line=nullptr;
+    
+    if (_carouselPage)
+        line=GetSubpage()->GetRow(row);
+    
+    if (line!=nullptr) // Found a line
+    {
+        return line;
+    }
+    // No more lines? return NULL.
+    return nullptr;
+}
+
+Subpage::Subpage() :
+    _subcode(0),
+    _status(0),
+    _cycleTime(1),
+    _timedMode(false),
+    _region(0),
+    _lastPacket(0),
+    _subpageChanged(true),
+    _headerCRC(0),
+    _subpageCRC(0)
+{
+    for (int i=0;i<=MAXROW;i++)
+    {
+        _lines[i]=nullptr; // delete rows
+    }
+    
+    for (int i=0;i<6;i++)
+    {
+        SetFastextLink(i,0x8ff,0x3f7f);
+    }
+}
+
+Subpage::~Subpage()
+{
+    //std::cerr << "Subpage dtor\n";
+}
+
+std::shared_ptr<TTXLine> Subpage::GetRow(unsigned int row)
+{
+    if (row>MAXROW)
+    {
+        return nullptr;
+    }
+    
+    if (_lines[row]==nullptr && row>0 && row<26)
+    {
+        _lines[row].reset(new TTXLine("                                        ")); // return a blank row for X/1-X/25
+    }
+    return _lines[row];
+}
 
 void Subpage::SetRow(unsigned int rownumber, std::string line)
 {

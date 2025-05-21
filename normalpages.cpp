@@ -81,7 +81,7 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
                 {
                     ++_iter;
                 }
-                else
+                else if (_page->GetSubpage()) // check page has a current subpage
                 {
                     return _page; // return page locked
                 }

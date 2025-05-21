@@ -57,7 +57,12 @@ std::shared_ptr<TTXPageStream> UpdatedPages::NextPage()
                 
                 _iter = _UpdatedPagesList.erase(_iter); // remove page from this list after transmitting it
                 _page->SetUpdatedFlag(false);
-                return _page; // return locked page
+                
+                if (_page->GetSubpage() != nullptr) // make sure there is a subpage
+                {
+                    return _page; // return page locked
+                }
+                _page->FreeLock(); // must unlock page again
             }
         }
     }

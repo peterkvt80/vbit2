@@ -33,16 +33,14 @@ bool File::LoadTTI(std::string filename)
     int lines=0;
     // Open the file
     std::ifstream filein(filename.c_str());
-    std::shared_ptr<Page> p(_page->getptr());
     _page->ClearPage(); // reset to blank page
     char * ptr;
     unsigned int subcode;
-    std::string subpage;
-    int pageNumber;
-    int pagestatus = _page->GetPageStatus();
-    char cycletimetype = _page->GetCycleTimeMode();
-    int cycletimeseconds = _page->GetCycleTime();
-    int region = _page->GetRegion();
+    int pageNumber = 0;
+    int pagestatus = 0;
+    char timedmode = false;
+    int cycletime = 1;
+    int region = 0;
     char m;
     
     /* We're going to create subpages in parallel with the old system for a moment... */
@@ -72,17 +70,14 @@ bool File::LoadTTI(std::string filename)
                     {
                         // CT,8,T
                         std::getline(filein, line, ',');
-                        cycletimeseconds = (atoi(line.c_str()));
+                        cycletime = (atoi(line.c_str()));
                         std::getline(filein, line);
-                        cycletimetype = (line[0]=='T'?'T':'C');
-                        
-                        p->SetCycleTime(cycletimeseconds);
-                        p->SetCycleTimeMode(cycletimetype);
+                        timedmode = (line[0]=='T'?true:false);
                         
                         if (s != nullptr)
                         {
-                            s->SetTimedMode(cycletimetype=='T');
-                            s->SetCycleTime(cycletimeseconds);
+                            s->SetTimedMode(timedmode);
+                            s->SetCycleTime(cycletime);
                         }
                         
                         break;
@@ -93,43 +88,35 @@ bool File::LoadTTI(std::string filename)
                         // pp=00 to ff (hex)
                         // ss=00 to 99 (decimal)
                         // PN,10000
+                        
                         std::getline(filein, line);
-                        if (line.length()<3) // Must have at least three characters for a page number
-                            break;
-                        m=line[0];
-                        if (m<'1' || m>'8') // Magazine must be 1 to 8
-                            break;
-                        pageNumber=std::strtol(line.c_str(), &ptr, 16);
-                        if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
+                        if (!pageNumber) // use the first page number we see
                         {
-                            // leave it alone
-                        }
-                        else   // Normally has subpage digits
-                        {
-                            subpage=line.substr(3,2);
-                            pageNumber=(pageNumber & 0xfff00) >> 8;
+                            if (line.length()<3) // Must have at least three characters for a page number
+                                break;
+                            m=line[0];
+                            if (m<'1' || m>'8') // Magazine must be 1 to 8
+                                break;
+                            pageNumber=std::strtol(line.c_str(), &ptr, 16);
+                            if (line.length()<5 && pageNumber<=0x8ff) // Page number without subpage? Shouldn't happen but you never know.
+                            {
+                                // leave it alone and hope for the best
+                            }
+                            else   // Normally has subpage digits, we don't care
+                            {
+                                pageNumber=(pageNumber & 0xfff00) >> 8;
+                            }
+                            
+                            _page->SetPageNumber(pageNumber);
                         }
                         
-                        std::shared_ptr<Subpage> s(new Subpage()); // create a new subpage
+                        s = std::shared_ptr<Subpage>(new Subpage()); // create a new subpage
                         // inherit settings from previous subpage
-                        s->SetTimedMode(cycletimetype=='T');
-                        s->SetCycleTime(cycletimeseconds);
+                        s->SetTimedMode(timedmode);
+                        s->SetCycleTime(cycletime);
                         s->SetSubpageStatus(pagestatus);
                         s->SetRegion(region);
                         _page->AppendSubpage(s); // add it to the page
-                        
-                        if (p->GetPageNumber()!=FIRSTPAGE) // Subsequent pages need new page instances
-                        {
-                            std::shared_ptr<Page> newSubPage(new Page()); // Create a new instance for the subpage
-                            p->Setm_SubPage(newSubPage);        // Put in a link to it
-                            p=newSubPage;                       // And jump to the next subpage ready to populate
-                            p->SetPageStatus(pagestatus); // inherit status of previous page instead of default
-                            p->SetCycleTimeMode(cycletimetype); // inherit cycle time
-                            p->SetCycleTime(cycletimeseconds);
-                            p->SetRegion(region); // inherit region
-                            
-                        }
-                        p->SetPageNumber(pageNumber);
 
                         break;
                     }
@@ -138,8 +125,6 @@ bool File::LoadTTI(std::string filename)
                         // SC,0000
                         std::getline(filein, line);
                         subcode=std::strtol(line.c_str(), &ptr, 16);
-
-                        p->SetSubCode(subcode);
                         
                         if (s != nullptr)
                             s->SetSubCode(subcode); // set subcode explicitly
@@ -151,8 +136,6 @@ bool File::LoadTTI(std::string filename)
                         // PS,8000
                         std::getline(filein, line);
                         pagestatus = std::strtol(line.c_str(), &ptr, 16);
-                        p->SetPageStatus(pagestatus);
-                        
                         if (s != nullptr)
                             s->SetSubpageStatus(pagestatus);
                         
@@ -164,11 +147,11 @@ bool File::LoadTTI(std::string filename)
                         lineNumber=atoi(line.c_str());
                         std::getline(filein, line);
                         if (lineNumber>MAXROW) break;
-                        p->SetRow(lineNumber,line);
-                        lines++;
-                        
                         if (s != nullptr)
+                        {
                             s->SetRow(lineNumber,line);
+                            lines++;
+                        }
                         
                         // check for and decode OL,28 page function and coding
                         if (lineNumber == 28 && line.length() >= 40)
@@ -198,7 +181,6 @@ bool File::LoadTTI(std::string filename)
                             else
                                 std::getline(filein, line); // Last parameter no comma
                             int link = std::strtol(line.c_str(), &ptr, 16);
-                            p->SetFastextLink(fli, link);
                             
                             if (s != nullptr)
                                 s->SetFastextLink(fli, link, 0x3f7f);
@@ -209,8 +191,6 @@ bool File::LoadTTI(std::string filename)
                     {
                         std::getline(filein, line);
                         int region = std::strtol(line.c_str(), &ptr, 16);
-                        p->SetRegion(region);
-                        
                         if (s != nullptr)
                             s->SetRegion(region);
                         break;
@@ -240,7 +220,6 @@ bool File::LoadTTI(std::string filename)
         if (!found) std::getline(filein, line);
     }
     filein.close(); // Not sure that we need to close it
-    p->Setm_SubPage(nullptr);
     _page->RenumberSubpages();
     return (lines>0);
 }
@@ -364,21 +343,22 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                                 }
                                 else
                                 {
-                                    page->IncrementUpdateCount();
-                                    int status = page->GetPageStatus();
-                                    
                                     if (f->Loaded())
                                     {
+                                        page->IncrementUpdateCount();
+                                        int update = false;
+                                        if (std::shared_ptr<Subpage> s = page->GetSubpage())
+                                            update = (s->GetSubpageStatus() & PAGESTATUS_C8_UPDATE); // only check update flag of single subpages
+                                        
                                         if (!(_pageList->Contains(page)))
                                         {
                                             // this page is not currently in pagelist
-                                            _pageList->AddPage(page, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                                            _pageList->AddPage(page, !update); // only transmit immediate update if update flag is set
                                         }
                                         else
                                         {
-                                            _pageList->UpdatePageLists(page, !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
+                                            _pageList->UpdatePageLists(page, !update); // only transmit immediate update if update flag is set
                                         }
-                                        page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an updated page
                                     }
                                     else
                                     {
@@ -408,10 +388,11 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                     {
                         std::shared_ptr<TTXPageStream> page = f->GetPage();
                         
-                        // don't add to updated pages list if this is the initial load
-                        int status = page->GetPageStatus();
-                        _pageList->AddPage(page, firstrun || !(status & PAGESTATUS_C8_UPDATE)); // noupdate unless C8 is set
-                        page->SetPageStatus(status | PAGESTATUS_C8_UPDATE); // always set C8 on an newly loaded page
+                        // don't add to updated pages list if this is the initial startup
+                        int update = false;
+                        if (std::shared_ptr<Subpage> s = page->GetSubpage())
+                            update = (s->GetSubpageStatus() & PAGESTATUS_C8_UPDATE) && !page->IsCarousel(); // only check update flag of single subpages
+                        _pageList->AddPage(page, firstrun | !update); // only transmit immediate update if update flag is set and vbit2 isn't starting up
                         _pageList->CheckForPacket29OrCustomHeader(page);
                     }
                     else

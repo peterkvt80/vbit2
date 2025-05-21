@@ -20,14 +20,18 @@ void Carousel::addPage(std::shared_ptr<TTXPageStream> p)
 {
     // @todo Don't allow duplicate entries
     p->SetCarouselFlag(true);
-    p->SetTransitionTime(p->GetCycleTime()+1);
+    int t = 1;
+    if (std::shared_ptr<Subpage> s = p->GetSubpage())
+        t += s->GetCycleTime();
+    
+    p->SetTransitionTime(t);
     _carouselList.push_front(p);
 }
 
 std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
 {
     std::shared_ptr<TTXPageStream> p;
-    if (_carouselList.size()==0) return NULL;
+    if (_carouselList.size()==0) return nullptr;
     
     for (std::list<std::shared_ptr<TTXPageStream>>::iterator it=_carouselList.begin();it!=_carouselList.end();++it)
     {
@@ -60,10 +64,13 @@ std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
                 if (p->Expired())
                 {
                     // We found a carousel that is ready to step
-                    if (p->GetSubpage()->GetPageStatus() & PAGESTATUS_C9_INTERRUPTED)
+                    if (std::shared_ptr<Subpage> s = p->GetSubpage()) // make sure there is a subpage
                     {
-                        // carousel should go out now out of sequence
-                        return p; // return page locked
+                        if (s->GetSubpageStatus() & PAGESTATUS_C9_INTERRUPTED)
+                        {
+                            // carousel should go out now out of sequence
+                            return p; // return page locked
+                        }
                     }
                 }
             }

@@ -106,10 +106,9 @@ loopback: // jump back point to avoid returning null packets when we could send 
                         _waitingForField = false; // don't need a page erasure interval
                     }
                     
-                    
                     _subpage = _page->GetSubpage();
                     
-                    _status = _subpage->GetPageStatus() & 0x8000; // get transmit flag
+                    _status = _subpage->GetSubpageStatus() & 0x8000; // get transmit flag
                     _region = _subpage->GetRegion();
                     thisSubcode = (_subpage->GetSubCode() & 0x000F) | (_subpage->GetLastPacket() << 8);
                     
@@ -176,12 +175,12 @@ loopback: // jump back point to avoid returning null packets when we could send 
                         // cycle if timer has expired
                         _page->StepNextSubpage();
                         _page->SetTransitionTime(_page->GetSubpage()->GetCycleTime());
-                        _status=_page->GetSubpage()->GetPageStatus();
+                        _status=_page->GetSubpage()->GetSubpageStatus();
                     }
                     else
                     {
                         // clear any ERASE bit if page hasn't cycled to minimise flicker, and the interrupted status bit
-                        _status=_page->GetSubpage()->GetPageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
+                        _status=_page->GetSubpage()->GetSubpageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
                     }
                     
                     _subpage = _page->GetSubpage();
@@ -194,7 +193,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                     _subpage = _page->GetSubpage();
                     
                     thisSubcode=_subpage->GetSubCode();
-                    _status=_subpage->GetPageStatus();
+                    _status=_subpage->GetSubpageStatus();
                     _region=_subpage->GetRegion();
                 }
                 
@@ -203,7 +202,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 if (_status & PAGESTATUS_C8_UPDATE)
                 {
                     // Clear update bit in stored page so that update flag is only transmitted once
-                    _subpage->SetPageStatus(_subpage->GetPageStatus() & ~PAGESTATUS_C8_UPDATE);
+                    _subpage->SetSubpageStatus(_subpage->GetSubpageStatus() & ~PAGESTATUS_C8_UPDATE);
                     
                     // Also set the erase flag in output. This will allow left over rows in adaptive transmission to be cleared without leaving the erase flag set causing flickering.
                     _status|=PAGESTATUS_C4_ERASEPAGE;
@@ -229,7 +228,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
             uint16_t tempCRC = p->PacketCRC(0); // calculate the crc of the new header
             
             bool headerChanged = _subpage->HasHeaderChanged(tempCRC);
-            bool pageChanged = _subpage->HasPageChanged();
+            bool pageChanged = _subpage->HasSubpageChanged();
             if (headerChanged || pageChanged)
             {
                 // the content of the header has changed or the page has been reloaded
@@ -241,7 +240,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                     tempCRC = TempPacket.PacketCRC(tempCRC);
                 }
                 
-                _subpage->SetPageCRC(tempCRC);
+                _subpage->SetSubpageCRC(tempCRC);
                 
                 // TODO: the page content may get modified by substitutions in Packet::tx() which will result in an invalid checksum
             }
@@ -270,7 +269,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 else
                 {
                     p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_HAMMING_8_4); // navigation packets
-                    p->SetX27CRC(_subpage->GetPageCRC());
+                    p->SetX27CRC(_subpage->GetSubpageCRC());
                 }
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
@@ -395,7 +394,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
             p->SetMRAG(_magNumber,27);
             links=_subpage->GetLinkSet();
             p->Fastext(links,_magNumber);
-            p->SetX27CRC(_subpage->GetPageCRC());
+            p->SetX27CRC(_subpage->GetSubpageCRC());
             _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
             _state=PACKETSTATE_PACKET27; // makes no attempt to prevent an FL row and an X/27/0 both being sent
             break;

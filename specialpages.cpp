@@ -31,15 +31,15 @@ std::shared_ptr<TTXPageStream> SpecialPages::NextPage()
     }
     else
     {
-        if (_page->IsCarousel())
+        if (_page->GetLock()) // try to lock this page against changes
         {
-            _page->StepNextSubpageNoLoop();
-            if (_page->GetSubpage() != NULL)
+            _page->StepNextSubpageNoLoop(); // next subpage if a carousel
+            if (_page->GetSubpage() != nullptr) // make sure there is a subpage
             {
-                return _page;
+                return _page; // return page locked
             }
+            _page->FreeLock(); // must unlock page again
         }
-
         ++_iter;
         _page = *_iter;
     }
@@ -56,9 +56,9 @@ std::shared_ptr<TTXPageStream> SpecialPages::NextPage()
         {
             if (_page->GetLock()) // try to lock this page against changes
             {
-                if (_page->IsCarousel() && _page->GetSubpage() == nullptr)
+                if (_page->GetSubpage() == nullptr)
                 {
-                    _page->StepNextSubpageNoLoop(); // ensure we don't point at a null subpage
+                    _page->StepNextSubpageNoLoop(); // step to first subpage
                 }
                 
                 if (_page->GetIsMarked() && _page->GetSpecialFlag()) // only remove it once
@@ -86,7 +86,10 @@ std::shared_ptr<TTXPageStream> SpecialPages::NextPage()
                 }
                 else
                 {
-                    return _page; // return page locked
+                    if (_page->GetSubpage() != nullptr) // make sure there is a subpage
+                    {
+                        return _page; // return page locked
+                    }
                 }
                 
                 _page->FreeLock(); // must unlock page again
