@@ -28,7 +28,7 @@ int main(int argc, char** argv)
     
     PageList *pageList=new PageList(configure, debug);
     PacketServer *packetServer=new PacketServer(configure, debug);
-    InterfaceServer *interfaceServer=new InterfaceServer(configure, debug);
+    InterfaceServer *interfaceServer=new InterfaceServer(configure, debug, pageList);
 
     Service* svc=new Service(configure, debug, pageList, packetServer, interfaceServer); // Need to copy the subtitle packet source for Newfor
 

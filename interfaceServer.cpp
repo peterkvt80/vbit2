@@ -20,9 +20,10 @@
 
 using namespace vbit;
 
-InterfaceServer::InterfaceServer(Configure *configure, Debug *debug) :
+InterfaceServer::InterfaceServer(Configure *configure, Debug *debug, PageList *pageList) :
     _configure(configure),
     _debug(debug),
+    _pageList(pageList),
     _portNumber(configure->GetInterfaceServerPort()),
     _isActive(false)
 {
@@ -414,19 +415,33 @@ void InterfaceServer::run()
                                 case PAGESAPI:
                                 {
                                     /* page data API */
+                                    res[0] = DCERR; // default to returning an error
+                                    
                                     if (_clientChannel[i] == 0 && n > 2) /* allow page data commands on channel 0 only */
                                     {
-                                        switch(readBuffer[2]){ // byte 2 is page data API command number
-                                            
-                                            /* no commands implemented yet */
-                                            
-                                            default: // unknown page data command
-                                                res[0] = DCERR;
+                                        int num;
+                                        if (n >= 5) // all commands must start with a page number
+                                        {
+                                            num = (readBuffer[3] << 8) | readBuffer[4];
+                                            switch(readBuffer[2]){ // byte 2 is page data API command number
+                                                
+                                                /* no commands implemented yet */
+                                                case PAGEDELETE:
+                                                {
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] PAGEDELETE command received for page " << std::hex << num;
+                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                    
+                                                    std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
+                                                    if (p != nullptr)
+                                                    {
+                                                        p->MarkForDeletion();
+                                                        res[0] = DCOK;
+                                                    }
+                                                    break;
+                                                }
+                                            }
                                         }
-                                    }
-                                    else
-                                    {
-                                        res[0] = DCERR;
                                     }
                                     break;
                                 }

@@ -3,6 +3,7 @@
 
 #include "configure.h"
 #include "debug.h"
+#include "pagelist.h"
 #include "packet.h"
 #include "packetDatacast.h"
 
@@ -38,6 +39,7 @@
 
 /* command numbers for page data API */
 // no commands defined yet - this is just a statement of intent
+#define PAGEDELETE  0x00    /* remove a page from the service */
 
 namespace vbit
 
@@ -45,7 +47,7 @@ namespace vbit
     class InterfaceServer
     {
         public:
-            InterfaceServer(Configure *configure, Debug *debug);
+            InterfaceServer(Configure *configure, Debug *debug, PageList *pageList);
             ~InterfaceServer();
             
             void run();
@@ -57,6 +59,7 @@ namespace vbit
         private:
             Configure* _configure;
             Debug* _debug;
+            PageList* _pageList;
             PacketDatacast* _datachannel[16]; /* array of datacast sources */
             
             static const uint16_t MAXPENDING=5;
