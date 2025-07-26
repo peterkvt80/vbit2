@@ -251,14 +251,11 @@ void Page::StepNextSubpage()
         }
         else
         {
-            ++_iter;
+            if (++_iter == _subpages.end())
+                _iter = _subpages.begin();
             _carouselPage = *_iter;
         }
-        if (_iter == _subpages.end())
-        {
-            _iter = _subpages.begin();
-            _carouselPage = *_iter;
-        }
+        
     }
 }
 
@@ -268,7 +265,7 @@ std::shared_ptr<TTXLine> Page::GetTxRow(uint8_t row)
     std::shared_ptr<TTXLine> line=nullptr;
     
     if (_carouselPage)
-        line=GetSubpage()->GetRow(row);
+        line=_carouselPage->GetRow(row);
     
     if (line!=nullptr) // Found a line
     {

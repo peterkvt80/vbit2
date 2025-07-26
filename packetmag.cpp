@@ -107,6 +107,11 @@ loopback: // jump back point to avoid returning null packets when we could send 
                     }
                     
                     _subpage = _page->GetSubpage();
+                    if (_subpage == nullptr) // page is empty
+                    {
+                        _page->FreeLock(); // Must free the lock or we can never use this page again!
+                        goto loopback;
+                    }
                     
                     _status = _subpage->GetSubpageStatus() & 0x8000; // get transmit flag
                     _region = _subpage->GetRegion();
@@ -174,16 +179,26 @@ loopback: // jump back point to avoid returning null packets when we could send 
                     {
                         // cycle if timer has expired
                         _page->StepNextSubpage();
-                        _page->SetTransitionTime(_page->GetSubpage()->GetCycleTime());
-                        _status=_page->GetSubpage()->GetSubpageStatus();
+                        _subpage = _page->GetSubpage();
+                        if (_subpage == nullptr) // page is empty
+                        {
+                            _page->FreeLock(); // Must free the lock or we can never use this page again!
+                            goto loopback;
+                        }
+                        _page->SetTransitionTime(_subpage->GetCycleTime());
+                        _status=_subpage->GetSubpageStatus();
                     }
                     else
                     {
+                        _subpage = _page->GetSubpage();
+                        if (_subpage == nullptr) // page is empty
+                        {
+                            _page->FreeLock(); // Must free the lock or we can never use this page again!
+                            goto loopback;
+                        }
                         // clear any ERASE bit if page hasn't cycled to minimise flicker, and the interrupted status bit
-                        _status=_page->GetSubpage()->GetSubpageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
+                        _status=_subpage->GetSubpageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
                     }
-                    
-                    _subpage = _page->GetSubpage();
                     
                     thisSubcode=_subpage->GetSubCode();
                     _region=_subpage->GetRegion();
@@ -191,6 +206,11 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 else
                 {
                     _subpage = _page->GetSubpage();
+                    if (_subpage == nullptr) // page is empty
+                    {
+                        _page->FreeLock(); // Must free the lock or we can never use this page again!
+                        goto loopback;
+                    }
                     
                     thisSubcode=_subpage->GetSubCode();
                     _status=_subpage->GetSubpageStatus();
