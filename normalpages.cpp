@@ -89,6 +89,12 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
                 _page->FreeLock(); // must unlock page again
                 _page = *_iter;
             }
+            else
+            {
+                // skip page
+                ++_iter;
+                _page = *_iter;
+            }
         }
     }
 }
