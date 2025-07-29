@@ -64,6 +64,8 @@ bool TTXPageStream::Expired(bool StepCycles)
         if (s->GetTimedMode())
         {
             MasterClock *mc = mc->Instance();
+            if (_transitionTime == 0)
+                return false; // catch race condition where we can check carousel before its timeout has been set
             return _transitionTime <= mc->GetMasterClock().seconds;
         }
     }

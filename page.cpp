@@ -20,6 +20,38 @@ void Page::AppendSubpage(std::shared_ptr<Subpage> s)
         StepNextSubpage();
 }
 
+void Page::InsertSubpage(std::shared_ptr<Subpage> s)
+{
+    for (std::list<std::shared_ptr<Subpage>>::iterator it=_subpages.begin();it!=_subpages.end();++it)
+    {
+        // find first subpage with a higher subcode
+        std::shared_ptr<Subpage> ptr = *it;
+        if (ptr->GetSubCode() > s->GetSubCode())
+        {
+            _subpages.insert(it,s);
+            return;
+        }
+    }
+    
+    // if we are here we ran to the end of the list without a match
+    _subpages.push_back(s);
+    if (_carouselPage == nullptr)
+        StepNextSubpage();
+}
+
+void Page::RemoveSubpage(std::shared_ptr<Subpage> s)
+{
+    _subpages.remove(s);
+    
+    if (_subpages.empty())
+        _carouselPage = nullptr;
+    else
+    {
+        _iter=_subpages.begin();
+        _carouselPage = *_iter;
+    }
+}
+
 void Page::ClearPage()
 {
     _pageNumber = 0; // an invalid page number
@@ -251,12 +283,25 @@ void Page::StepNextSubpage()
         }
         else
         {
+            if (_iter == _subpages.end())
+                _iter = _subpages.begin();
             if (++_iter == _subpages.end())
                 _iter = _subpages.begin();
             _carouselPage = *_iter;
         }
-        
     }
+}
+
+// Find a subpage by subcode - Warning: this will only find the first match so don't let multiples into the list!
+std::shared_ptr<Subpage> Page::LocateSubpage(uint16_t SubpageNumber)
+{
+    for (std::list<std::shared_ptr<Subpage>>::iterator s=_subpages.begin();s!=_subpages.end();++s)
+    {
+        std::shared_ptr<Subpage> ptr = *s;
+        if (SubpageNumber==ptr->GetSubCode())
+            return ptr;
+    }
+    return nullptr;
 }
 
 std::shared_ptr<TTXLine> Page::GetTxRow(uint8_t row)

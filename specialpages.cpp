@@ -19,7 +19,18 @@ SpecialPages::~SpecialPages()
 void SpecialPages::addPage(std::shared_ptr<TTXPageStream> p)
 {
     p->SetSpecialFlag(true);
-    _specialPagesList.push_front(p);
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator it=_specialPagesList.begin();it!=_specialPagesList.end();++it)
+    {
+        // find first page with a higher number
+        std::shared_ptr<TTXPageStream> ptr = *it;
+        if (ptr->GetPageNumber() > p->GetPageNumber())
+        {
+            _specialPagesList.insert(it,p);
+            return;
+        }
+    }
+    // if we are here we ran to the end of the list without a match
+    _specialPagesList.push_back(p);
 }
 
 std::shared_ptr<TTXPageStream> SpecialPages::NextPage()
@@ -84,12 +95,13 @@ std::shared_ptr<TTXPageStream> SpecialPages::NextPage()
                 {
                     ++_iter;
                 }
+                else if (_page->GetSubpageCount() == 0) // skip pages with no subpages
+                {
+                    ++_iter;
+                }
                 else
                 {
-                    if (_page->GetSubpage() != nullptr) // make sure there is a subpage
-                    {
-                        return _page; // return page locked
-                    }
+                    return _page; // return page locked
                 }
                 
                 _page->FreeLock(); // must unlock page again

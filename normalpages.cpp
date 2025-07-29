@@ -10,7 +10,6 @@ NormalPages::NormalPages(int mag, PageList *pageList, Debug *debug) :
 {
     _iter=_NormalPagesList.begin();
     _page=nullptr;
-    _needSorting = false;
 }
 
 NormalPages::~NormalPages()
@@ -21,20 +20,25 @@ NormalPages::~NormalPages()
 void NormalPages::addPage(std::shared_ptr<TTXPageStream> p)
 {
     p->SetNormalFlag(true);
-    _NormalPagesList.push_front(p);
-    _needSorting = true; // set flag to indicate that list should be sorted before next cycle
+    
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator it=_NormalPagesList.begin();it!=_NormalPagesList.end();++it)
+    {
+        // find first page with a higher number
+        std::shared_ptr<TTXPageStream> ptr = *it;
+        if (ptr->GetPageNumber() > p->GetPageNumber())
+        {
+            _NormalPagesList.insert(it,p);
+            return;
+        }
+    }
+    // if we are here we ran to the end of the list without a match
+    _NormalPagesList.push_back(p);
 }
 
 std::shared_ptr<TTXPageStream> NormalPages::NextPage()
 {
     if (_page == nullptr)
     {
-        if (_needSorting)
-        {
-            // sort the page list by page number. Only check this at the start of each cycle
-            _NormalPagesList.sort(pageLessThan<TTXPageStream>());
-            _needSorting = false; // clear flag
-        }
         _iter=_NormalPagesList.begin();
         _page = *_iter;
     }
@@ -81,7 +85,11 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
                 {
                     ++_iter;
                 }
-                else if (_page->GetSubpage()) // check page has a current subpage
+                else if (_page->GetSubpageCount() == 0) // skip pages with no subpages
+                {
+                    ++_iter;
+                }
+                else
                 {
                     return _page; // return page locked
                 }

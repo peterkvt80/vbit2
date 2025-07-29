@@ -108,13 +108,16 @@ class Page
         virtual ~Page();
         
         void AppendSubpage(std::shared_ptr<Subpage> s);
+        void InsertSubpage(std::shared_ptr<Subpage> s);
+        void RemoveSubpage(std::shared_ptr<Subpage> s);
+        unsigned int GetSubpageCount() {return _subpages.size();};
         
-        int GetPageNumber() const {return _pageNumber;}
+        int GetPageNumber() const {return _pageNumber;};
         void SetPageNumber(int page);
         
         // get the function or coding of a page as the enum
-        PageCoding GetPageCoding() {return _pageCoding;}
-        PageFunction GetPageFunction() {return _pageFunction;}
+        PageCoding GetPageCoding() {return _pageCoding;};
+        PageFunction GetPageFunction() {return _pageFunction;};
         
         // set the page function or coding based on their integer representations in ETS 300 706 section 9.4.2.1
         static PageCoding ReturnPageCoding(int pageCoding);
@@ -132,6 +135,7 @@ class Page
         void StepNextSubpageNoLoop();
         
         std::shared_ptr<Subpage> GetSubpage(){return _carouselPage;};
+        std::shared_ptr<Subpage> LocateSubpage(uint16_t SubpageNumber);
         
         std::shared_ptr<TTXLine> GetTxRow(uint8_t row);
         

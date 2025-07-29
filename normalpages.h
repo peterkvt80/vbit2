@@ -34,15 +34,6 @@ class NormalPages
         std::list<std::shared_ptr<TTXPageStream>> _NormalPagesList;
         std::list<std::shared_ptr<TTXPageStream>>::iterator _iter;
         std::shared_ptr<TTXPageStream> _page;
-        bool _needSorting;
-        
-        template <typename TTXPageStream>
-        struct pageLessThan
-        {
-            bool operator()(const std::shared_ptr<TTXPageStream>a, const std::shared_ptr<TTXPageStream>b) const{
-                return a->GetPageNumber() < b->GetPageNumber();
-            }
-        };
 };
 
 }

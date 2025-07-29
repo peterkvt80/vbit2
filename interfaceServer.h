@@ -4,6 +4,7 @@
 #include "configure.h"
 #include "debug.h"
 #include "pagelist.h"
+#include "ttxpagestream.h"
 #include "packet.h"
 #include "packetDatacast.h"
 
@@ -38,12 +39,23 @@
 #define CONFHEADER  0x03    /* get/set 32 byte header template */
 
 /* command numbers for page data API */
-// no commands defined yet - this is just a statement of intent
 #define PAGEDELETE  0x00    /* remove a page from the service */
+#define PAGEOPEN    0x01    /* open a page for updating */
+#define PAGESETSUB  0x02    /* select subpage */
+#define PAGEDELSUB  0x03    /* delete subpage */
+#define PAGECLOSE   0x04    /* close updated page */
 
 namespace vbit
 
 {
+    class ClientState
+    {
+        public:
+            int socket = -1;
+            int channel = -1;
+            std::shared_ptr<TTXPageStream> page = nullptr;
+            std::shared_ptr<Subpage> subpage = nullptr;
+    };
     class InterfaceServer
     {
         public:
@@ -68,12 +80,12 @@ namespace vbit
             int _portNumber;
             int _serverSock;
             
-            int _clientSocks[MAXCLIENTS];
-            int _clientChannel[MAXCLIENTS];
+            ClientState _clientState[MAXCLIENTS];
             
             bool _isActive;
             
             void SocketError(std::string errorMessage); // handle fatal socket errors
+            void CloseClient(ClientState *client); // clean up after a connected client
     };
 }
 

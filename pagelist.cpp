@@ -101,7 +101,8 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
                 std::stringstream ss;
                 ss << "[PageList::UpdatePageLists] page is now a carousel " << std::hex << (page->GetPageNumber());
                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                page->StepNextSubpage(); // ensure we're pointing at a subpage
+                if (page->GetSubpage() == nullptr)
+                    page->StepNextSubpage(); // ensure we're pointing at a subpage
                 _mag[mag]->GetCarousel()->addPage(page);
             }
             page->SetUpdatedFlag(false);
