@@ -334,6 +334,9 @@ void InterfaceServer::run()
                                                 if (n == 4)
                                                 {
                                                     _configure->SetRowAdaptive(((uint8_t)readBuffer[3]&1)?true:false);
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": CONFRAFLAG " << ((readBuffer[3] & 1)?"ON":"OFF");
+                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                 }
                                                 else if (n != 3)
                                                 {
@@ -349,6 +352,9 @@ void InterfaceServer::run()
                                                 if (n == 7) // set new bytes
                                                 {
                                                     _configure->SetReservedBytes(std::array<uint8_t, 4>({(uint8_t)readBuffer[3],(uint8_t)readBuffer[4],(uint8_t)readBuffer[5],(uint8_t)readBuffer[6]}));
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": CONFRBYTES set";
+                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                 }
                                                 else if (n != 3)
                                                 {
@@ -374,6 +380,9 @@ void InterfaceServer::run()
                                                     }
                                                     
                                                     _configure->SetServiceStatusString(tmp.str());
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": CONFSTATUS set";
+                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                 }
                                                 else if (n != 3)
                                                 {
@@ -400,6 +409,9 @@ void InterfaceServer::run()
                                                     }
                                                     
                                                     _configure->SetHeaderTemplate(tmp.str());
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
+                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                 }
                                                 else if (n != 3)
                                                 {
