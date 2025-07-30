@@ -304,6 +304,14 @@ std::shared_ptr<Subpage> Page::LocateSubpage(uint16_t SubpageNumber)
     return nullptr;
 }
 
+// attempt to set current subpage by number
+void Page::SetSubpage(uint16_t SubpageNumber)
+{
+    if (std::shared_ptr<Subpage> s = LocateSubpage(SubpageNumber))
+        _carouselPage = s;
+    // no warning on failure
+}
+
 std::shared_ptr<TTXLine> Page::GetTxRow(uint8_t row)
 {
     // Return a line or nullptr if the row does not exist

@@ -330,7 +330,6 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                         else
                         {
                             // We just load the new page and update the modified time
-                            
                             if (page->GetLock()) // try to lock page
                             {
                                 int curnum = page->GetPageNumber();
@@ -345,6 +344,17 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                                 {
                                     if (f->Loaded())
                                     {
+                                        if (page->GetOneShotFlag())
+                                        {
+                                            // file load clears oneshot status
+                                            page->SetOneShotFlag(false); 
+                                            // ensure page gets re-added to lists
+                                            page->SetNormalFlag(false);
+                                            page->SetSpecialFlag(false);
+                                            page->SetCarouselFlag(false);
+                                            _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Reloading page from " + std::string(dirp->d_name));
+                                        }
+                                        
                                         page->IncrementUpdateCount();
                                         int update = false;
                                         if (std::shared_ptr<Subpage> s = page->GetSubpage())
@@ -377,9 +387,9 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                 }
                 else
                 {
-                    //if (!firstrun){ // suppress logspam on first run
+                    if (!firstrun){ // suppress logspam on first run
                         _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Adding a new page " + std::string(dirp->d_name));
-                    //}
+                    }
                     // A new file. Create the page object and add it to the page list.
                     
                     std::shared_ptr<File> f(new File(name));

@@ -135,6 +135,7 @@ class Page
         void StepNextSubpageNoLoop();
         
         std::shared_ptr<Subpage> GetSubpage(){return _carouselPage;};
+        void SetSubpage(uint16_t SubpageNumber);
         std::shared_ptr<Subpage> LocateSubpage(uint16_t SubpageNumber);
         
         std::shared_ptr<TTXLine> GetTxRow(uint8_t row);

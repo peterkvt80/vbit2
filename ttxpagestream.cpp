@@ -11,7 +11,8 @@ TTXPageStream::TTXPageStream() :
     _isNormal(false),
     _isUpdated(false),
     _updateCount(0),
-    _deleteFlag(false)
+    _deleteFlag(false),
+    _isOneShot(false)
 {
     //ctor
     _mtx.reset(new std::mutex());

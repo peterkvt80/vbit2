@@ -36,6 +36,12 @@ std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
     for (std::list<std::shared_ptr<TTXPageStream>>::iterator it=_carouselList.begin();it!=_carouselList.end();++it)
     {
         p=*it;
+        if (p->GetOneShotFlag())
+        {
+            _carouselList.erase(it--);
+            continue;
+        }
+        
         if (p->GetLock()) // try to lock this page against changes
         {
             if (p->GetIsMarked() && p->GetCarouselFlag()) // only remove it once
@@ -50,7 +56,7 @@ std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
                 _pageList->RemovePage(p); // try to remove it from the pagelist immediately - will free the lock
                 continue; // jump back to loop
             }
-            else if ((!(p->IsCarousel())) || (p->Special()))
+            else if ((!(p->IsCarousel())) || p->Special())
             {
                 std::stringstream ss;
                 ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << (p->GetPageNumber());

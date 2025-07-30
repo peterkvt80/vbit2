@@ -20,7 +20,7 @@ UpdatedPages::~UpdatedPages()
 void UpdatedPages::addPage(std::shared_ptr<TTXPageStream> p)
 {
     p->SetUpdatedFlag(true);
-    _UpdatedPagesList.push_front(p);
+    _UpdatedPagesList.push_back(p);
 }
 
 std::shared_ptr<TTXPageStream> UpdatedPages::NextPage()

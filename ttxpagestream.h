@@ -25,6 +25,9 @@ class TTXPageStream : public Page
         
         void MarkForDeletion() { _deleteFlag = true; }
         bool GetIsMarked() { return _deleteFlag; }
+        
+        void SetOneShotFlag(bool val) { _isOneShot = val; }
+        bool GetOneShotFlag() { return _isOneShot; }
 
         bool GetCarouselFlag() { return _isCarousel; }
         void SetCarouselFlag(bool val) { _isCarousel = val; }
@@ -92,6 +95,8 @@ class TTXPageStream : public Page
         int _updateCount; // update counter for special pages.
         
         bool _deleteFlag; // marks a page for deletion from the service and cannot be undone
+        
+        bool _isOneShot;
         
         std::shared_ptr<std::mutex> _mtx;
 };

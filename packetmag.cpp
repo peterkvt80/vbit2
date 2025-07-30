@@ -173,7 +173,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 
                 _thisRow=0;
                 
-                if (_page->IsCarousel())
+                if (_page->IsCarousel() && !_page->GetOneShotFlag()) // don't cycle oneshot pages
                 {
                     if (_page->Expired(true))
                     {

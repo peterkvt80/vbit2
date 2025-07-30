@@ -256,7 +256,7 @@ void InterfaceServer::run()
                                         _clientState[i].channel = ch; // use requested channel
                                         
                                         std::stringstream ss;
-                                        ss << "[InterfaceServer::run] Set Datachannel " << std::hex << ch;
+                                        ss << "[InterfaceServer::run] Client " << i << ": DCSET " << ch;
                                         _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                         break;
                                     }
@@ -447,7 +447,7 @@ void InterfaceServer::run()
                                             if (cmd == PAGEDELETE)
                                             {
                                                 std::stringstream ss;
-                                                ss << "[InterfaceServer::run] PAGEDELETE command received for page " << std::hex << num;
+                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEDELETE " << std::hex << num;
                                                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                 
                                                 std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
@@ -459,22 +459,28 @@ void InterfaceServer::run()
                                             }
                                             else if (cmd == PAGEOPEN)
                                             {
+                                                bool OneShot = false;
+                                                if (n > 5)
+                                                    OneShot = (readBuffer[5] == 1);
+                                                
                                                 std::stringstream ss;
-                                                ss << "[InterfaceServer::run] PAGEOPEN command received for page " << std::hex << num;
+                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEOPEN " << std::hex << num << (OneShot?" as OneShot":"");
                                                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                 if ((uint8_t)readBuffer[3] > 0 && (uint8_t)readBuffer[3] <= 8 && (uint8_t)readBuffer[4] < 0xff)
                                                 {
                                                     std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
-                                                    if (p == nullptr)
+                                                    if (p == nullptr || p->GetIsMarked())
                                                     {
                                                         p = std::shared_ptr<TTXPageStream>(new TTXPageStream()); // create new page
                                                         std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] created new page " << std::hex << num;
+                                                        ss << "[InterfaceServer::run] Created new page " << std::hex << num;
                                                         _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                         if (p->GetLock()) // if this fails we have a real problem!
                                                         {
                                                             p->SetPageNumber(num);
+                                                            p->SetOneShotFlag(OneShot);
                                                             _pageList->AddPage(p, true); // put it in the page lists
+                                                            
                                                             // at this stage it has no subpages!
                                                             _clientState[i].page = p;
                                                             res[0] = DCOK;
@@ -482,8 +488,26 @@ void InterfaceServer::run()
                                                     }
                                                     else
                                                     {
-                                                        if(p->GetLock()) // try to lock page
+                                                        if (p->GetOneShotFlag() && p->GetUpdatedFlag())
                                                         {
+                                                            // previous oneshot hasn't yet sent
+                                                        }
+                                                        else if (p->GetLock()) // try to lock page
+                                                        {
+                                                            if (OneShot || (p->GetOneShotFlag() != OneShot)) // oneshot or oneshot changed
+                                                            {
+                                                                p->SetOneShotFlag(OneShot);
+                                                                if (!OneShot)
+                                                                {
+                                                                    // ensure page gets re-added to lists
+                                                                    p->SetNormalFlag(false);
+                                                                    p->SetSpecialFlag(false);
+                                                                    p->SetCarouselFlag(false);
+                                                                }
+                                                                p->SetUpdatedFlag(false);
+                                                                _pageList->UpdatePageLists(p);
+                                                            }
+                                                            
                                                             _clientState[i].page = p;
                                                             res[0] = DCOK;
                                                         }
@@ -493,7 +517,7 @@ void InterfaceServer::run()
                                             else if ((cmd == PAGESETSUB || cmd == PAGEDELSUB) && _clientState[i].page)
                                             {
                                                 std::stringstream ss;
-                                                ss << "[InterfaceServer::run] " << ((cmd==PAGESETSUB)?"PAGESETSUB":"PAGEDELSUB") << " command received for subpage " << std::hex << num;
+                                                ss << "[InterfaceServer::run] Client " << i << ": " << ((cmd==PAGESETSUB)?"PAGESETSUB ":"PAGEDELSUB ") << std::hex << num;
                                                 _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                 
                                                 if (_clientState[i].subpage)
@@ -518,6 +542,9 @@ void InterfaceServer::run()
                                                             s->SetRow(1,ss.str());
                                                             // -----------------------------------------------------------
                                                             
+                                                            if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
+                                                                _clientState[i].page->SetSubpage(num); // put this subpage on air
+                                                            
                                                             res[0] = DCOK;
                                                             unsigned int count = _clientState[i].page->GetSubpageCount();
                                                             res.push_back((count >> 8) & 0xff);
@@ -528,7 +555,9 @@ void InterfaceServer::run()
                                                     {
                                                         if (cmd == PAGESETSUB)
                                                         {
-                                                            _clientState[i].subpage = s; // set subpage
+                                                            _clientState[i].subpage = s; // store subpage
+                                                            if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
+                                                                _clientState[i].page->SetSubpage(num); // put this subpage on air
                                                         }
                                                         else // PAGEDELSUB
                                                         {
@@ -544,7 +573,9 @@ void InterfaceServer::run()
                                         }
                                         else if (cmd == PAGECLOSE)
                                         {
-                                            _debug->Log(Debug::LogLevels::logINFO,"[InterfaceServer::run] PAGECLOSE command received");
+                                            std::stringstream ss;
+                                            ss << "[InterfaceServer::run] Client " << i << ": PAGECLOSE";
+                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                             if (_clientState[i].page)
                                             {
                                                 _clientState[i].page->FreeLock();
@@ -556,7 +587,7 @@ void InterfaceServer::run()
                                         else if (cmd > PAGECLOSE) // last defined command number
                                         {
                                             std::stringstream ss;
-                                            ss << "[InterfaceServer::run] Unknown PAGESAPI command received " << std::hex << cmd;
+                                            ss << "[InterfaceServer::run] Client " << i << ": Unknown PAGESAPI command received " << std::hex << cmd;
                                             _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                         }
                                     }

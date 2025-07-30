@@ -58,10 +58,16 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
         
         if (_page)
         {
+            if (_page->GetOneShotFlag())
+            {
+                _iter = _NormalPagesList.erase(_iter); // remove oneshot pages from the page list
+                _page = *_iter;
+                continue;
+            }
+            
             if (_page->GetLock()) // try to lock this page against changes
             {
                 /* remove pointers from this list if the pages are marked for deletion */
-                
                 if (_page->GetIsMarked() && _page->GetNormalFlag()) // only remove it once
                 {
                     std::stringstream ss;
@@ -72,7 +78,7 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
                     _pageList->RemovePage(_page); // try to remove it from the pagelist immediately - will free the lock
                     _page = *_iter;
                     continue; // jump back to loop
-                } 
+                }
                 else if (_page->Special())
                 {
                     std::stringstream ss;

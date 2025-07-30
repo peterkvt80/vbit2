@@ -59,7 +59,7 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
 {
     int mag=(page->GetPageNumber() >> 8) & 0x7;
     
-    if (page->Special())
+    if (page->Special() && !page->GetOneShotFlag()) // OneShot pages can't be special
     {
         // Page is 'special'
         if (!(page->GetSpecialFlag()))
@@ -82,7 +82,7 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
         // Page is 'normal'
         if (!(page->GetNormalFlag()))
         {
-            if (page->GetSpecialFlag())
+            if (page->GetSpecialFlag() && !page->GetOneShotFlag())
             {
                 std::stringstream ss;
                 ss << "[PageList::UpdatePageLists] page was special, is now normal " << std::hex << (page->GetPageNumber());
@@ -93,7 +93,7 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
         }
         page->SetSpecialFlag(false);
         
-        if (page->IsCarousel())
+        if (page->IsCarousel() && !page->GetOneShotFlag()) // don't cycle OneShot pages
         {
             // Page is also a 'carousel'
             if (!(page->GetCarouselFlag()))
