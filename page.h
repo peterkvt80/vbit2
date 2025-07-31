@@ -67,7 +67,7 @@ class Subpage
         void SetRegion(uint8_t region){_region=region;}
         
         std::shared_ptr<TTXLine> GetRow(unsigned int rowNumber);
-        void SetRow(unsigned int rownumber, std::string line);
+        void SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line);
         
         void SetFastextLink(uint8_t link, uint16_t page, uint16_t subpage);
         std::array<FastextLink, 6> GetLinkSet(){return _fastextLinks;};

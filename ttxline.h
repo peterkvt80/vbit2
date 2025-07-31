@@ -17,8 +17,8 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
     public:
         /** Constructors */
         TTXLine();
-        TTXLine(std::string const& line, bool validate=true);
-        
+        TTXLine(std::array<uint8_t, 40> line);
+        TTXLine(std::string const& line);
         TTXLine(std::shared_ptr<TTXLine> line);
         
         /** Default destructor */
@@ -29,11 +29,7 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
             return shared_from_this();
         }
 
-        /** Set the teletext line contents
-         * \param val - New value to set
-         * \param validateLine - If true, it ensures the line is checked and modified if needed to be transmission ready.
-         */
-        void SetLine(std::string const& val, bool validateLine=true);
+        void SetLineTxt(std::string const& val);
 
         std::array<uint8_t, 40> GetLine(){return _line;};
         bool IsBlank();
@@ -42,7 +38,7 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
         /** Adds line to a linked list
          *  This is used for enhanced packets which might require multiples of the same row
          */
-        void AppendLine(std::string  const& line);
+        void AppendLine(std::shared_ptr<TTXLine> line);
 
         std::shared_ptr<TTXLine> GetNextLine(){return _nextLine;}
 

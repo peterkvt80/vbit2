@@ -403,7 +403,7 @@ void InterfaceServer::run()
                                                     std::string tmp = "        ";
                                                     for (int i = 3; i < 35; i++)
                                                         tmp += (uint8_t)readBuffer[i];
-                                                    std::shared_ptr<TTXLine> line(new TTXLine(tmp, true));
+                                                    std::shared_ptr<TTXLine> line(new TTXLine(tmp));
                                                     _configure->SetHeaderTemplate(line);
                                                     std::stringstream ss;
                                                     ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
@@ -547,7 +547,8 @@ void InterfaceServer::run()
                                                             s->SetSubpageStatus(0x8000);
                                                             std::stringstream ss;
                                                             ss << "TEST " << std::hex << std::setw(4) << std::setfill('0') << num;
-                                                            s->SetRow(1,ss.str());
+                                                            std::shared_ptr<TTXLine> tmp(new TTXLine(ss.str()));
+                                                            s->SetRow(1,tmp);
                                                             // -----------------------------------------------------------
                                                             
                                                             if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot

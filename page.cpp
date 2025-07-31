@@ -369,16 +369,16 @@ std::shared_ptr<TTXLine> Subpage::GetRow(unsigned int row)
     return _lines[row];
 }
 
-void Subpage::SetRow(unsigned int rownumber, std::string line)
+void Subpage::SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line)
 {
     unsigned int dc;
     
     // assert(rownumber<=MAXROW);
     if (rownumber>MAXROW) return;
     
-    if (rownumber == 26 && line.length() >= 40)
+    if (rownumber == 26)
     {
-        dc = line.at(0) & 0x0F;
+        dc = line->GetCharAt(0) & 0x0F;
         if ((dc + 26) > _lastPacket)
             _lastPacket = dc + 26;
     }
@@ -392,13 +392,13 @@ void Subpage::SetRow(unsigned int rownumber, std::string line)
 
     if (_lines[rownumber]==nullptr)
     {
-        _lines[rownumber].reset(new TTXLine(line,true)); // Didn't exist before
+        _lines[rownumber] = line; // Didn't exist before
     }
     else
     {
         if (rownumber<26) // Ordinary line
         {
-            _lines[rownumber]->SetLine(line, true);
+            _lines[rownumber] = line;
         }
         else // Enhanced packet
         {

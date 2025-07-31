@@ -147,9 +147,10 @@ bool File::LoadTTI(std::string filename)
                         lineNumber=atoi(line.c_str());
                         std::getline(filein, line);
                         if (lineNumber>MAXROW) break;
+                        std::shared_ptr<TTXLine> ttxline(new TTXLine(line));
                         if (s != nullptr)
                         {
-                            s->SetRow(lineNumber,line);
+                            s->SetRow(lineNumber,ttxline);
                             lines++;
                         }
                         

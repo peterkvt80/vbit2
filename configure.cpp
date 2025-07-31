@@ -304,7 +304,7 @@ void Configure::SetHeaderTemplate(std::shared_ptr<TTXLine> line)
 {
     std::string str = "";
     for (int i=8; i<40; i++)
-        str += line->GetCharAt(i);
+        str += line->GetCharAt(i) & 0x7f;
     _headerTemplate.assign(str);
 }
 
@@ -342,7 +342,7 @@ int Configure::LoadConfigFile(std::string filename)
                         {
                             case 0: // header_template
                             {
-                                std::shared_ptr<TTXLine> header(new TTXLine("        "+value,true)); // use to process escape codes
+                                std::shared_ptr<TTXLine> header(new TTXLine("        "+value)); // use to process escape codes
                                 SetHeaderTemplate(header);
                                 break;
                             }
