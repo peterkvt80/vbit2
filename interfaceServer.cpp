@@ -400,15 +400,11 @@ void InterfaceServer::run()
                                             {
                                                 if (n == 35) // set new header template
                                                 {
-                                                    std::ostringstream tmp;
+                                                    std::string tmp = "        ";
                                                     for (int i = 3; i < 35; i++)
-                                                    {
-                                                        /* strip to 7-bit values then add back high bit to control codes to match behaviour of templates loaded from config file */
-                                                        uint8_t c = (uint8_t)readBuffer[i] & 0x7F;
-                                                        tmp << (char)((c<0x20)?(c|0x80):c);
-                                                    }
-                                                    
-                                                    _configure->SetHeaderTemplate(tmp.str());
+                                                        tmp += (uint8_t)readBuffer[i];
+                                                    std::shared_ptr<TTXLine> line(new TTXLine(tmp, true));
+                                                    _configure->SetHeaderTemplate(line);
                                                     std::stringstream ss;
                                                     ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
                                                     _debug->Log(Debug::LogLevels::logINFO,ss.str());

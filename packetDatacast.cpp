@@ -14,7 +14,7 @@ PacketDatacast::PacketDatacast(uint8_t datachannel, Configure* configure) :
     
     for (int i=0; i<_bufferSize; i++){
         // build packet buffer
-        _packetBuffer.push_back(new Packet(8,25,"                                        "));
+        _packetBuffer.push_back(new Packet(8,25));
     }
     // set head and tail indices
     _head = 0;

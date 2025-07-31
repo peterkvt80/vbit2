@@ -300,9 +300,11 @@ Configure::~Configure()
     
 }
 
-void Configure::SetHeaderTemplate(std::string str)
+void Configure::SetHeaderTemplate(std::shared_ptr<TTXLine> line)
 {
-    str.resize(32,' ');
+    std::string str = "";
+    for (int i=8; i<40; i++)
+        str += line->GetCharAt(i);
     _headerTemplate.assign(str);
 }
 
@@ -321,7 +323,6 @@ int Configure::LoadConfigFile(std::string filename)
         std::string line;
         std::string name;
         std::string value;
-        std::shared_ptr<TTXLine> header(new TTXLine());
         while (std::getline(filein >> std::ws, line))
         {
             if (line.front() != ';') // ignore comments
@@ -341,8 +342,8 @@ int Configure::LoadConfigFile(std::string filename)
                         {
                             case 0: // header_template
                             {
-                                header->Setm_textline(value,true); // use to process escape codes
-                                SetHeaderTemplate(header->GetLine());
+                                std::shared_ptr<TTXLine> header(new TTXLine("        "+value,true)); // use to process escape codes
+                                SetHeaderTemplate(header);
                                 break;
                             }
                             case 1: // initial_teletext_page

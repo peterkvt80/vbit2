@@ -3,11 +3,11 @@
 
 using namespace vbit;
 
-Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _coding(CODING_7BIT_TEXT)
+Packet::Packet(int mag, int row) : _isHeader(false), _coding(CODING_7BIT_TEXT)
 {
     //ctor
-    SetMRAG(mag, row);
-    SetPacketText(val);
+    _packet.fill(0x20); // fill with spaces
+    SetMRAG(mag, row); // overwrite front 5 bytes
     assert(_row!=0); // Use Header for row 0
 }
 
@@ -16,10 +16,13 @@ Packet::~Packet()
     //dtor
 }
 
-void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
+void Packet::SetRow(int mag, int row, std::array<uint8_t, 40> val, PageCoding coding)
 {
     SetMRAG(mag, row);
-    SetPacketText(val);
+    
+    _isHeader=false; // Because it can't be a header
+    std::copy(val.begin(), val.end(), _packet.begin() + 5);
+    
     _coding = coding;
     
     switch(coding)
@@ -134,13 +137,6 @@ void Packet::SetPacketRaw(std::vector<uint8_t> data)
     data.resize(40, 0x00); // ensure correct length
     std::copy(data.begin(), data.end(), _packet.begin() + 5);
     _coding = CODING_8BIT_DATA; // don't allow this to be re-processed with parity etc
-}
-
-void Packet::SetPacketText(std::string data)
-{
-    _isHeader=false; // Because it can't be a header
-    data.resize(40, ' '); // ensure correct length
-    std::copy(data.begin(), data.end(), _packet.begin() + 5);
 }
 
 // Set CRI and MRAG. Leave the rest of the packet alone

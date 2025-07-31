@@ -14,8 +14,6 @@
 #include "debug.h"
 #include "masterClock.h"
 
-#define MAXPACKET29TYPES 3
-
 namespace vbit
 {
     class PacketMag : public PacketSource
@@ -40,11 +38,11 @@ namespace vbit
 
             bool IsReady(bool force=false);
 
-            void SetPacket29(int i, std::shared_ptr<TTXLine> line);
-            bool GetPacket29Flag() { return _hasPacket29; };
+            void SetPacket29(std::shared_ptr<TTXLine> line);
+            bool GetPacket29Flag() { return _packet29 != nullptr; };
             void DeletePacket29();
             
-            void SetCustomHeader(std::string row) {_customHeaderTemplate = row; _hasCustomHeader = true;}
+            void SetCustomHeader(std::shared_ptr<TTXLine> line);
             bool GetCustomHeaderFlag() { return _hasCustomHeader; };
             void DeleteCustomHeader();
             
@@ -74,11 +72,9 @@ namespace vbit
             uint8_t _thisRow; // The current line that we are outputting
             std::shared_ptr<TTXLine> _lastTxt; // The text of the last row that we fetched. Used for enhanced packets
 
-            int _nextPacket29DC;
-            std::shared_ptr<TTXLine> _packet29[MAXPACKET29TYPES]; // space to store magazine related enhancement packets
+            std::shared_ptr<TTXLine> _packet29; // magazine related enhancement packets
             std::shared_ptr<TTXLine> _nextPacket29;
-            bool _hasPacket29;
-            std::mutex _mtx; // Mutex to interlock packet 29 from filemonitor
+            std::mutex _mtx; // Mutex to interlock packet 29 from filemonitor.
             
             std::string _customHeaderTemplate;
             bool _hasCustomHeader;

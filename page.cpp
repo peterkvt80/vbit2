@@ -364,7 +364,7 @@ std::shared_ptr<TTXLine> Subpage::GetRow(unsigned int row)
     
     if (_lines[row]==nullptr && row>0 && row<26)
     {
-        _lines[row].reset(new TTXLine("                                        ")); // return a blank row for X/1-X/25
+        _lines[row].reset(new TTXLine()); // return a blank row for X/1-X/25
     }
     return _lines[row];
 }
@@ -398,7 +398,7 @@ void Subpage::SetRow(unsigned int rownumber, std::string line)
     {
         if (rownumber<26) // Ordinary line
         {
-            _lines[rownumber]->Setm_textline(line, true);
+            _lines[rownumber]->SetLine(line, true);
         }
         else // Enhanced packet
         {

@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <string>
 #include <memory>
+#include <array>
 
 /** TTXLine - a single line of teletext
  *  The line is always stored in 40 bytes in transmission ready format
@@ -17,6 +18,9 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
         /** Constructors */
         TTXLine();
         TTXLine(std::string const& line, bool validate=true);
+        
+        TTXLine(std::shared_ptr<TTXLine> line);
+        
         /** Default destructor */
         virtual ~TTXLine();
 
@@ -29,23 +33,11 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
          * \param val - New value to set
          * \param validateLine - If true, it ensures the line is checked and modified if needed to be transmission ready.
          */
-        void Setm_textline(std::string const& val, bool validateLine=true);
+        void SetLine(std::string const& val, bool validateLine=true);
 
-        /** Access m_textline
-         * \return The current value of m_textline
-         */
-        std::string GetLine();
-
-        /**
-         * @brief Check if the line is blank so that we don't bother to write it to the file.
-         * @return true is the line is blank
-         */
+        std::array<uint8_t, 40> GetLine(){return _line;};
         bool IsBlank();
-
-        /** Get one character from this line.
-         *  If there is no data set then return a space
-         */
-        char GetCharAt(int xLoc);
+        uint8_t GetCharAt(int index){return _line[index];};
 
         /** Adds line to a linked list
          *  This is used for enhanced packets which might require multiples of the same row
@@ -56,9 +48,7 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
 
     protected:
     private:
-        std::string validate(std::string const& test);
-
-        std::string m_textline;
+        std::array<uint8_t, 40> _line; // 40 byte line
         std::shared_ptr<TTXLine> _nextLine;
 };
 

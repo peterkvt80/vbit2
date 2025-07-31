@@ -44,6 +44,8 @@
 #define PAGESETSUB  0x02    /* select subpage */
 #define PAGEDELSUB  0x03    /* delete subpage */
 #define PAGECLOSE   0x04    /* close updated page */
+#define PAGEFANDC   0x05
+#define PAGEOPTNS   0x06
 
 namespace vbit
 

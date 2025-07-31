@@ -44,7 +44,7 @@ class Configure
         inline std::string GetPageDirectory(){return _pageDir;};
         
         std::string GetHeaderTemplate(){return _headerTemplate;}
-        void SetHeaderTemplate(std::string str);
+        void SetHeaderTemplate(std::shared_ptr<TTXLine> line);
         bool GetRowAdaptive(){return _rowAdaptive;}
         void SetRowAdaptive(bool flag){_rowAdaptive = flag;}
         std::string GetServiceStatusString(){return _serviceStatusString;}

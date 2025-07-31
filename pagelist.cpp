@@ -152,7 +152,7 @@ void PageList::CheckForPacket29OrCustomHeader(std::shared_ptr<TTXPageStream> pag
         if ((!_mag[mag]->GetCustomHeaderFlag()) || page->GetCustomHeaderFlag()) // Only allow one file to set header per magazine
         {
             if (page->GetTxRow(0)){
-                _mag[mag]->SetCustomHeader(page->GetTxRow(0)->GetLine().substr(8,32)); // set custom headers
+                _mag[mag]->SetCustomHeader(page->GetTxRow(0)); // set custom headers
                 
                 if (!page->GetCustomHeaderFlag())
                     _debug->Log(Debug::LogLevels::logINFO,"[PageList::CheckForPacket29OrCustomHeader] Added custom header for magazine " + std::to_string((mag == 0)?8:mag));
@@ -175,39 +175,16 @@ void PageList::CheckForPacket29OrCustomHeader(std::shared_ptr<TTXPageStream> pag
             
             std::shared_ptr<TTXLine> tempLine = page->GetTxRow(29);
             
-            while (tempLine != nullptr)
+            if (tempLine != nullptr)
             {
-                switch (tempLine->GetCharAt(0))
-                {
-                    case '@':
-                    {
-                        Packet29Flag = true;
-                        _mag[mag]->SetPacket29(0, std::shared_ptr<TTXLine>(new TTXLine(tempLine->GetLine(), true)));
-                        break;
-                    }
-                    case 'A':
-                    {
-                        Packet29Flag = true;
-                        _mag[mag]->SetPacket29(1, std::shared_ptr<TTXLine>(new TTXLine(tempLine->GetLine(), true)));
-                        break;
-                    }
-                    case 'D':
-                    {
-                        Packet29Flag = true;
-                        _mag[mag]->SetPacket29(2, std::shared_ptr<TTXLine>(new TTXLine(tempLine->GetLine(), true)));
-                        break;
-                    }
-                }
-                
-                tempLine = tempLine->GetNextLine();
-                // loop until every row 29 is copied
+                Packet29Flag = true;
+                _mag[mag]->SetPacket29(std::shared_ptr<TTXLine>(new TTXLine(tempLine))); // create a deep copy
             }
+            
             if (Packet29Flag && !page->GetPacket29Flag())
                 _debug->Log(Debug::LogLevels::logINFO,"[PageList::CheckForPacket29OrCustomHeader] Added packet 29 for magazine "+ std::to_string((mag == 0)?8:mag));
             
             page->SetPacket29Flag(Packet29Flag); // mark the page
-            
-            
         }
     }
 }

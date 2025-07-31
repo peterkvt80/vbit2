@@ -17,8 +17,8 @@ PacketMag::PacketMag(uint8_t mag, PageList *pageList, Configure *configure, Debu
     _state(PACKETSTATE_HEADER),
     _thisRow(0),
     _lastTxt(nullptr),
-    _nextPacket29DC(0),
-    _hasPacket29(false),
+    _packet29(nullptr),
+    _nextPacket29(nullptr),
     _hasCustomHeader(false),
     _magRegion(0),
     _specialPagesFlipFlop(false),
@@ -28,10 +28,6 @@ PacketMag::PacketMag(uint8_t mag, PageList *pageList, Configure *configure, Debu
     //ctor
     _lastCycleTimestamp = {0,0};
     
-    for (int i=0;i<MAXPACKET29TYPES;i++)
-    {
-        _packet29[i]=nullptr;
-    }
     _carousel=new Carousel(_magNumber, _pageList, _debug);
     _specialPages=new SpecialPages(_magNumber, _pageList, _debug);
     _normalPages=new NormalPages(_magNumber, _pageList, _debug);
@@ -67,24 +63,19 @@ loopback: // jump back point to avoid returning null packets when we could send 
         case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
         {
             _waitingForField = true; // enforce 20ms page erasure interval
-            if (GetEvent(EVENT_PACKET_29) && _hasPacket29)
+            if (GetEvent(EVENT_PACKET_29) && _packet29 != nullptr)
             {
                 if (_mtx.try_lock()) // skip if unable to get lock
                 {
-                    while (_packet29[_nextPacket29DC] == nullptr)
+                    if (_nextPacket29 == nullptr)
                     {
-                        _nextPacket29DC++;
-                    }
-                    
-                    if (_nextPacket29DC >= MAXPACKET29TYPES)
-                    {
-                        _nextPacket29DC = 0;
+                        _nextPacket29 = _packet29;
                         ClearEvent(EVENT_PACKET_29);
                     }
                     else
                     {
-                        p->SetRow(_magNumber, 29, _packet29[_nextPacket29DC]->GetLine(), CODING_13_TRIPLETS);
-                        _nextPacket29DC++;
+                        p->SetRow(_magNumber, 29, _nextPacket29->GetLine(), CODING_13_TRIPLETS);
+                        _nextPacket29 = _nextPacket29->GetNextLine();
                         _mtx.unlock(); // unlock before we return!
                         return p;
                     }
@@ -253,7 +244,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
             {
                 // the content of the header has changed or the page has been reloaded
                 // we must now CRC the whole page
-                Packet TempPacket(8,25,"                                        "); // a temporary packet for checksum calculation
+                Packet TempPacket(8,25); // a temporary packet for checksum calculation
                 for (int i=1; i<26; i++)
                 {
                     TempPacket.SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _page->GetPageCoding());
@@ -284,7 +275,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
         {
             if (_lastTxt)
             {
-                if ((_lastTxt->GetLine()[0] & 0xF) > 3) // designation codes > 3
+                if ((_lastTxt->GetCharAt(0) & 0xF) > 3) // designation codes > 3
                     p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_13_TRIPLETS); // enhancement linking
                 else
                 {
@@ -313,13 +304,19 @@ loopback: // jump back point to avoid returning null packets when we could send 
             {
                 // create X/28/0 packet for pages which have a region set with RE in file
                 // this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
-                std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
+                
+                std::array<uint8_t, 40> val{
+                    0x40, 0x40, 0x40, 0x74, 0x47, 0x70, 0x43, 0x75, 0x57, 0x40, 0x74, 0x77,
+                    0x77, 0x43, 0x70, 0x52, 0x41, 0x60, 0x55, 0x42, 0x57, 0x77, 0x44, 0x73,
+                    0x57, 0x77, 0x75, 0x77, 0x77, 0x77, 0x55, 0x77, 0x57, 0x77, 0x75, 0x57,
+                    0x77, 0x45, 0x40, 0x40
+                }; // default X/28/0 packet in pre Hamming24EncodeTriplet form (i.e. tti OL format)
                 int NOS = (_status & 0x380) >> 7;
                 int language = NOS | (_region << 3);
                 int triplet = 0x3C000 | (language << 7); // construct triplet 1
-                val.replace(1,1,1,(triplet & 0x3F) | 0x40);
-                val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
-                val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
+                val[1] = (triplet & 0x3F) | 0x40;
+                val[2] = ((triplet & 0xFC0) >> 6) | 0x40;
+                val[3] = ((triplet & 0x3F000) >> 12) | 0x40;
                 p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
                 _lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
                 _state=PACKETSTATE_PACKET26;
@@ -470,30 +467,37 @@ bool PacketMag::IsReady(bool force)
     }
 };
 
-void PacketMag::SetPacket29(int i, std::shared_ptr<TTXLine> line)
+void PacketMag::SetPacket29(std::shared_ptr<TTXLine> line)
 {
-    _packet29[i] = line;
-    _hasPacket29 = true;
-    
-    if (_packet29[0])
+    _packet29 = line;
+    _nextPacket29 = _packet29;
+    do
     {
-        _magRegion = ((_packet29[0]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[0]->GetCharAt(3) & 0x3) << 2);
-    } 
-    else if (_packet29[2])
-    {
-        _magRegion = ((_packet29[2]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[2]->GetCharAt(3) & 0x3) << 2);
-    }
+        uint8_t dc = _nextPacket29->GetCharAt(0) & 0xf;
+        if (dc == 0 || dc == 4)
+        {
+            _magRegion = ((_nextPacket29->GetCharAt(2) & 0x30) >> 4) | ((_nextPacket29->GetCharAt(3) & 0x3) << 2);
+        }
+        _nextPacket29 = _nextPacket29->GetNextLine();
+    } while (_nextPacket29 != nullptr);
+    _nextPacket29 = _packet29;
 }
 
 void PacketMag::DeletePacket29()
 {
     _mtx.lock();
-    for (int i=0;i<MAXPACKET29TYPES;i++)
-    {
-        _packet29[i] = nullptr;
-    }
-    _hasPacket29 = false;
+    _packet29 = nullptr;
+    _nextPacket29 == nullptr;
     _mtx.unlock();
+}
+
+void PacketMag::SetCustomHeader(std::shared_ptr<TTXLine> line)
+{
+    _hasCustomHeader = true;
+    std::string str = "";
+    for (int i=8; i<40; i++)
+        str += line->GetCharAt(i);
+    _customHeaderTemplate.assign(str);
 }
 
 void PacketMag::DeleteCustomHeader()

@@ -61,9 +61,9 @@ int Service::run()
     std::list<PacketSource*>::const_iterator magIterator=_magazineSources.begin(); // Iterator for magazine packet sources
     std::list<PacketSource*>::const_iterator dcIterator=_datacastSources.begin(); // Iterator for datacast sources
 
-    Packet* pkt=new Packet(8,25,"                                        ");  // This just allocates storage.
+    Packet* pkt=new Packet(8,25);  // This just allocates storage.
 
-    static Packet* filler=new Packet(8,25,"                                        ");  // A pre-prepared quiet packet to avoid eating the heap
+    static Packet* filler=new Packet(8,25);  // A pre-prepared quiet packet to avoid eating the heap
 
     _debug->Log(Debug::LogLevels::logINFO,"[Service::run] Lines per field: " + std::to_string((int)_linesPerField));
     _debug->Log(Debug::LogLevels::logINFO,"[Service::run] Dedicated datacast lines: " + std::to_string((int)_datacastLines));
