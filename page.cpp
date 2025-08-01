@@ -343,11 +343,6 @@ Subpage::Subpage() :
     {
         _lines[i]=nullptr; // delete rows
     }
-    
-    for (int i=0;i<6;i++)
-    {
-        SetFastextLink(i,0x8ff,0x3f7f);
-    }
 }
 
 Subpage::~Subpage()
@@ -408,18 +403,33 @@ void Subpage::SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line)
     }
 }
 
-void Subpage::SetFastextLink(uint8_t link, uint16_t page, uint16_t subpage)
+void Subpage::SetFastext(std::array<FastextLink, 6> links, uint8_t mag)
 {
-    if (link>5 || page<0x100 || page>0x8ff)
+    std::array<uint8_t, 40> line; // 40 bytes of packet data in CODING_HAMMING_8_4 form
+    
+    uint16_t lp, ls;
+    uint8_t p=0;
+    line[p++] = 0x0; // designation code 0
+    line[37] = 0xf; // link control set
+    line[38] = 0;
+    line[39] = 0; // last two bytes get overwritten with page CRC by packetmag
+    for (uint8_t i=0; i<6; i++)
     {
-        _fastextLinks[link].page = 0x8ff;
-        _fastextLinks[link].subpage = 0x3f7f;
+        lp=links[i].page;
+        if (lp == 0) lp = 0x8ff; // turn zero into 8FF to be ignored
+        ls=links[i].subpage;
+
+        uint8_t m=(lp/0x100 ^ mag);         // calculate the relative magazine
+        line[p++]=lp & 0xF;              // page units
+        line[p++]=(lp & 0xF0) >> 4;      // page tens
+        line[p++]=ls & 0xF;              // S1
+        line[p++]=((m & 1) << 3) | ((ls >> 4) & 0xF); // S2 + M1
+        line[p++]=((ls >> 8) & 0xF);     // S3
+        line[p++]=((m & 6) << 1) | ((ls >> 4) & 0x3); // S4 + M2, M3
     }
-    else
-    {
-        _fastextLinks[link].page = page;
-        _fastextLinks[link].subpage = subpage & 0x3f7f;
-    }
+    
+    std::shared_ptr<TTXLine> ttxline(new TTXLine(line));
+    SetRow(27,ttxline);
 }
 
 bool Subpage::HasHeaderChanged(uint16_t crc)

@@ -69,8 +69,7 @@ class Subpage
         std::shared_ptr<TTXLine> GetRow(unsigned int rowNumber);
         void SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line);
         
-        void SetFastextLink(uint8_t link, uint16_t page, uint16_t subpage);
-        std::array<FastextLink, 6> GetLinkSet(){return _fastextLinks;};
+        void SetFastext(std::array<FastextLink, 6> links, uint8_t mag);
         
         unsigned int GetLastPacket() {return _lastPacket;};
         
@@ -90,8 +89,6 @@ class Subpage
         
         std::shared_ptr<TTXLine> _lines[MAXROW+1];
         unsigned int _lastPacket;
-        
-        std::array<FastextLink,6> _fastextLinks;
         
         bool _subpageChanged;   // page was reloaded
         uint16_t _headerCRC;    // holds the last calculated CRC of the page header

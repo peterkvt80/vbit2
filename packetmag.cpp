@@ -46,7 +46,6 @@ PacketMag::~PacketMag()
 Packet* PacketMag::GetPacket(Packet* p)
 {
     unsigned int thisSubcode;
-    std::array<FastextLink, 6> links;
     bool updatedFlag=false;
 
     // We should only call GetPacket if IsReady has returned true
@@ -257,19 +256,10 @@ loopback: // jump back point to avoid returning null packets when we could send 
             }
             
             assert(p!=NULL);
-
-            links=_subpage->GetLinkSet();
-            if ((links[0].page & links[1].page & links[2].page & links[3].page & links[4].page & links[5].page) != 0x8FF) // only create if links were initialised
-            {
-                _state=PACKETSTATE_FASTEXT;
-                break;
-            }
-            else
-            {
-                _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
-                _state=PACKETSTATE_PACKET27;
-                break;
-            }
+            
+            _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
+            _state=PACKETSTATE_PACKET27;
+            break;
         }
         case PACKETSTATE_PACKET27:
         {
@@ -277,10 +267,14 @@ loopback: // jump back point to avoid returning null packets when we could send 
             {
                 if ((_lastTxt->GetCharAt(0) & 0xF) > 3) // designation codes > 3
                     p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_13_TRIPLETS); // enhancement linking
-                else
+                else if ((_lastTxt->GetCharAt(1) & _lastTxt->GetCharAt(2) & _lastTxt->GetCharAt(7) & _lastTxt->GetCharAt(8) &
+                         _lastTxt->GetCharAt(13) & _lastTxt->GetCharAt(14) & _lastTxt->GetCharAt(19) & _lastTxt->GetCharAt(20) &
+                         _lastTxt->GetCharAt(25) & _lastTxt->GetCharAt(26) & _lastTxt->GetCharAt(31) & _lastTxt->GetCharAt(32)) != 0xf)
+                         // don't generate packet if all page links are 0xFF
                 {
                     p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_HAMMING_8_4); // navigation packets
-                    p->SetX27CRC(_subpage->GetSubpageCRC());
+                    if ((_lastTxt->GetCharAt(0) & 0xF) == 0) // only designation code 0 has CRC
+                        p->SetX27CRC(_subpage->GetSubpageCRC());
                 }
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
@@ -404,16 +398,6 @@ loopback: // jump back point to avoid returning null packets when we could send 
                     assert(p->IsHeader()!=true);
                 }
             }
-            break;
-        }
-        case PACKETSTATE_FASTEXT:
-        {
-            p->SetMRAG(_magNumber,27);
-            links=_subpage->GetLinkSet();
-            p->Fastext(links,_magNumber);
-            p->SetX27CRC(_subpage->GetSubpageCRC());
-            _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
-            _state=PACKETSTATE_PACKET27; // makes no attempt to prevent an FL row and an X/27/0 both being sent
             break;
         }
         default:

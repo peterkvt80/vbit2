@@ -52,7 +52,7 @@ namespace vbit
         protected:
 
         private:
-            enum PacketState {PACKETSTATE_HEADER, PACKETSTATE_FASTEXT, PACKETSTATE_PACKET26, PACKETSTATE_PACKET27, PACKETSTATE_PACKET28, PACKETSTATE_TEXTROW};
+            enum PacketState {PACKETSTATE_HEADER, PACKETSTATE_PACKET26, PACKETSTATE_PACKET27, PACKETSTATE_PACKET28, PACKETSTATE_TEXTROW};
             
             PageList* _pageList;
             Configure* _configure;

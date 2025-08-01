@@ -147,9 +147,9 @@ bool File::LoadTTI(std::string filename)
                         lineNumber=atoi(line.c_str());
                         std::getline(filein, line);
                         if (lineNumber>MAXROW) break;
-                        std::shared_ptr<TTXLine> ttxline(new TTXLine(line));
                         if (s != nullptr)
                         {
+                            std::shared_ptr<TTXLine> ttxline(new TTXLine(line));
                             s->SetRow(lineNumber,ttxline);
                             lines++;
                         }
@@ -175,16 +175,22 @@ bool File::LoadTTI(std::string filename)
                     }
                     case 9 : // "FL"; - Fastext links
                     {
+                        std::array<FastextLink,6> links;
+                        
                         for (int fli=0;fli<6;fli++)
                         {
                             if (fli<5)
                                 std::getline(filein, line, ',');
                             else
                                 std::getline(filein, line); // Last parameter no comma
-                            int link = std::strtol(line.c_str(), &ptr, 16);
                             
-                            if (s != nullptr)
-                                s->SetFastextLink(fli, link, 0x3f7f);
+                            links[fli].page = std::strtol(line.c_str(), &ptr, 16);
+                            links[fli].subpage = 0x3f7f;
+                        }
+                        
+                        if (s != nullptr)
+                        {
+                            s->SetFastext(links, m);
                         }
                         break;
                     }

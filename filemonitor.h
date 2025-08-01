@@ -7,6 +7,7 @@
 #include <list>
 #include <strings.h>
 #include <sys/stat.h>
+#include <array>
 
 #include "configure.h"
 #include "pagelist.h"
