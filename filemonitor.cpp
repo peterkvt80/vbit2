@@ -364,8 +364,10 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                                         
                                         page->IncrementUpdateCount();
                                         int update = false;
+                                        
+                                        page->StepFirstSubpage(); // Only check update flag on first subpage. Carousels don't get pushed out anyway
                                         if (std::shared_ptr<Subpage> s = page->GetSubpage())
-                                            update = (s->GetSubpageStatus() & PAGESTATUS_C8_UPDATE); // only check update flag of single subpages
+                                            update = (s->GetSubpageStatus() & PAGESTATUS_C8_UPDATE);
                                         
                                         if (!(_pageList->Contains(page)))
                                         {
@@ -376,6 +378,8 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                                         {
                                             _pageList->UpdatePageLists(page, !update); // only transmit immediate update if update flag is set
                                         }
+                                        
+                                        page->StepLastSubpage(); // prepare for page to roll to first subpage
                                     }
                                     else
                                     {

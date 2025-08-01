@@ -128,6 +128,8 @@ class Page
         
         bool IsCarousel();
 
+        void StepFirstSubpage();
+        void StepLastSubpage();
         void StepNextSubpage();
         void StepNextSubpageNoLoop();
         

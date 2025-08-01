@@ -17,7 +17,7 @@ void Page::AppendSubpage(std::shared_ptr<Subpage> s)
 {
     _subpages.push_back(s);
     if (_carouselPage == nullptr)
-        StepNextSubpage();
+        StepFirstSubpage();
 }
 
 void Page::InsertSubpage(std::shared_ptr<Subpage> s)
@@ -36,7 +36,7 @@ void Page::InsertSubpage(std::shared_ptr<Subpage> s)
     // if we are here we ran to the end of the list without a match
     _subpages.push_back(s);
     if (_carouselPage == nullptr)
-        StepNextSubpage();
+        StepFirstSubpage();
 }
 
 void Page::RemoveSubpage(std::shared_ptr<Subpage> s)
@@ -243,6 +243,32 @@ bool Page::IsCarousel()
     return false;
 }
 
+void Page::StepFirstSubpage()
+{
+    if (_subpages.empty())
+    {
+        _carouselPage==nullptr;
+    }
+    else
+    {
+        _iter=_subpages.begin();
+        _carouselPage = *_iter;
+    }
+}
+
+void Page::StepLastSubpage()
+{
+    if (_subpages.empty())
+    {
+        _carouselPage==nullptr;
+    }
+    else
+    {
+        _iter=_subpages.end();
+        _carouselPage = *--_iter;
+    }
+}
+
 void Page::StepNextSubpageNoLoop()
 {
     if (_subpages.empty())
@@ -261,9 +287,14 @@ void Page::StepNextSubpageNoLoop()
             ++_iter;
             _carouselPage = *_iter;
         }
+        
         if (_iter == _subpages.end())
         {
             _carouselPage = nullptr;
+        }
+        else if (!(_carouselPage->GetSubpageStatus() & 0x8000))
+        {
+            StepNextSubpageNoLoop(); // skip over subpages if transmit flag not set
         }
     }
 }
@@ -288,6 +319,11 @@ void Page::StepNextSubpage()
             if (++_iter == _subpages.end())
                 _iter = _subpages.begin();
             _carouselPage = *_iter;
+        }
+        
+        if (!(_carouselPage->GetSubpageStatus() & 0x8000))
+        {
+            StepNextSubpageNoLoop(); // skip over subpages if transmit flag not set
         }
     }
 }
