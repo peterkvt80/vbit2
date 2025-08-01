@@ -73,8 +73,6 @@ bool TTXLine::IsBlank()
 
 void TTXLine::AppendLine(std::shared_ptr<TTXLine> line)
 {
-    // TODO: this allows packets to be added out of designation code order!
-    
     // Seek through list
     std::shared_ptr<TTXLine> p=this->getptr();
     for (p=this->getptr();;p=p->_nextLine)
@@ -82,9 +80,19 @@ void TTXLine::AppendLine(std::shared_ptr<TTXLine> line)
         if ((p->GetCharAt(0)&0xF) == (line->GetCharAt(0)&0xF))
         {
             // line with same designation code already exists
-            p->_line = line->GetLine(); // replace its data
+            p->_line = line->_line; // overwrite it with our new line data but leave _nextLine unmodified
             return;
         }
+        else if ((p->GetCharAt(0)&0xF) > (line->GetCharAt(0)&0xF))
+        {
+            // existing line has higher designation code than we are trying to add
+            std::array<uint8_t, 40> tmp = p->_line; // preserve original line data
+            line->_nextLine = p->_nextLine; // move original _nextLine pointer to our new line
+            p->_line = line->_line; // move our new line data to original line
+            line->_line = tmp; // move original line data into our new line
+            p->_nextLine = line; // finally update _nextLine pointer to our line which now contains the original line
+        }
+        
         if (p->_nextLine == nullptr) // reached the end of the list
             break;
     }
