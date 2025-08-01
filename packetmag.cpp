@@ -246,7 +246,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 Packet TempPacket(8,25); // a temporary packet for checksum calculation
                 for (int i=1; i<26; i++)
                 {
-                    TempPacket.SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _page->GetPageCoding());
+                    TempPacket.SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _subpage->GetRow(i)->IsBlank()?CODING_7BIT_TEXT:_page->GetPageCoding());
                     tempCRC = TempPacket.PacketCRC(tempCRC);
                 }
                 
