@@ -397,7 +397,7 @@ void Subpage::SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line)
         }
         else // Enhanced packet
         {
-            // If the line already exists we want to add the packet rather than overwrite what is already there
+            // If the line already exists we want to add to linked list of different designation codes
             _lines[rownumber]->AppendLine(line);
         }
     }

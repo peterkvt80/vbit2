@@ -24,11 +24,6 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
         /** Default destructor */
         virtual ~TTXLine();
 
-        std::shared_ptr<TTXLine> getptr()
-        {
-            return shared_from_this();
-        }
-
         void SetLineTxt(std::string const& val);
 
         std::array<uint8_t, 40> GetLine(){return _line;};
@@ -44,6 +39,11 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
 
     protected:
     private:
+        std::shared_ptr<TTXLine> getptr()
+        {
+            return shared_from_this();
+        }
+        
         std::array<uint8_t, 40> _line; // 40 byte line
         std::shared_ptr<TTXLine> _nextLine;
 };
