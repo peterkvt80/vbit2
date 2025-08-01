@@ -237,7 +237,7 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
                     exit(EXIT_FAILURE);
                 }
             }
-            else if (arg == "--datacast")
+            else if (arg == "--interface")
             {
                 if (i + 1 < argc)
                 {
@@ -256,7 +256,7 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
                 }
                 else
                 {
-                    std::cerr << "--datacast requires a port number\n";
+                    std::cerr << "--interface requires a port number\n";
                     exit(EXIT_FAILURE);
                 }
             }

@@ -229,437 +229,475 @@ void InterfaceServer::run()
                     {
                         // byte 0 of message is message length
                         int len = (uint8_t)readBuffer[0];
-                        n = recv(sock, readBuffer, len, 0); // try to read whole message
-                        if (n == len)
+                        if (len)
                         {
-                            std::vector<uint8_t> res = {DCOK}; // create "OK" response
-                            
-                            // byte 1 of message is interface server command number
-                            switch ((uint8_t)readBuffer[1]){
-                                case DCSET: // set datacast channel
-                                {
-                                    int ch = (uint8_t)readBuffer[2];
-                                    if (n == 3 && ch >= 0 && ch <= 15)
+                            n = recv(sock, readBuffer, len, 0); // try to read whole message
+                            if (n == len)
+                            {
+                                std::vector<uint8_t> res = {CMDOK}; // create "OK" response
+                                
+                                // byte 1 of message is interface server command number
+                                switch ((uint8_t)readBuffer[1]){
+                                    case SETCHAN: // set interface channel
                                     {
-                                        _clientState[i].channel = -1; // release a current datachannel
-                                        
-                                        
-                                        if (ch) // allow multiple connections for channel 0
+                                        int ch = (uint8_t)readBuffer[2];
+                                        if (n == 3 && ch >= 0 && ch <= 15)
                                         {
-                                            // check if another client is using desired datachannel
-                                            for (int j=0; j<MAXCLIENTS; j++){
-                                                if (_clientState[j].channel == ch)
-                                                    goto DCSETError; // jump out to return error
-                                            }
-                                        }
-                                        
-                                        _clientState[i].channel = ch; // use requested channel
-                                        
-                                        std::stringstream ss;
-                                        ss << "[InterfaceServer::run] Client " << i << ": DCSET " << ch;
-                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                        break;
-                                    }
-                                    
-                                    DCSETError:
-                                    res[0] = DCERR;
-                                    break;
-                                }
-                                
-                                case DCRAW: // push raw datacast packet to buffer
-                                {
-                                    if (_clientState[i].channel > 0 && n == 42) // 40 bytes of packet data
-                                    {
-                                        std::vector<uint8_t> data(readBuffer+2, readBuffer+n);
-                                        
-                                        if(_datachannel[_clientState[i].channel]->PushRaw(&data))
-                                        {
-                                            res[0] = DCFULL; // buffer full
-                                        }
-                                    }
-                                    else
-                                    {
-                                        res[0] = DCERR;
-                                    }
-                                    break;
-                                }
-                                
-                                case DCFORMATA: // encode and push a format A datacast payload to buffer
-                                {
-                                    /* Does _not_ automate repeats, continuity indicator, etc.
-                                       Format is:
-                                         byte 2: bits 4-7 IAL, bits 1-3 flags RI,CI,DL
-                                         byte 3-5: 24 bit Service Packet Address (little endian)
-                                         byte 6: Repeat indicator
-                                         byte 7: Continuity indicator
-                                         byte 8+: payload data
-                                    */
-                                    if (_clientState[i].channel > 0 && n > 8)
-                                    {
-                                        uint8_t flags = (uint8_t)readBuffer[2] & 0xe;
-                                        uint8_t ial = (uint8_t)readBuffer[2] >> 4;
-                                        uint32_t spa = (uint8_t)readBuffer[3] | ((uint8_t)readBuffer[4] << 8) | ((uint8_t)readBuffer[5] << 16);
-                                        uint8_t ri = (uint8_t)readBuffer[6];
-                                        uint8_t ci = (uint8_t)readBuffer[7];
-                                        
-                                        std::vector<uint8_t> data(readBuffer+8, readBuffer+n);
-                                        
-                                        int bytes = _datachannel[_clientState[i].channel]->PushIDLA(flags, ial, spa, ri, ci, &data);
-                                        
-                                        if (bytes == 0) // buffer full
-                                            res[0] = DCFULL;
-                                        else if (bytes < n-8) // payload didn't fit
-                                            res[0] = DCTRUNC; // warn of truncation
-                                        
-                                        res.push_back(bytes); // return number of bytes written
-                                        
-                                        break;
-                                    }
-                                    else
-                                    {
-                                        res[0] = DCERR;
-                                        res.push_back(0); // no bytes written
-                                    }
-                                    break;
-                                }
-                                
-                                case CONFIGAPI:
-                                {
-                                    /* vbit2 configuration API */
-                                    if (_clientState[i].channel == 0 && n > 2) /* allow VBIT2 configuration commands on channel 0 only */
-                                    {
-                                        switch((uint8_t)readBuffer[2]){ // byte 2 is configuration command number
-                                            case CONFRAFLAG: /* get/set row adaptive flag */
-                                            {
-                                                if (n == 4)
-                                                {
-                                                    _configure->SetRowAdaptive(((uint8_t)readBuffer[3]&1)?true:false);
-                                                    std::stringstream ss;
-                                                    ss << "[InterfaceServer::run] Client " << i << ": CONFRAFLAG " << ((readBuffer[3] & 1)?"ON":"OFF");
-                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                }
-                                                else if (n != 3)
-                                                {
-                                                    res[0] = DCERR;
-                                                }
-                                                res.push_back(_configure->GetRowAdaptive()?1:0);
-                                                
-                                                break;
-                                            }
+                                            _clientState[i].channel = -1; // release current channel
                                             
-                                            case CONFRBYTES: /* get/set BSDP reserved bytes */
-                                            {
-                                                if (n == 7) // set new bytes
-                                                {
-                                                    _configure->SetReservedBytes(std::array<uint8_t, 4>({(uint8_t)readBuffer[3],(uint8_t)readBuffer[4],(uint8_t)readBuffer[5],(uint8_t)readBuffer[6]}));
-                                                    std::stringstream ss;
-                                                    ss << "[InterfaceServer::run] Client " << i << ": CONFRBYTES set";
-                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                }
-                                                else if (n != 3)
-                                                {
-                                                    res[0] = DCERR;
-                                                }
-                                                
-                                                std::array<uint8_t, 4> bytes = _configure->GetReservedBytes();
-                                                res.push_back(bytes[0]);
-                                                res.push_back(bytes[1]);
-                                                res.push_back(bytes[2]);
-                                                res.push_back(bytes[3]); // read back reserved bytes
-                                                break;
-                                            }
                                             
-                                            case CONFSTATUS: /* get/set BSDP status message */
+                                            if (ch) // allows multiple connections for channel 0
                                             {
-                                                if (n == 23) // set new status
-                                                {
-                                                    std::ostringstream tmp;
-                                                    for (int i = 3; i < 23; i++)
+                                                // check if another client is using desired datachannel
+                                                for (int j=0; j<MAXCLIENTS; j++){
+                                                    if (_clientState[j].channel == ch)
                                                     {
-                                                        tmp << (char)readBuffer[i];
+                                                        res[0] = CMDBUSY;
+                                                        goto SETCHANError; // jump out to return error
                                                     }
-                                                    
-                                                    _configure->SetServiceStatusString(tmp.str());
-                                                    std::stringstream ss;
-                                                    ss << "[InterfaceServer::run] Client " << i << ": CONFSTATUS set";
-                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                                 }
-                                                else if (n != 3)
-                                                {
-                                                    res[0] = DCERR;
-                                                }
-                                                
-                                                for(char& c : _configure->GetServiceStatusString()) {
-                                                    res.push_back((uint8_t)c);
-                                                }
-                                                
-                                                break;
                                             }
                                             
-                                            case CONFHEADER: /* get/set header template */
-                                            {
-                                                if (n == 35) // set new header template
-                                                {
-                                                    std::string tmp = "        ";
-                                                    for (int i = 3; i < 35; i++)
-                                                        tmp += (uint8_t)readBuffer[i];
-                                                    std::shared_ptr<TTXLine> line(new TTXLine(tmp));
-                                                    _configure->SetHeaderTemplate(line);
-                                                    std::stringstream ss;
-                                                    ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
-                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                }
-                                                else if (n != 3)
-                                                {
-                                                    res[0] = DCERR;
-                                                }
-                                                
-                                                for(char& c : _configure->GetHeaderTemplate()) {
-                                                    res.push_back((uint8_t)c);
-                                                }
-                                                
-                                                break;
-                                            }
+                                            _clientState[i].channel = ch; // use requested channel
                                             
-                                            default: // unknown configuration command
-                                                res[0] = DCERR;
+                                            std::stringstream ss;
+                                            ss << "[InterfaceServer::run] Client " << i << ": SETCHAN " << ch;
+                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                            break;
                                         }
-                                    }
-                                    else
-                                    {
-                                        res[0] = DCERR;
-                                    }
-                                    break;
-                                }
-                                
-                                case PAGESAPI:
-                                {
-                                    /* page data API */
-                                    res[0] = DCERR; // default to returning an error
-                                    
-                                    if (_clientState[i].channel == 0 && n >= 3) /* allow page data commands on channel 0 only */
-                                    {
-                                        int cmd = (uint8_t)readBuffer[2]; // byte 2 is page data API command number
                                         
-                                        if (cmd <= PAGEDELSUB && n >= 5) // all commands that start with a page/subpage number
+                                        res[0] = CMDERR;
+                                        SETCHANError:
+                                        break;
+                                    }
+                                    
+                                    case DBCASTAPI:
+                                    {
+                                        /* databroadcast API */
+                                        if (_clientState[i].channel > 0 && n > 2) // databroadcast commands only on channels 1-15
                                         {
-                                            int num = ((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4];
-                                            if (cmd <= PAGEOPEN && _clientState[i].page)
+                                            switch((uint8_t)readBuffer[2]) // byte 2 is databroadcast command number
                                             {
-                                                // implicitly close page when issuing other page delete/open commands
-                                                _clientState[i].page->FreeLock();
-                                                _clientState[i].page = nullptr;
-                                                _clientState[i].subpage = nullptr;
-                                            }
-                                            
-                                            if (cmd == PAGEDELETE)
-                                            {
-                                                std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEDELETE " << std::hex << num;
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                
-                                                std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
-                                                if (p != nullptr)
+                                                case DCRAW: // push raw datacast packet to buffer
                                                 {
-                                                    p->MarkForDeletion();
-                                                    res[0] = DCOK;
-                                                }
-                                            }
-                                            else if (cmd == PAGEOPEN)
-                                            {
-                                                bool OneShot = false;
-                                                if (n > 5)
-                                                    OneShot = (readBuffer[5] == 1);
-                                                
-                                                std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEOPEN " << std::hex << num << (OneShot?" as OneShot":"");
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                if ((uint8_t)readBuffer[3] > 0 && (uint8_t)readBuffer[3] <= 8 && (uint8_t)readBuffer[4] < 0xff)
-                                                {
-                                                    std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
-                                                    if (p == nullptr || p->GetIsMarked())
+                                                    if (n == 43) // 40 bytes of packet data
                                                     {
-                                                        p = std::shared_ptr<TTXPageStream>(new TTXPageStream()); // create new page
-                                                        std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] Created new page " << std::hex << num;
-                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                        if (p->GetLock()) // if this fails we have a real problem!
+                                                        std::vector<uint8_t> data(readBuffer+3, readBuffer+n);
+                                                        
+                                                        if(_datachannel[_clientState[i].channel]->PushRaw(&data))
                                                         {
-                                                            p->SetPageNumber(num);
-                                                            p->SetOneShotFlag(OneShot);
-                                                            _pageList->AddPage(p, true); // put it in the page lists
-                                                            
-                                                            // at this stage it has no subpages!
-                                                            _clientState[i].page = p;
-                                                            res[0] = DCOK;
+                                                            res[0] = CMDBUSY; // buffer full
                                                         }
                                                     }
                                                     else
                                                     {
-                                                        if (p->GetOneShotFlag() && p->GetUpdatedFlag())
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    break;
+                                                }
+                                                
+                                                case DCFORMATA: // encode and push a format A datacast payload to buffer
+                                                {
+                                                    /* Does _not_ automate repeats, continuity indicator, etc.
+                                                       Format is:
+                                                         byte 3: bits 4-7 IAL, bits 1-3 flags RI,CI,DL
+                                                         byte 4-6: 24 bit Service Packet Address (little endian)
+                                                         byte 7: Repeat indicator
+                                                         byte 8: Continuity indicator
+                                                         byte 9+: payload data
+                                                    */
+                                                    if (n > 9)
+                                                    {
+                                                        uint8_t flags = (uint8_t)readBuffer[3] & 0xe;
+                                                        uint8_t ial = (uint8_t)readBuffer[3] >> 4;
+                                                        uint32_t spa = (uint8_t)readBuffer[4] | ((uint8_t)readBuffer[5] << 8) | ((uint8_t)readBuffer[6] << 16);
+                                                        uint8_t ri = (uint8_t)readBuffer[7];
+                                                        uint8_t ci = (uint8_t)readBuffer[8];
+                                                        
+                                                        std::vector<uint8_t> data(readBuffer+9, readBuffer+n);
+                                                        
+                                                        int bytes = _datachannel[_clientState[i].channel]->PushIDLA(flags, ial, spa, ri, ci, &data);
+                                                        
+                                                        if (bytes == 0) // buffer full
+                                                            res[0] = CMDBUSY;
+                                                        else if (bytes < n-9) // payload didn't fit
+                                                            res[0] = CMDTRUNC; // warn of truncation
+                                                        
+                                                        res.push_back(bytes); // return number of bytes written
+                                                        
+                                                        break;
+                                                    }
+                                                    else
+                                                    {
+                                                        res[0] = CMDERR;
+                                                        res.push_back(0); // no bytes written
+                                                    }
+                                                    break;
+                                                }
+                                                
+                                                default: // unknown datacast command
+                                                    res[0] = CMDERR;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            res[0] = CMDERR;
+                                        }
+                                        break;
+                                    }
+                                    
+                                    case CONFIGAPI:
+                                    {
+                                        /* vbit2 configuration API */
+                                        if (_clientState[i].channel == 0 && n > 2) // allow VBIT2 configuration commands on channel 0 only
+                                        {
+                                            switch((uint8_t)readBuffer[2]){ // byte 2 is configuration command number
+                                                case CONFRAFLAG: /* get/set row adaptive flag */
+                                                {
+                                                    if (n == 4)
+                                                    {
+                                                        _configure->SetRowAdaptive(((uint8_t)readBuffer[3]&1)?true:false);
+                                                        std::stringstream ss;
+                                                        ss << "[InterfaceServer::run] Client " << i << ": CONFRAFLAG " << ((readBuffer[3] & 1)?"ON":"OFF");
+                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                    }
+                                                    else if (n != 3)
+                                                    {
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    res.push_back(_configure->GetRowAdaptive()?1:0);
+                                                    
+                                                    break;
+                                                }
+                                                
+                                                case CONFRBYTES: /* get/set BSDP reserved bytes */
+                                                {
+                                                    if (n == 7) // set new bytes
+                                                    {
+                                                        _configure->SetReservedBytes(std::array<uint8_t, 4>({(uint8_t)readBuffer[3],(uint8_t)readBuffer[4],(uint8_t)readBuffer[5],(uint8_t)readBuffer[6]}));
+                                                        std::stringstream ss;
+                                                        ss << "[InterfaceServer::run] Client " << i << ": CONFRBYTES set";
+                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                    }
+                                                    else if (n != 3)
+                                                    {
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    
+                                                    std::array<uint8_t, 4> bytes = _configure->GetReservedBytes();
+                                                    res.push_back(bytes[0]);
+                                                    res.push_back(bytes[1]);
+                                                    res.push_back(bytes[2]);
+                                                    res.push_back(bytes[3]); // read back reserved bytes
+                                                    break;
+                                                }
+                                                
+                                                case CONFSTATUS: /* get/set BSDP status message */
+                                                {
+                                                    if (n == 23) // set new status
+                                                    {
+                                                        std::ostringstream tmp;
+                                                        for (int i = 3; i < 23; i++)
                                                         {
-                                                            // previous oneshot hasn't yet sent
+                                                            tmp << (char)readBuffer[i];
                                                         }
-                                                        else if (p->GetLock()) // try to lock page
+                                                        
+                                                        _configure->SetServiceStatusString(tmp.str());
+                                                        std::stringstream ss;
+                                                        ss << "[InterfaceServer::run] Client " << i << ": CONFSTATUS set";
+                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                    }
+                                                    else if (n != 3)
+                                                    {
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    
+                                                    for(char& c : _configure->GetServiceStatusString()) {
+                                                        res.push_back((uint8_t)c);
+                                                    }
+                                                    
+                                                    break;
+                                                }
+                                                
+                                                case CONFHEADER: /* get/set header template */
+                                                {
+                                                    if (n == 35) // set new header template
+                                                    {
+                                                        std::string tmp = "        ";
+                                                        for (int i = 3; i < 35; i++)
+                                                            tmp += (uint8_t)readBuffer[i];
+                                                        std::shared_ptr<TTXLine> line(new TTXLine(tmp));
+                                                        _configure->SetHeaderTemplate(line);
+                                                        std::stringstream ss;
+                                                        ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
+                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                    }
+                                                    else if (n != 3)
+                                                    {
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    
+                                                    for(char& c : _configure->GetHeaderTemplate()) {
+                                                        res.push_back((uint8_t)c);
+                                                    }
+                                                    
+                                                    break;
+                                                }
+                                                
+                                                default: // unknown configuration command
+                                                    res[0] = CMDERR;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            res[0] = CMDERR;
+                                        }
+                                        break;
+                                    }
+                                    
+                                    case PAGESAPI:
+                                    {
+                                        /* page data API */
+                                        
+                                        if (_clientState[i].channel == 0 && n > 2) // allow page data commands on channel 0 only
+                                        {
+                                            int cmd = (uint8_t)readBuffer[2]; // byte 2 is page data API command number
+                                            
+                                            if (cmd <= PAGEDELSUB && n >= 5) // all commands that start with a page/subpage number
+                                            {
+                                                int num = ((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4];
+                                                if (cmd <= PAGEOPEN && _clientState[i].page)
+                                                {
+                                                    // implicitly close page when issuing other page delete/open commands
+                                                    _clientState[i].page->FreeLock();
+                                                    _clientState[i].page = nullptr;
+                                                    _clientState[i].subpage = nullptr;
+                                                }
+                                                
+                                                if (cmd == PAGEDELETE)
+                                                {
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGEDELETE " << std::hex << num;
+                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                    
+                                                    std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
+                                                    if (p != nullptr)
+                                                    {
+                                                        p->MarkForDeletion();
+                                                    }
+                                                    else
+                                                    {
+                                                        res[0] = CMDNOENT;
+                                                    }
+                                                }
+                                                else if (cmd == PAGEOPEN)
+                                                {
+                                                    bool OneShot = false;
+                                                    if (n > 5)
+                                                        OneShot = (readBuffer[5] == 1);
+                                                    
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGEOPEN " << std::hex << num << (OneShot?" as OneShot":"");
+                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                    if ((uint8_t)readBuffer[3] > 0 && (uint8_t)readBuffer[3] <= 8 && (uint8_t)readBuffer[4] < 0xff)
+                                                    {
+                                                        std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
+                                                        if (p == nullptr || p->GetIsMarked())
                                                         {
-                                                            if (OneShot || (p->GetOneShotFlag() != OneShot)) // oneshot or oneshot changed
+                                                            p = std::shared_ptr<TTXPageStream>(new TTXPageStream()); // create new page
+                                                            std::stringstream ss;
+                                                            ss << "[InterfaceServer::run] Created new page " << std::hex << num;
+                                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                            if (p->GetLock()) // if this fails we have a real problem!
                                                             {
+                                                                p->SetPageNumber(num);
                                                                 p->SetOneShotFlag(OneShot);
-                                                                if (!OneShot)
-                                                                {
-                                                                    // ensure page gets re-added to lists
-                                                                    p->SetNormalFlag(false);
-                                                                    p->SetSpecialFlag(false);
-                                                                    p->SetCarouselFlag(false);
-                                                                }
-                                                                p->SetUpdatedFlag(false);
-                                                                _pageList->UpdatePageLists(p);
+                                                                _pageList->AddPage(p, true); // put it in the page lists
+                                                                
+                                                                // at this stage it has no subpages!
+                                                                _clientState[i].page = p;
                                                             }
-                                                            
-                                                            _clientState[i].page = p;
-                                                            res[0] = DCOK;
+                                                            else
+                                                            {
+                                                                res[0] = CMDBUSY;
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            res[0] = CMDBUSY; // overwritten if successful
+                                                            if (p->GetOneShotFlag() && p->GetUpdatedFlag())
+                                                            {
+                                                                // previous oneshot hasn't yet sent
+                                                            }
+                                                            else if (p->GetLock()) // try to lock page
+                                                            {
+                                                                if (OneShot || (p->GetOneShotFlag() != OneShot)) // oneshot or oneshot changed
+                                                                {
+                                                                    p->SetOneShotFlag(OneShot);
+                                                                    if (!OneShot)
+                                                                    {
+                                                                        // ensure page gets re-added to lists
+                                                                        p->SetNormalFlag(false);
+                                                                        p->SetSpecialFlag(false);
+                                                                        p->SetCarouselFlag(false);
+                                                                    }
+                                                                    p->SetUpdatedFlag(false);
+                                                                    _pageList->UpdatePageLists(p);
+                                                                }
+                                                                
+                                                                _clientState[i].page = p;
+                                                                res[0] = CMDOK;
+                                                            }
                                                         }
                                                     }
                                                 }
-                                            }
-                                            else if ((cmd == PAGESETSUB || cmd == PAGEDELSUB) && _clientState[i].page)
-                                            {
-                                                std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": " << ((cmd==PAGESETSUB)?"PAGESETSUB ":"PAGEDELSUB ") << std::hex << num;
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                
-                                                if (_clientState[i].subpage)
-                                                    _clientState[i].subpage = nullptr; // invalidate previous subpage
-                                                
-                                                if (!(num & 0xc080) && num < 0x3f7f) // reject invalid subpage numbers
+                                                else if ((cmd == PAGESETSUB || cmd == PAGEDELSUB) && _clientState[i].page)
                                                 {
-                                                    std::shared_ptr<Subpage> s = _clientState[i].page->LocateSubpage(num);
-                                                    if (s == nullptr)
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": " << ((cmd==PAGESETSUB)?"PAGESETSUB ":"PAGEDELSUB ") << std::hex << num;
+                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                    
+                                                    if (_clientState[i].subpage)
+                                                        _clientState[i].subpage = nullptr; // invalidate previous subpage
+                                                    
+                                                    if ((num & 0xc080) || num >= 0x3f7f) // reject invalid subpage numbers
                                                     {
-                                                        if (cmd == PAGESETSUB)
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    else
+                                                    {
+                                                        std::shared_ptr<Subpage> s = _clientState[i].page->LocateSubpage(num);
+                                                        if (s == nullptr) // subpage not found
                                                         {
-                                                            s = std::shared_ptr<Subpage>(new Subpage()); // create new subpage
-                                                            s->SetSubCode(num); // set subcode first
-                                                            _clientState[i].page->InsertSubpage(s); // add to page
-                                                            _pageList->UpdatePageLists(_clientState[i].page);
-                                                            
-                                                            // ------------- Debug: put it on air with a test row --------
-                                                            s->SetSubpageStatus(0x8000);
-                                                            std::stringstream ss;
-                                                            ss << "TEST " << std::hex << std::setw(4) << std::setfill('0') << num;
-                                                            std::shared_ptr<TTXLine> tmp(new TTXLine(ss.str()));
-                                                            s->SetRow(1,tmp);
-                                                            // -----------------------------------------------------------
-                                                            
-                                                            if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
-                                                                _clientState[i].page->SetSubpage(num); // put this subpage on air
-                                                            
-                                                            res[0] = DCOK;
+                                                            if (cmd == PAGESETSUB)
+                                                            {
+                                                                s = std::shared_ptr<Subpage>(new Subpage()); // create new subpage
+                                                                s->SetSubCode(num); // set subcode first
+                                                                _clientState[i].page->InsertSubpage(s); // add to page
+                                                                _pageList->UpdatePageLists(_clientState[i].page);
+                                                                
+                                                                // ------------- Debug: put it on air with a test row --------
+                                                                s->SetSubpageStatus(0x8000);
+                                                                std::stringstream ss;
+                                                                ss << "TEST " << std::hex << std::setw(4) << std::setfill('0') << num;
+                                                                std::shared_ptr<TTXLine> tmp(new TTXLine(ss.str()));
+                                                                s->SetRow(1,tmp);
+                                                                // -----------------------------------------------------------
+                                                                
+                                                                if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
+                                                                    _clientState[i].page->SetSubpage(num); // put this subpage on air
+                                                                
+                                                                unsigned int count = _clientState[i].page->GetSubpageCount();
+                                                                res.push_back((count >> 8) & 0xff);
+                                                                res.push_back(count & 0xff); // return subpage count (big endian)
+                                                            }
+                                                            else // PAGEDELSUB
+                                                            {
+                                                                res[0] = CMDNOENT;
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            if (cmd == PAGESETSUB)
+                                                            {
+                                                                _clientState[i].subpage = s; // store subpage
+                                                                if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
+                                                                    _clientState[i].page->SetSubpage(num); // put this subpage on air
+                                                            }
+                                                            else // PAGEDELSUB
+                                                            {
+                                                                _clientState[i].page->RemoveSubpage(s);
+                                                            }
                                                             unsigned int count = _clientState[i].page->GetSubpageCount();
                                                             res.push_back((count >> 8) & 0xff);
                                                             res.push_back(count & 0xff); // return subpage count (big endian)
                                                         }
                                                     }
-                                                    else
-                                                    {
-                                                        if (cmd == PAGESETSUB)
-                                                        {
-                                                            _clientState[i].subpage = s; // store subpage
-                                                            if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
-                                                                _clientState[i].page->SetSubpage(num); // put this subpage on air
-                                                        }
-                                                        else // PAGEDELSUB
-                                                        {
-                                                            _clientState[i].page->RemoveSubpage(s);
-                                                        }
-                                                        res[0] = DCOK;
-                                                        unsigned int count = _clientState[i].page->GetSubpageCount();
-                                                        res.push_back((count >> 8) & 0xff);
-                                                        res.push_back(count & 0xff); // return subpage count (big endian)
-                                                    }
                                                 }
                                             }
-                                        }
-                                        else if (cmd == PAGECLOSE)
-                                        {
-                                            std::stringstream ss;
-                                            ss << "[InterfaceServer::run] Client " << i << ": PAGECLOSE";
-                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                            if (_clientState[i].page)
+                                            else if (cmd == PAGECLOSE)
                                             {
-                                                _clientState[i].page->FreeLock();
-                                                _clientState[i].page = nullptr;
-                                                _clientState[i].subpage = nullptr;
-                                                res[0] = DCOK;
+                                                std::stringstream ss;
+                                                ss << "[InterfaceServer::run] Client " << i << ": PAGECLOSE";
+                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                if (_clientState[i].page)
+                                                {
+                                                    _clientState[i].page->FreeLock();
+                                                    _clientState[i].page = nullptr;
+                                                    _clientState[i].subpage = nullptr;
+                                                }
+                                                else
+                                                {
+                                                    res[0] = CMDERR;
+                                                }
+                                            }
+                                            else if (cmd == PAGEFANDC)
+                                            {
+                                                std::stringstream ss;
+                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEFANDC";
+                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                if (n == 5) // write
+                                                {
+                                                    _clientState[i].page->SetPageFunctionInt((uint8_t)readBuffer[3]);
+                                                    _clientState[i].page->SetPageCodingInt((uint8_t)readBuffer[4]);
+                                                    _pageList->UpdatePageLists(_clientState[i].page);
+                                                }
+                                                else if (n != 3)
+                                                {
+                                                    res[0] = CMDERR;
+                                                }
+                                                res.push_back((uint8_t)_clientState[i].page->GetPageFunction());
+                                                res.push_back((uint8_t)_clientState[i].page->GetPageCoding());
+                                            }
+                                            else if (cmd == PAGEOPTNS)
+                                            {
+                                                std::stringstream ss;
+                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEOPTNS";
+                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                            }
+                                            else if (cmd == PAGEROW)
+                                            {
+                                                std::stringstream ss;
+                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEROW";
+                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                            }
+                                            else if (cmd == PAGELINKS)
+                                            {
+                                                std::stringstream ss;
+                                                ss << "[InterfaceServer::run] Client " << i << ": PAGELINKS";
+                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                            }
+                                            else if (cmd > PAGELINKS) // last defined command number
+                                            {
+                                                std::stringstream ss;
+                                                ss << "[InterfaceServer::run] Client " << i << ": Unknown PAGESAPI command received " << std::hex << cmd;
+                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
                                             }
                                         }
-                                        else if (cmd == PAGEFANDC)
-                                        {
-                                            std::stringstream ss;
-                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEFANDC";
-                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                            if (n == 5) // write
-                                            {
-                                                _clientState[i].page->SetPageFunctionInt((uint8_t)readBuffer[3]);
-                                                _clientState[i].page->SetPageCodingInt((uint8_t)readBuffer[4]);
-                                                _pageList->UpdatePageLists(_clientState[i].page);
-                                                res[0] = DCOK;
-                                            }
-                                            else if (n == 3)
-                                            {
-                                                res[0] = DCOK;
-                                            }
-                                            res.push_back((uint8_t)_clientState[i].page->GetPageFunction());
-                                            res.push_back((uint8_t)_clientState[i].page->GetPageCoding());
-                                        }
-                                        else if (cmd == PAGEOPTNS)
-                                        {
-                                            std::stringstream ss;
-                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEOPTNS";
-                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                        }
-                                        else if (cmd == PAGEROW)
-                                        {
-                                            std::stringstream ss;
-                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEROW";
-                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                        }
-                                        else if (cmd == PAGELINKS)
-                                        {
-                                            std::stringstream ss;
-                                            ss << "[InterfaceServer::run] Client " << i << ": PAGELINKS";
-                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                        }
-                                        else if (cmd > PAGELINKS) // last defined command number
-                                        {
-                                            std::stringstream ss;
-                                            ss << "[InterfaceServer::run] Client " << i << ": Unknown PAGESAPI command received " << std::hex << cmd;
-                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                        }
+                                        break;
                                     }
-                                    break;
+                                    
+                                    default: // unknown command
+                                    {
+                                        res[0] = CMDERR;
+                                        break;
+                                    }
                                 }
                                 
-                                default: // unknown command
+                                if (res.size() > 254)
                                 {
-                                    res[0] = DCERR;
-                                    break;
+                                    _debug->Log(Debug::LogLevels::logERROR,"[InterfaceServer::run] Response too long");
+                                    res.resize(254); // truncate!
                                 }
+                                
+                                res.insert(res.begin(), res.size()+1); // prepend message size
+                                
+                                int n = send(sock, (char*)res.data(), res.size(), 0); // send response
+                                if (n > 0)
+                                    continue; // next socket in loop
                             }
-                            
-                            if (res.size() > 254)
-                            {
-                                _debug->Log(Debug::LogLevels::logERROR,"[InterfaceServer::run] Response too long");
-                                res.resize(254); // truncate!
-                            }
-                            
-                            res.insert(res.begin(), res.size()+1); // prepend message size
-                            
-                            int n = send(sock, (char*)res.data(), res.size(), 0); // send response
-                            if (n > 0)
-                                continue; // next socket in loop
+                            // else fall through to error handling
                         }
-                        // else fall through to error handling
                     }
                     // couldn't read/write all bytes
                     getpeername(sock, (struct sockaddr*)&address, &addrlen);

@@ -19,18 +19,22 @@
 #endif
 
 /* interface server command numbers */
-#define DCSET       0x00    /* set datachannel for subsequent commands */
-#define DCRAW       0x01    /* push raw packet data to datacast buffer */
-#define DCFORMATA   0x02    /* push format A packet to datacast buffer */
-#define DCFORMATB   0x03    /* placeholder - may never implement */
-#define CONFIGAPI   0x04    /* vbit2 configuration API command */
-#define PAGESAPI    0x05    /* page data API */
+#define SETCHAN     0x00    /* set channel number for subsequent commands */
+#define DBCASTAPI   0x01    /* databroadcast API command */
+#define CONFIGAPI   0x02    /* vbit2 configuration API command */
+#define PAGESAPI    0x03    /* page data API */
 
 /* interface server response codes */
-#define DCOK        0x00    /* command successful */
-#define DCTRUNC     0xfd    /* command completed but data was truncated */
-#define DCFULL      0xfe    /* command failed as buffer is full */
-#define DCERR       0xff    /* command failed */
+#define CMDOK       0x00    /* command successful */
+#define CMDTRUNC    0xfc    /* command completed but data was truncated */
+#define CMDNOENT    0xfd    /* command failed because entity doesn't exist */
+#define CMDBUSY     0xfe    /* command failed because operation is blocked */
+#define CMDERR      0xff    /* command failed */
+
+/* command numbers for databroadcast API */
+#define DCRAW       0x00    /* push raw packet data to datacast buffer */
+#define DCFORMATA   0x01    /* push format A packet to datacast buffer */
+#define DCFORMATB   0x02    /* placeholder - may never implement */
 
 /* command numbers for vbit2 configuration API */
 #define CONFRAFLAG  0x00    /* get/set row adaptive flag */
@@ -44,7 +48,7 @@
 #define PAGESETSUB  0x02    /* select subpage */
 #define PAGEDELSUB  0x03    /* delete subpage */
 #define PAGECLOSE   0x04    /* close updated page */
-#define PAGEFANDC   0x05
+#define PAGEFANDC   0x05    /* get/set page function and coding */
 #define PAGEOPTNS   0x06
 #define PAGEROW     0x07
 #define PAGELINKS   0x08
