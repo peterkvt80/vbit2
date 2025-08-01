@@ -46,6 +46,8 @@
 #define PAGECLOSE   0x04    /* close updated page */
 #define PAGEFANDC   0x05
 #define PAGEOPTNS   0x06
+#define PAGEROW     0x07
+#define PAGELINKS   0x08
 
 namespace vbit
 

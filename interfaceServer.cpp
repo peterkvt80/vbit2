@@ -593,7 +593,44 @@ void InterfaceServer::run()
                                                 res[0] = DCOK;
                                             }
                                         }
-                                        else if (cmd > PAGECLOSE) // last defined command number
+                                        else if (cmd == PAGEFANDC)
+                                        {
+                                            std::stringstream ss;
+                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEFANDC";
+                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                            if (n == 5) // write
+                                            {
+                                                _clientState[i].page->SetPageFunctionInt((uint8_t)readBuffer[3]);
+                                                _clientState[i].page->SetPageCodingInt((uint8_t)readBuffer[4]);
+                                                _pageList->UpdatePageLists(_clientState[i].page);
+                                                res[0] = DCOK;
+                                            }
+                                            else if (n == 3)
+                                            {
+                                                res[0] = DCOK;
+                                            }
+                                            res.push_back((uint8_t)_clientState[i].page->GetPageFunction());
+                                            res.push_back((uint8_t)_clientState[i].page->GetPageCoding());
+                                        }
+                                        else if (cmd == PAGEOPTNS)
+                                        {
+                                            std::stringstream ss;
+                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEOPTNS";
+                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                        }
+                                        else if (cmd == PAGEROW)
+                                        {
+                                            std::stringstream ss;
+                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEROW";
+                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                        }
+                                        else if (cmd == PAGELINKS)
+                                        {
+                                            std::stringstream ss;
+                                            ss << "[InterfaceServer::run] Client " << i << ": PAGELINKS";
+                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                        }
+                                        else if (cmd > PAGELINKS) // last defined command number
                                         {
                                             std::stringstream ss;
                                             ss << "[InterfaceServer::run] Client " << i << ": Unknown PAGESAPI command received " << std::hex << cmd;

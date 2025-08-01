@@ -73,6 +73,7 @@ class Subpage
         
         unsigned int GetLastPacket() {return _lastPacket;};
         
+        void SetSubpageChanged(){_subpageChanged = true;}; // mark subpage changed to cause CRC to be recalculated
         bool HasSubpageChanged(){bool t = _subpageChanged; _subpageChanged = false; return t; }; // clears the flag for this subpage
         
         bool HasHeaderChanged(uint16_t crc); // updates the header crc for this subpage
@@ -119,7 +120,7 @@ class Page
         // set the page function or coding based on their integer representations in ETS 300 706 section 9.4.2.1
         static PageCoding ReturnPageCoding(int pageCoding);
         void SetPageFunctionInt(int pageFunction);
-        void SetPageCodingInt(int pageCoding){_pageCoding = ReturnPageCoding(pageCoding);};
+        void SetPageCodingInt(int pageCoding);
 
         bool Special() {return (_pageFunction == GPOP || _pageFunction == POP || _pageFunction == GDRCS || _pageFunction == DRCS || _pageFunction == MOT || _pageFunction == MIP);} // more convenient way to tell if a page is 'special'.
         

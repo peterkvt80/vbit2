@@ -204,6 +204,18 @@ void Page::SetPageFunctionInt(int pageFunction)
     }
 }
 
+void Page::SetPageCodingInt(int pageCoding)
+{
+    if (pageCoding != _pageCoding)
+    {
+        _pageCoding = ReturnPageCoding(pageCoding);
+        for (auto it = _subpages.begin(); it != _subpages.end(); ++it)
+        {
+            (*it)->SetSubpageChanged(); // page coding changed so CRC needs recalculating for each subpage
+        }
+    }
+}
+
 PageCoding Page::ReturnPageCoding(int pageCoding)
 {
     switch (pageCoding)
