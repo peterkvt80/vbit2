@@ -41,7 +41,7 @@ void TTXPageStream::IncrementUpdateCount()
     _updateCount = (_updateCount + 1) % 8;
 }
 
-void TTXPageStream::SetTransitionTime(int cycleTime)
+void TTXPageStream::SetTransitionTime(uint8_t cycleTime)
 {
     if (std::shared_ptr<Subpage> s = GetSubpage())
     {
@@ -71,10 +71,9 @@ bool TTXPageStream::Expired(bool StepCycles)
         }
     }
     
-    if (StepCycles)
+    if (StepCycles > 0)
     {
         _cyclesRemaining--;
-        _cyclesRemaining = (_cyclesRemaining<0)?0:_cyclesRemaining;
     }
     return _cyclesRemaining == 0;
 }

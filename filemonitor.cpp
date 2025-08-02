@@ -71,6 +71,11 @@ bool File::LoadTTI(std::string filename)
                         // CT,8,T
                         std::getline(filein, line, ',');
                         cycletime = (atoi(line.c_str()));
+                        if (cycletime < 1)
+                            cycletime = 1;
+                        else if (cycletime > 255)
+                            cycletime = 255;
+                        
                         std::getline(filein, line);
                         timedmode = (line[0]=='T'?true:false);
                         

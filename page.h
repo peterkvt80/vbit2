@@ -57,8 +57,8 @@ class Subpage
         uint16_t GetSubpageStatus() {return _status;}
         void SetSubpageStatus(uint16_t ps){_status=ps;}
         
-        int GetCycleTime() {return _cycleTime;}
-        void SetCycleTime(int time){_cycleTime=time;}
+        uint8_t GetCycleTime() {return _cycleTime;}
+        void SetCycleTime(uint8_t time){_cycleTime=time;}
         
         bool GetTimedMode() {return _timedMode;}
         void SetTimedMode(bool mode){_timedMode=mode;}
@@ -84,7 +84,7 @@ class Subpage
     private:
         uint16_t _subcode;
         uint16_t _status;
-        int _cycleTime;         // number of page cycles or seconds before subpage cycles
+        uint8_t _cycleTime;     // number of page cycles or seconds before subpage cycles
         bool _timedMode;        // cycle subpage based on time in seconds
         uint8_t _region;
         

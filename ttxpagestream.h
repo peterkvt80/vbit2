@@ -48,7 +48,7 @@ class TTXPageStream : public Page
          *  which is the current time plus the cycle time
          *  or the number of page cycles remaining
          */
-        void SetTransitionTime(int cycleTime);
+        void SetTransitionTime(uint8_t cycleTime);
 
         /** Used to time carousels
          *  If StepCycles is set, decrement page cycle count
@@ -79,7 +79,7 @@ class TTXPageStream : public Page
         
     private:
         time_t _transitionTime; // Records when the next carousel transition is due
-        int _cyclesRemaining; // As above for cycle mode
+        uint8_t _cyclesRemaining; // As above for cycle mode
         
         bool _loadedPacket29; // Packet 29 for magazine was loaded from this page. Should only be set on one page in each magazine.
         
