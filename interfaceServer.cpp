@@ -423,9 +423,9 @@ void InterfaceServer::run()
                                                 {
                                                     if (n == 35) // set new header template
                                                     {
-                                                        std::string tmp = "        ";
-                                                        for (int i = 3; i < 35; i++)
-                                                            tmp += (uint8_t)readBuffer[i];
+                                                        std::array<uint8_t, 40> tmp;
+                                                        for (int i = 0; i < 32; i++)
+                                                            tmp[8+i] = readBuffer[3+i];
                                                         std::shared_ptr<TTXLine> line(new TTXLine(tmp));
                                                         _configure->SetHeaderTemplate(line);
                                                         std::stringstream ss;
