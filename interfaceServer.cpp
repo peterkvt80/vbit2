@@ -598,10 +598,6 @@ void InterfaceServer::run()
                                                                     
                                                                     if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
                                                                         _clientState[i].page->SetSubpage(num); // put this subpage on air
-                                                                    
-                                                                    unsigned int count = _clientState[i].page->GetSubpageCount();
-                                                                    res.push_back((count >> 8) & 0xff);
-                                                                    res.push_back(count & 0xff); // return subpage count (big endian)
                                                                 }
                                                                 else // PAGEDELSUB
                                                                 {
@@ -620,10 +616,10 @@ void InterfaceServer::run()
                                                                 {
                                                                     _clientState[i].page->RemoveSubpage(s);
                                                                 }
-                                                                unsigned int count = _clientState[i].page->GetSubpageCount();
-                                                                res.push_back((count >> 8) & 0xff);
-                                                                res.push_back(count & 0xff); // return subpage count (big endian)
                                                             }
+                                                            unsigned int count = _clientState[i].page->GetSubpageCount();
+                                                            res.push_back((count >> 8) & 0xff);
+                                                            res.push_back(count & 0xff); // return subpage count (big endian)
                                                         }
                                                     }
                                                     else
