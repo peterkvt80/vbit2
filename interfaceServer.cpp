@@ -399,7 +399,7 @@ void InterfaceServer::run()
                                                         std::ostringstream tmp;
                                                         for (int i = 3; i < 23; i++)
                                                         {
-                                                            tmp << (char)readBuffer[i];
+                                                            tmp << (char)(readBuffer[i] & 0x7f);
                                                         }
                                                         
                                                         _configure->SetServiceStatusString(tmp.str());
@@ -413,7 +413,7 @@ void InterfaceServer::run()
                                                     }
                                                     
                                                     for(char& c : _configure->GetServiceStatusString()) {
-                                                        res.push_back((uint8_t)c);
+                                                        res.push_back((uint8_t)c & 0x7f);
                                                     }
                                                     
                                                     break;
