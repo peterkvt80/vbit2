@@ -304,7 +304,7 @@ void Page::StepNextSubpageNoLoop()
         {
             _carouselPage = nullptr;
         }
-        else if (!(_carouselPage->GetSubpageStatus() & 0x8000))
+        else if (!(_carouselPage->GetSubpageStatus() & PAGESTATUS_TRANSMITPAGE))
         {
             StepNextSubpageNoLoop(); // skip over subpages if transmit flag not set
         }
@@ -333,7 +333,7 @@ void Page::StepNextSubpage()
             _carouselPage = *_iter;
         }
         
-        if (!(_carouselPage->GetSubpageStatus() & 0x8000))
+        if (!(_carouselPage->GetSubpageStatus() & PAGESTATUS_TRANSMITPAGE))
         {
             StepNextSubpageNoLoop(); // skip over subpages if transmit flag not set
         }

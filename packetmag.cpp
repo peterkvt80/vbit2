@@ -103,7 +103,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                         goto loopback;
                     }
                     
-                    _status = _subpage->GetSubpageStatus() & 0x8000; // get transmit flag
+                    _status = _subpage->GetSubpageStatus() & PAGESTATUS_TRANSMITPAGE; // get transmit flag
                     _region = _subpage->GetRegion();
                     thisSubcode = (_subpage->GetSubCode() & 0x000F) | (_subpage->GetLastPacket() << 8);
                     
@@ -225,7 +225,7 @@ loopback: // jump back point to avoid returning null packets when we could send 
                 }
             }
             
-            if (!(_status & 0x8000))
+            if (!(_status & PAGESTATUS_TRANSMITPAGE))
             {
                 _page->FreeLock(); // Must free the lock or we can never use this page again!
                 goto loopback;

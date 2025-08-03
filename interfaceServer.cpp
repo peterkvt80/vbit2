@@ -262,7 +262,7 @@ void InterfaceServer::run()
                                             
                                             std::stringstream ss;
                                             ss << "[InterfaceServer::run] Client " << i << ": SETCHAN " << ch;
-                                            _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                            _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                             break;
                                         }
                                         
@@ -359,7 +359,7 @@ void InterfaceServer::run()
                                                         _configure->SetRowAdaptive(((uint8_t)readBuffer[3]&1)?true:false);
                                                         std::stringstream ss;
                                                         ss << "[InterfaceServer::run] Client " << i << ": CONFRAFLAG " << ((readBuffer[3] & 1)?"ON":"OFF");
-                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
                                                     else if (n != 3)
                                                     {
@@ -377,7 +377,7 @@ void InterfaceServer::run()
                                                         _configure->SetReservedBytes(std::array<uint8_t, 4>({(uint8_t)readBuffer[3],(uint8_t)readBuffer[4],(uint8_t)readBuffer[5],(uint8_t)readBuffer[6]}));
                                                         std::stringstream ss;
                                                         ss << "[InterfaceServer::run] Client " << i << ": CONFRBYTES set";
-                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
                                                     else if (n != 3)
                                                     {
@@ -405,7 +405,7 @@ void InterfaceServer::run()
                                                         _configure->SetServiceStatusString(tmp.str());
                                                         std::stringstream ss;
                                                         ss << "[InterfaceServer::run] Client " << i << ": CONFSTATUS set";
-                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
                                                     else if (n != 3)
                                                     {
@@ -430,7 +430,7 @@ void InterfaceServer::run()
                                                         _configure->SetHeaderTemplate(line);
                                                         std::stringstream ss;
                                                         ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
-                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
                                                     else if (n != 3)
                                                     {
@@ -480,7 +480,7 @@ void InterfaceServer::run()
                                                     {
                                                         std::stringstream ss;
                                                         ss << "[InterfaceServer::run] Client " << i << ": PAGEDELETE " << std::hex << num;
-                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                         
                                                         std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
                                                         if (p != nullptr)
@@ -505,7 +505,7 @@ void InterfaceServer::run()
                                                     {
                                                         std::stringstream ss;
                                                         ss << "[InterfaceServer::run] Client " << i << ": PAGEOPEN " << std::hex << num << (OneShot?" as OneShot":"");
-                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                         if ((uint8_t)readBuffer[3] > 0 && (uint8_t)readBuffer[3] <= 8 && (uint8_t)readBuffer[4] < 0xff)
                                                         {
                                                             std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
@@ -563,14 +563,12 @@ void InterfaceServer::run()
                                                 }
                                                 else if ((cmd == PAGESETSUB || cmd == PAGEDELSUB) && _clientState[i].page)
                                                 {
+                                                    _clientState[i].subpage = nullptr; // invalidate previous subpage
                                                     if (n == 5)
                                                     {
                                                         std::stringstream ss;
                                                         ss << "[InterfaceServer::run] Client " << i << ": " << ((cmd==PAGESETSUB)?"PAGESETSUB ":"PAGEDELSUB ") << std::hex << num;
-                                                        _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                        
-                                                        if (_clientState[i].subpage)
-                                                            _clientState[i].subpage = nullptr; // invalidate previous subpage
+                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                         
                                                         if ((num & 0xc080) || num >= 0x3f7f) // reject invalid subpage numbers
                                                         {
@@ -578,22 +576,22 @@ void InterfaceServer::run()
                                                         }
                                                         else
                                                         {
-                                                            std::shared_ptr<Subpage> s = _clientState[i].page->LocateSubpage(num);
-                                                            if (s == nullptr) // subpage not found
+                                                            _clientState[i].subpage = _clientState[i].page->LocateSubpage(num);
+                                                            if (_clientState[i].subpage == nullptr) // subpage not found
                                                             {
                                                                 if (cmd == PAGESETSUB)
                                                                 {
-                                                                    s = std::shared_ptr<Subpage>(new Subpage()); // create new subpage
-                                                                    s->SetSubCode(num); // set subcode first
-                                                                    _clientState[i].page->InsertSubpage(s); // add to page
+                                                                    _clientState[i].subpage = std::shared_ptr<Subpage>(new Subpage()); // create new subpage
+                                                                    _clientState[i].subpage->SetSubCode(num); // set subcode first
+                                                                    _clientState[i].page->InsertSubpage(_clientState[i].subpage); // add to page
                                                                     _pageList->UpdatePageLists(_clientState[i].page);
+                                                                    _clientState[i].subpage->SetSubpageStatus(PAGESTATUS_TRANSMITPAGE);
                                                                     
-                                                                    // ------------- Debug: put it on air with a test row --------
-                                                                    s->SetSubpageStatus(0x8000);
+                                                                    // ------------------- Debug: add a test row -----------------
                                                                     std::stringstream ss;
                                                                     ss << "TEST " << std::hex << std::setw(4) << std::setfill('0') << num;
                                                                     std::shared_ptr<TTXLine> tmp(new TTXLine(ss.str()));
-                                                                    s->SetRow(1,tmp);
+                                                                    _clientState[i].subpage->SetRow(1,tmp);
                                                                     // -----------------------------------------------------------
                                                                     
                                                                     if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
@@ -608,13 +606,12 @@ void InterfaceServer::run()
                                                             {
                                                                 if (cmd == PAGESETSUB)
                                                                 {
-                                                                    _clientState[i].subpage = s; // store subpage
                                                                     if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
                                                                         _clientState[i].page->SetSubpage(num); // put this subpage on air
                                                                 }
                                                                 else // PAGEDELSUB
                                                                 {
-                                                                    _clientState[i].page->RemoveSubpage(s);
+                                                                    _clientState[i].page->RemoveSubpage(_clientState[i].subpage);
                                                                 }
                                                             }
                                                             unsigned int count = _clientState[i].page->GetSubpageCount();
@@ -630,7 +627,7 @@ void InterfaceServer::run()
                                             {
                                                 std::stringstream ss;
                                                 ss << "[InterfaceServer::run] Client " << i << ": PAGECLOSE";
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                 if (_clientState[i].page && n==3)
                                                 {
                                                     _clientState[i].page->FreeLock();
@@ -644,45 +641,77 @@ void InterfaceServer::run()
                                             }
                                             else if (cmd == PAGEFANDC)
                                             {
-                                                std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEFANDC";
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                if (n == 5) // write
+                                                if (_clientState[i].page)
                                                 {
-                                                    _clientState[i].page->SetPageFunctionInt((uint8_t)readBuffer[3]);
-                                                    _clientState[i].page->SetPageCodingInt((uint8_t)readBuffer[4]);
-                                                    _pageList->UpdatePageLists(_clientState[i].page);
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGEFANDC";
+                                                    _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                    if (n == 5) // write
+                                                    {
+                                                        _clientState[i].page->SetPageFunctionInt((uint8_t)readBuffer[3]);
+                                                        _clientState[i].page->SetPageCodingInt((uint8_t)readBuffer[4]);
+                                                        _pageList->UpdatePageLists(_clientState[i].page);
+                                                    }
+                                                    else if (n != 3)
+                                                    {
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    res.push_back(_clientState[i].page->GetPageFunction());
+                                                    res.push_back(_clientState[i].page->GetPageCoding());
                                                 }
-                                                else if (n != 3)
+                                                else
                                                 {
                                                     res[0] = CMDERR;
                                                 }
-                                                res.push_back((uint8_t)_clientState[i].page->GetPageFunction());
-                                                res.push_back((uint8_t)_clientState[i].page->GetPageCoding());
                                             }
                                             else if (cmd == PAGEOPTNS)
                                             {
-                                                std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEOPTNS";
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                if (_clientState[i].subpage)
+                                                {
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGEOPTNS";
+                                                    _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                    
+                                                    if (n == 8) // write
+                                                    {
+                                                        _clientState[i].subpage->SetSubpageStatus(((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4]);
+                                                        _clientState[i].subpage->SetRegion((uint8_t)readBuffer[5]);
+                                                        _clientState[i].subpage->SetCycleTime((uint8_t)readBuffer[6]);
+                                                        _clientState[i].subpage->SetTimedMode((uint8_t)readBuffer[7] == 1);
+                                                    }
+                                                    else if (n != 3)
+                                                    {
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    uint16_t status = _clientState[i].subpage->GetSubpageStatus();
+                                                    res.push_back((status >> 8) & 0xff);
+                                                    res.push_back(status & 0xff);
+                                                    res.push_back(_clientState[i].subpage->GetRegion());
+                                                    res.push_back(_clientState[i].subpage->GetCycleTime());
+                                                    res.push_back(_clientState[i].subpage->GetTimedMode()?1:0);
+                                                }
+                                                else
+                                                {
+                                                    res[0] = CMDERR;
+                                                }
                                             }
                                             else if (cmd == PAGEROW)
                                             {
                                                 std::stringstream ss;
                                                 ss << "[InterfaceServer::run] Client " << i << ": PAGEROW";
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                             }
                                             else if (cmd == PAGELINKS)
                                             {
                                                 std::stringstream ss;
                                                 ss << "[InterfaceServer::run] Client " << i << ": PAGELINKS";
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                             }
                                             else if (cmd > PAGELINKS) // last defined command number
                                             {
                                                 std::stringstream ss;
                                                 ss << "[InterfaceServer::run] Client " << i << ": Unknown PAGESAPI command received " << std::hex << cmd;
-                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                             }
                                         }
                                         break;
