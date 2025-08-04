@@ -633,11 +633,16 @@ void InterfaceServer::run()
                                                 std::stringstream ss;
                                                 ss << "[InterfaceServer::run] Client " << i << ": PAGECLOSE";
                                                 _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
-                                                if (_clientState[i].page && n==3)
+                                                if (n==3)
                                                 {
-                                                    _clientState[i].page->FreeLock();
+                                                    if (_clientState[i].page)
+                                                        _clientState[i].page->FreeLock();
+                                                    else
+                                                        res[0] = CMDNOENT;
                                                     _clientState[i].page = nullptr;
                                                     _clientState[i].subpage = nullptr;
+                                                    
+                                                    
                                                 }
                                                 else
                                                 {
