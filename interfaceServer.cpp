@@ -465,17 +465,17 @@ void InterfaceServer::run()
                                             
                                             if (cmd <= PAGEDELSUB) // all commands that start with a page/subpage number
                                             {
+                                                if (cmd <= PAGEOPEN && _clientState[i].page)
+                                                {
+                                                    // implicitly close page when issuing other page delete/open commands
+                                                    _clientState[i].page->FreeLock();
+                                                    _clientState[i].page = nullptr;
+                                                    _clientState[i].subpage = nullptr;
+                                                }
+                                                
                                                 if (n >= 5)
                                                 {
                                                     int num = ((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4];
-                                                    if (cmd <= PAGEOPEN && _clientState[i].page)
-                                                    {
-                                                        // implicitly close page when issuing other page delete/open commands
-                                                        _clientState[i].page->FreeLock();
-                                                        _clientState[i].page = nullptr;
-                                                        _clientState[i].subpage = nullptr;
-                                                    }
-                                                    
                                                     if (cmd == PAGEDELETE)
                                                     {
                                                         if (n == 5)
