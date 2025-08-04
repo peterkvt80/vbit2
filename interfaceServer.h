@@ -23,6 +23,7 @@
 #define DBCASTAPI   0x01    /* databroadcast API command */
 #define CONFIGAPI   0x02    /* vbit2 configuration API command */
 #define PAGESAPI    0x03    /* page data API */
+#define GETAPIVER   0x04    /* get API version number */
 
 /* interface server response codes */
 #define CMDOK       0x00    /* command successful */
@@ -49,7 +50,7 @@
 #define PAGEDELSUB  0x03    /* delete subpage */
 #define PAGECLOSE   0x04    /* close updated page */
 #define PAGEFANDC   0x05    /* get/set page function and coding */
-#define PAGEOPTNS   0x06
+#define PAGEOPTNS   0x06    /* get/set subpage options */
 #define PAGEROW     0x07
 #define PAGELINKS   0x08
 
@@ -77,6 +78,8 @@ namespace vbit
             PacketDatacast** GetDatachannels() { PacketDatacast **channels=_datachannel; return channels; };
             
         private:
+            const uint8_t APIVERSION[3] = {0,1,0}; // Version number for interface API. TODO: set to 1.0.0 for release
+            
             Configure* _configure;
             Debug* _debug;
             PageList* _pageList;

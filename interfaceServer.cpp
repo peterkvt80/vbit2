@@ -271,6 +271,20 @@ void InterfaceServer::run()
                                         break;
                                     }
                                     
+                                    case GETAPIVER:
+                                    {
+                                        /* get API version number */
+                                        if (n == 2)
+                                        {
+                                            res.push_back(APIVERSION[0]); // major version
+                                            res.push_back(APIVERSION[1]); // minor version
+                                            res.push_back(APIVERSION[2]); // patch
+                                        }
+                                        else
+                                            res[0] = CMDERR;
+                                        break;
+                                    }
+                                    
                                     case DBCASTAPI:
                                     {
                                         /* databroadcast API */
