@@ -463,165 +463,170 @@ void InterfaceServer::run()
                                         {
                                             int cmd = (uint8_t)readBuffer[2]; // byte 2 is page data API command number
                                             
-                                            if (cmd <= PAGEDELSUB && n >= 5) // all commands that start with a page/subpage number
+                                            if (cmd <= PAGEDELSUB) // all commands that start with a page/subpage number
                                             {
-                                                int num = ((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4];
-                                                if (cmd <= PAGEOPEN && _clientState[i].page)
+                                                if (n >= 5)
                                                 {
-                                                    // implicitly close page when issuing other page delete/open commands
-                                                    _clientState[i].page->FreeLock();
-                                                    _clientState[i].page = nullptr;
-                                                    _clientState[i].subpage = nullptr;
-                                                }
-                                                
-                                                if (cmd == PAGEDELETE)
-                                                {
-                                                    if (n == 5)
+                                                    int num = ((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4];
+                                                    if (cmd <= PAGEOPEN && _clientState[i].page)
                                                     {
-                                                        std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] Client " << i << ": PAGEDELETE " << std::hex << num;
-                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
-                                                        
-                                                        std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
-                                                        if (p != nullptr)
+                                                        // implicitly close page when issuing other page delete/open commands
+                                                        _clientState[i].page->FreeLock();
+                                                        _clientState[i].page = nullptr;
+                                                        _clientState[i].subpage = nullptr;
+                                                    }
+                                                    
+                                                    if (cmd == PAGEDELETE)
+                                                    {
+                                                        if (n == 5)
                                                         {
-                                                            p->MarkForDeletion();
+                                                            std::stringstream ss;
+                                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEDELETE " << std::hex << num;
+                                                            _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                            
+                                                            std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
+                                                            if (p != nullptr)
+                                                            {
+                                                                p->MarkForDeletion();
+                                                            }
+                                                            else
+                                                            {
+                                                                res[0] = CMDNOENT;
+                                                            }
                                                         }
                                                         else
-                                                        {
-                                                            res[0] = CMDNOENT;
-                                                        }
+                                                            res[0] = CMDERR;
                                                     }
-                                                    else
-                                                        res[0] = CMDERR;
-                                                }
-                                                else if (cmd == PAGEOPEN)
-                                                {
-                                                    bool OneShot = false;
-                                                    if (n > 5)
-                                                        OneShot = (readBuffer[5] == 1);
-                                                    
-                                                    if (n < 7)
+                                                    else if (cmd == PAGEOPEN)
                                                     {
-                                                        std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] Client " << i << ": PAGEOPEN " << std::hex << num << (OneShot?" as OneShot":"");
-                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
-                                                        if ((uint8_t)readBuffer[3] > 0 && (uint8_t)readBuffer[3] <= 8 && (uint8_t)readBuffer[4] < 0xff)
+                                                        bool OneShot = false;
+                                                        if (n > 5)
+                                                            OneShot = (readBuffer[5] == 1);
+                                                        
+                                                        if (n < 7)
                                                         {
-                                                            std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
-                                                            if (p == nullptr || p->GetIsMarked())
+                                                            std::stringstream ss;
+                                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEOPEN " << std::hex << num << (OneShot?" as OneShot":"");
+                                                            _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                            if ((uint8_t)readBuffer[3] > 0 && (uint8_t)readBuffer[3] <= 8 && (uint8_t)readBuffer[4] < 0xff)
                                                             {
-                                                                p = std::shared_ptr<TTXPageStream>(new TTXPageStream()); // create new page
-                                                                std::stringstream ss;
-                                                                ss << "[InterfaceServer::run] Created new page " << std::hex << num;
-                                                                _debug->Log(Debug::LogLevels::logINFO,ss.str());
-                                                                if (p->GetLock()) // if this fails we have a real problem!
+                                                                std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
+                                                                if (p == nullptr || p->GetIsMarked())
                                                                 {
-                                                                    p->SetPageNumber(num);
-                                                                    p->SetOneShotFlag(OneShot);
-                                                                    _pageList->AddPage(p, true); // put it in the page lists
-                                                                    
-                                                                    // at this stage it has no subpages!
-                                                                    _clientState[i].page = p;
+                                                                    p = std::shared_ptr<TTXPageStream>(new TTXPageStream()); // create new page
+                                                                    std::stringstream ss;
+                                                                    ss << "[InterfaceServer::run] Created new page " << std::hex << num;
+                                                                    _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                                                                    if (p->GetLock()) // if this fails we have a real problem!
+                                                                    {
+                                                                        p->SetPageNumber(num);
+                                                                        p->SetOneShotFlag(OneShot);
+                                                                        _pageList->AddPage(p, true); // put it in the page lists
+                                                                        
+                                                                        // at this stage it has no subpages!
+                                                                        _clientState[i].page = p;
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        res[0] = CMDBUSY;
+                                                                    }
                                                                 }
                                                                 else
                                                                 {
-                                                                    res[0] = CMDBUSY;
-                                                                }
-                                                            }
-                                                            else
-                                                            {
-                                                                res[0] = CMDBUSY; // overwritten if successful
-                                                                if (p->GetOneShotFlag() && p->GetUpdatedFlag())
-                                                                {
-                                                                    // previous oneshot hasn't yet sent
-                                                                }
-                                                                else if (p->GetLock()) // try to lock page
-                                                                {
-                                                                    if (OneShot || (p->GetOneShotFlag() != OneShot)) // oneshot or oneshot changed
+                                                                    res[0] = CMDBUSY; // overwritten if successful
+                                                                    if (p->GetOneShotFlag() && p->GetUpdatedFlag())
                                                                     {
-                                                                        p->SetOneShotFlag(OneShot);
-                                                                        if (!OneShot)
-                                                                        {
-                                                                            // ensure page gets re-added to lists
-                                                                            p->SetNormalFlag(false);
-                                                                            p->SetSpecialFlag(false);
-                                                                            p->SetCarouselFlag(false);
-                                                                        }
-                                                                        p->SetUpdatedFlag(false);
-                                                                        _pageList->UpdatePageLists(p);
+                                                                        // previous oneshot hasn't yet sent
                                                                     }
-                                                                    
-                                                                    _clientState[i].page = p;
-                                                                    res[0] = CMDOK;
+                                                                    else if (p->GetLock()) // try to lock page
+                                                                    {
+                                                                        if (OneShot || (p->GetOneShotFlag() != OneShot)) // oneshot or oneshot changed
+                                                                        {
+                                                                            p->SetOneShotFlag(OneShot);
+                                                                            if (!OneShot)
+                                                                            {
+                                                                                // ensure page gets re-added to lists
+                                                                                p->SetNormalFlag(false);
+                                                                                p->SetSpecialFlag(false);
+                                                                                p->SetCarouselFlag(false);
+                                                                            }
+                                                                            p->SetUpdatedFlag(false);
+                                                                            _pageList->UpdatePageLists(p);
+                                                                        }
+                                                                        
+                                                                        _clientState[i].page = p;
+                                                                        res[0] = CMDOK;
+                                                                    }
                                                                 }
                                                             }
-                                                        }
-                                                    }
-                                                    else
-                                                        res[0] = CMDERR;
-                                                }
-                                                else if ((cmd == PAGESETSUB || cmd == PAGEDELSUB) && _clientState[i].page)
-                                                {
-                                                    _clientState[i].subpage = nullptr; // invalidate previous subpage
-                                                    if (n == 5)
-                                                    {
-                                                        std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] Client " << i << ": " << ((cmd==PAGESETSUB)?"PAGESETSUB ":"PAGEDELSUB ") << std::hex << num;
-                                                        _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
-                                                        
-                                                        if ((num & 0xc080) || num >= 0x3f7f) // reject invalid subpage numbers
-                                                        {
-                                                            res[0] = CMDERR;
                                                         }
                                                         else
+                                                            res[0] = CMDERR;
+                                                    }
+                                                    else if (cmd == PAGESETSUB || cmd == PAGEDELSUB)
+                                                    {
+                                                        _clientState[i].subpage = nullptr; // invalidate previous subpage
+                                                        if (n == 5 && _clientState[i].page)
                                                         {
-                                                            _clientState[i].subpage = _clientState[i].page->LocateSubpage(num);
-                                                            if (_clientState[i].subpage == nullptr) // subpage not found
+                                                            std::stringstream ss;
+                                                            ss << "[InterfaceServer::run] Client " << i << ": " << ((cmd==PAGESETSUB)?"PAGESETSUB ":"PAGEDELSUB ") << std::hex << num;
+                                                            _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                            
+                                                            if ((num & 0xc080) || num >= 0x3f7f) // reject invalid subpage numbers
                                                             {
-                                                                if (cmd == PAGESETSUB)
-                                                                {
-                                                                    _clientState[i].subpage = std::shared_ptr<Subpage>(new Subpage()); // create new subpage
-                                                                    _clientState[i].subpage->SetSubCode(num); // set subcode first
-                                                                    _clientState[i].page->InsertSubpage(_clientState[i].subpage); // add to page
-                                                                    _pageList->UpdatePageLists(_clientState[i].page);
-                                                                    _clientState[i].subpage->SetSubpageStatus(PAGESTATUS_TRANSMITPAGE);
-                                                                    
-                                                                    // ------------------- Debug: add a test row -----------------
-                                                                    std::stringstream ss;
-                                                                    ss << "TEST " << std::hex << std::setw(4) << std::setfill('0') << num;
-                                                                    std::shared_ptr<TTXLine> tmp(new TTXLine(ss.str()));
-                                                                    _clientState[i].subpage->SetRow(1,tmp);
-                                                                    // -----------------------------------------------------------
-                                                                    
-                                                                    if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
-                                                                        _clientState[i].page->SetSubpage(num); // put this subpage on air
-                                                                }
-                                                                else // PAGEDELSUB
-                                                                {
-                                                                    res[0] = CMDNOENT;
-                                                                }
+                                                                res[0] = CMDERR;
                                                             }
                                                             else
                                                             {
-                                                                if (cmd == PAGESETSUB)
+                                                                _clientState[i].subpage = _clientState[i].page->LocateSubpage(num);
+                                                                if (_clientState[i].subpage == nullptr) // subpage not found
                                                                 {
-                                                                    if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
-                                                                        _clientState[i].page->SetSubpage(num); // put this subpage on air
+                                                                    if (cmd == PAGESETSUB)
+                                                                    {
+                                                                        _clientState[i].subpage = std::shared_ptr<Subpage>(new Subpage()); // create new subpage
+                                                                        _clientState[i].subpage->SetSubCode(num); // set subcode first
+                                                                        _clientState[i].page->InsertSubpage(_clientState[i].subpage); // add to page
+                                                                        _pageList->UpdatePageLists(_clientState[i].page);
+                                                                        _clientState[i].subpage->SetSubpageStatus(PAGESTATUS_TRANSMITPAGE);
+                                                                        
+                                                                        // ------------------- Debug: add a test row -----------------
+                                                                        std::stringstream ss;
+                                                                        ss << "TEST " << std::hex << std::setw(4) << std::setfill('0') << num;
+                                                                        std::shared_ptr<TTXLine> tmp(new TTXLine(ss.str()));
+                                                                        _clientState[i].subpage->SetRow(1,tmp);
+                                                                        // -----------------------------------------------------------
+                                                                        
+                                                                        if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
+                                                                            _clientState[i].page->SetSubpage(num); // put this subpage on air
+                                                                    }
+                                                                    else // PAGEDELSUB
+                                                                    {
+                                                                        res[0] = CMDNOENT;
+                                                                    }
                                                                 }
-                                                                else // PAGEDELSUB
+                                                                else
                                                                 {
-                                                                    _clientState[i].page->RemoveSubpage(_clientState[i].subpage);
+                                                                    if (cmd == PAGESETSUB)
+                                                                    {
+                                                                        if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
+                                                                            _clientState[i].page->SetSubpage(num); // put this subpage on air
+                                                                    }
+                                                                    else // PAGEDELSUB
+                                                                    {
+                                                                        _clientState[i].page->RemoveSubpage(_clientState[i].subpage);
+                                                                    }
                                                                 }
+                                                                unsigned int count = _clientState[i].page->GetSubpageCount();
+                                                                res.push_back((count >> 8) & 0xff);
+                                                                res.push_back(count & 0xff); // return subpage count (big endian)
                                                             }
-                                                            unsigned int count = _clientState[i].page->GetSubpageCount();
-                                                            res.push_back((count >> 8) & 0xff);
-                                                            res.push_back(count & 0xff); // return subpage count (big endian)
                                                         }
+                                                        else
+                                                            res[0] = CMDERR;
                                                     }
-                                                    else
-                                                        res[0] = CMDERR;
                                                 }
+                                                else
+                                                    res[0] = CMDERR;
                                             }
                                             else if (cmd == PAGECLOSE)
                                             {
