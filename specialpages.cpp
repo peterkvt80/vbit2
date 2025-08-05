@@ -70,6 +70,7 @@ std::shared_ptr<TTXPageStream> SpecialPages::NextPage()
         {
             if (_page->GetOneShotFlag())
             {
+                _page->SetSpecialFlag(false);
                 _iter = _specialPagesList.erase(_iter); // remove oneshot pages from the page list
                 continue;
             }

@@ -30,16 +30,16 @@ class TTXPageStream : public Page
         bool GetOneShotFlag() { return _isOneShot; }
 
         bool GetCarouselFlag() { return _isCarousel; }
-        void SetCarouselFlag(bool val) { _isCarousel = val; }
+        void SetCarouselFlag(bool val) { _isCarousel = val; } // must only be set by Carousel!
 
         bool GetSpecialFlag() { return _isSpecial; }
-        void SetSpecialFlag(bool val) { _isSpecial = val; }
+        void SetSpecialFlag(bool val) { _isSpecial = val; } // must only be set by SpecialPages!
         
         bool GetNormalFlag() { return _isNormal; }
-        void SetNormalFlag(bool val) { _isNormal = val; }
+        void SetNormalFlag(bool val) { _isNormal = val; } // must only be set by NormalPages!
         
         bool GetUpdatedFlag() { return _isUpdated; }
-        void SetUpdatedFlag(bool val) { _isUpdated = val; }
+        void SetUpdatedFlag(bool val) { _isUpdated = val; } // must only be set by UpdatedPages!
         
         int GetUpdateCount() {return _updateCount;}
         void IncrementUpdateCount();

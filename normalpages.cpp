@@ -60,6 +60,7 @@ std::shared_ptr<TTXPageStream> NormalPages::NextPage()
         {
             if (_page->GetOneShotFlag())
             {
+                _page->SetNormalFlag(false);
                 _iter = _NormalPagesList.erase(_iter); // remove oneshot pages from the page list
                 _page = *_iter;
                 continue;

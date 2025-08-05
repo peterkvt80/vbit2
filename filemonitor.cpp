@@ -359,11 +359,7 @@ int FileMonitor::readDirectory(std::string path, bool firstrun)
                                         if (page->GetOneShotFlag())
                                         {
                                             // file load clears oneshot status
-                                            page->SetOneShotFlag(false); 
-                                            // ensure page gets re-added to lists
-                                            page->SetNormalFlag(false);
-                                            page->SetSpecialFlag(false);
-                                            page->SetCarouselFlag(false);
+                                            page->SetOneShotFlag(false);
                                             _debug->Log(Debug::LogLevels::logINFO,"[FileMonitor::run] Reloading page from " + std::string(dirp->d_name));
                                         }
                                         

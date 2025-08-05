@@ -72,10 +72,6 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
             }
             _mag[mag]->GetSpecialPages()->addPage(page);
         }
-        
-        page->SetNormalFlag(false);
-        page->SetCarouselFlag(false);
-        page->SetUpdatedFlag(false);
     }
     else
     {
@@ -91,7 +87,6 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
             
             _mag[mag]->GetNormalPages()->addPage(page);
         }
-        page->SetSpecialFlag(false);
         
         if (page->IsCarousel() && !page->GetOneShotFlag()) // don't cycle OneShot pages
         {
@@ -105,7 +100,6 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
                     page->StepFirstSubpage(); // ensure we're pointing at a subpage
                 _mag[mag]->GetCarousel()->addPage(page);
             }
-            page->SetUpdatedFlag(false);
         }
         else
         {
@@ -116,9 +110,7 @@ void PageList::UpdatePageLists(std::shared_ptr<TTXPageStream> page, bool noupdat
             }
             else
             {
-                page->SetUpdatedFlag(false);
             }
-            page->SetCarouselFlag(false);
         }
     }
 }

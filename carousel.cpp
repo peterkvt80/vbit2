@@ -38,6 +38,7 @@ std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
         p=*it;
         if (p->GetOneShotFlag())
         {
+            p->SetCarouselFlag(false);
             _carouselList.erase(it--);
             continue;
         }

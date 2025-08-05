@@ -557,14 +557,6 @@ void InterfaceServer::run()
                                                                         if (OneShot || (p->GetOneShotFlag() != OneShot)) // oneshot or oneshot changed
                                                                         {
                                                                             p->SetOneShotFlag(OneShot);
-                                                                            if (!OneShot)
-                                                                            {
-                                                                                // ensure page gets re-added to lists
-                                                                                p->SetNormalFlag(false);
-                                                                                p->SetSpecialFlag(false);
-                                                                                p->SetCarouselFlag(false);
-                                                                            }
-                                                                            p->SetUpdatedFlag(false);
                                                                             _pageList->UpdatePageLists(p);
                                                                         }
                                                                         
