@@ -370,7 +370,7 @@ void InterfaceServer::run()
                                                 {
                                                     if (n == 4)
                                                     {
-                                                        _configure->SetRowAdaptive(((uint8_t)readBuffer[3]&1)?true:false);
+                                                        _configure->SetRowAdaptive((uint8_t)readBuffer[3]&1);
                                                         std::stringstream ss;
                                                         ss << "[InterfaceServer::run] Client " << i << ": CONFRAFLAG " << ((readBuffer[3] & 1)?"ON":"OFF");
                                                         _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
@@ -515,7 +515,7 @@ void InterfaceServer::run()
                                                     {
                                                         bool OneShot = false;
                                                         if (n > 5)
-                                                            OneShot = (readBuffer[5] == 1);
+                                                            OneShot = (readBuffer[5] & 1);
                                                         
                                                         if (n < 7)
                                                         {
@@ -701,7 +701,7 @@ void InterfaceServer::run()
                                                         _clientState[i].subpage->SetSubpageStatus(((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4]);
                                                         _clientState[i].subpage->SetRegion((uint8_t)readBuffer[5]);
                                                         _clientState[i].subpage->SetCycleTime((uint8_t)readBuffer[6]);
-                                                        _clientState[i].subpage->SetTimedMode((uint8_t)readBuffer[7] == 1);
+                                                        _clientState[i].subpage->SetTimedMode((uint8_t)readBuffer[7] & 1);
                                                     }
                                                     else if (n != 3)
                                                     {
