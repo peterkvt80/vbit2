@@ -16,6 +16,7 @@
         ]},
         {"name":"Chunkytext","type":"git","url":"https://zxnet.co.uk/git/cf.git","path":"Chunkytext"},
         {"name":"SPARK","type":"git","url":"https://github.com/ZXGuesser/spark-teletext.git","path":"SPARK"},
-        {"name":"Nemetext","type":"git","url":"https://github.com/JamieNemeth/nemetext.git","path":"Nemetext"}
+        {"name":"Nemetext","type":"git","url":"https://github.com/JamieNemeth/nemetext.git","path":"Nemetext"},
+        {"name":"Artfax","type":"git","url":"https://github.com/teletexx/service-artfax","path":"Artfax"}
     ]
 }
