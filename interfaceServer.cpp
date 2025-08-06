@@ -501,6 +501,7 @@ void InterfaceServer::run()
                                                             std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
                                                             if (p != nullptr)
                                                             {
+                                                                p->SetOneShotFlag(false);
                                                                 p->MarkForDeletion();
                                                             }
                                                             else

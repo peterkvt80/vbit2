@@ -22,7 +22,8 @@ PacketMag::PacketMag(uint8_t mag, PageList *pageList, Configure *configure, Debu
     _hasCustomHeader(false),
     _magRegion(0),
     _specialPagesFlipFlop(false),
-    _waitingForField(0),
+    _waitingForField(false),
+    _waitingForSecond(false),
     _cycleDuration(-1)
 {
     //ctor
@@ -150,9 +151,19 @@ loopback: // jump back point to avoid returning null packets when we could send 
                     MasterClock *mc = mc->Instance();
                     MasterClock::timeStruct t = mc->GetMasterClock();
                     if (_lastCycleTimestamp.seconds){ // wait for real timestamps
+                        // calculate time since magazine cycle started
                         int diffSeconds = difftime(t.seconds, _lastCycleTimestamp.seconds); // truncates double to int
                         _cycleDuration = ((diffSeconds * 50) - _lastCycleTimestamp.fields) + t.fields;
-                        _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
+                        if (_cycleDuration < 50)
+                        {
+                            // hold magazine cycle start until next second tick
+                            _waitingForSecond = true;
+                        }
+                        else
+                        {
+                            // otherwise update cycle duration
+                            _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
+                        }
                     }
                     _lastCycleTimestamp = t; // update timestamp
                     
@@ -422,6 +433,7 @@ bool PacketMag::IsReady(bool force)
     // We can always send something unless
     // 1) We have just sent out a header and are waiting on a new field
     // 2) There are no pages
+    // 3) The magazine cycle is less than 1 second
     if (GetEvent(EVENT_FIELD))
     {
         ClearEvent(EVENT_FIELD);
@@ -431,10 +443,32 @@ bool PacketMag::IsReady(bool force)
         }
     }
     
+    if (GetEvent(EVENT_P830_FORMAT_1))
+    {
+        ClearEvent(EVENT_P830_FORMAT_1);
+        
+        if (_waitingForSecond)
+        {
+            _waitingForSecond = false;
+            // get master clock singleton
+            MasterClock *mc = mc->Instance();
+            MasterClock::timeStruct t = mc->GetMasterClock();
+            // calculate time since last time filling header and add to cycle time measured there
+            int diffSeconds = difftime(t.seconds, _lastCycleTimestamp.seconds); // truncates double to int
+            _cycleDuration += ((diffSeconds * 50) - _lastCycleTimestamp.fields) + t.fields;
+            // should clamp to 1 second
+            _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
+            _lastCycleTimestamp = t; // update timestamp so that true cycle time can be measured
+        }
+    }
+    
+    if (_state==PACKETSTATE_HEADER && _waitingForSecond && !_updatedPages->waiting()) // force if there are updated pages waiting
+        return false; // limit output
+    
     if (!_waitingForField)
     {
         _priorityCount--;
-        if (_priorityCount==0 || force || (_updatedPages->waiting())) // force if there are updated pages waiting
+        if (_priorityCount==0 || force || _updatedPages->waiting())
         {
             _priorityCount=_priority;
             result=true;

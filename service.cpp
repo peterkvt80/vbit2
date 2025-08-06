@@ -266,6 +266,9 @@ void Service::_updateEvents()
         for (std::list<PacketSource*>::const_iterator iterator = _magazineSources.begin(), end = _magazineSources.end(); iterator != end; ++iterator)
         {
             (*iterator)->SetEvent(EVENT_FIELD);
+            
+            if (_fieldCounter%50==0)
+                (*iterator)->SetEvent(EVENT_P830_FORMAT_1); // let magazines see the second tick
         }
         
         _packetDebug->SetEvent(EVENT_FIELD);

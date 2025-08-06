@@ -85,6 +85,7 @@ namespace vbit
             bool _hasX28Region;
             bool _specialPagesFlipFlop; // toggle to alternate between special pages and normal pages
             bool _waitingForField;
+            bool _waitingForSecond;
             
             MasterClock::timeStruct _lastCycleTimestamp;
             int _cycleDuration; // magazine cycle time in fields
