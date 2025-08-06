@@ -713,9 +713,67 @@ void InterfaceServer::run()
                                             }
                                             else if (cmd == PAGEROW)
                                             {
-                                                std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": PAGEROW";
-                                                _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                res[0] = CMDERR; // default to an returning an error unless we have success
+                                                if (_clientState[i].subpage)
+                                                {
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGEROW";
+                                                    _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                    
+                                                    if (n > 3)
+                                                    {
+                                                        int num = readBuffer[3] & 0x1F;
+                                                        int deleteFlag = readBuffer[3]&0x80;
+                                                        if (num > 0 && num < 29)
+                                                        {
+                                                            if (!deleteFlag)
+                                                            {
+                                                                if (n == 44)
+                                                                {
+                                                                    // write row data
+                                                                    std::array<uint8_t, 40> tmp;
+                                                                    for (int i = 0; i < 40; i++)
+                                                                        tmp[i] = readBuffer[4+i];
+                                                                    std::shared_ptr<TTXLine> line(new TTXLine(tmp));
+                                                                    
+                                                                    _clientState[i].subpage->SetRow(num, line);
+                                                                    
+                                                                    res[0] = CMDOK;
+                                                                }
+                                                                else if ((num < 26 && n==4) || (num > 25 && n==5))
+                                                                {
+                                                                    // read row data
+                                                                    std::shared_ptr<TTXLine> line = _clientState[i].subpage->GetRow(num);
+                                                                    if (n==5 && line!=nullptr)
+                                                                        line = line->LocateLine(readBuffer[4]&0xF);
+                                                                    
+                                                                    if (line != nullptr)
+                                                                    {
+                                                                        std::array<uint8_t, 40> tmp = line->GetLine();
+                                                                        res.insert (res.end(), tmp.data(), tmp.data()+tmp.size());
+                                                                        res[0] = CMDOK;
+                                                                    }
+                                                                    else
+                                                                        res[0] = CMDNOENT; // row doesn't exist
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                if (n==4)
+                                                                {
+                                                                    // delete row data
+                                                                    _clientState[i].subpage->DeleteRow(num);
+                                                                }
+                                                                else if (num > 25 && n==5)
+                                                                {
+                                                                    // delete dc
+                                                                    _clientState[i].subpage->DeleteRow(num, readBuffer[4]&0xF);
+                                                                }
+                                                                res[0] = CMDOK; // didn't check if line existed, just returns OK
+                                                            }
+                                                        }
+                                                    }
+                                                }
                                             }
                                             else if (cmd == PAGELINKS)
                                             {

@@ -34,6 +34,10 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
          *  This is used for enhanced packets which might require multiples of the same row
          */
         void AppendLine(std::shared_ptr<TTXLine> line);
+        
+        std::shared_ptr<TTXLine> RemoveLine(uint8_t designationCode); // remove line by designation code
+        
+        std::shared_ptr<TTXLine> LocateLine(uint8_t designationCode); // get line by designation code
 
         std::shared_ptr<TTXLine> GetNextLine(){return _nextLine;}
 

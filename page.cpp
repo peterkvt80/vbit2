@@ -451,6 +451,18 @@ void Subpage::SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line)
     }
 }
 
+void Subpage::DeleteRow(unsigned int rownumber, int designationCode)
+{
+    if (rownumber < 26 || designationCode < 0 || designationCode > 15)
+    {
+        _lines[rownumber] = nullptr; // delete entire row
+    }
+    else
+    {
+        _lines[rownumber] = _lines[rownumber]->RemoveLine(designationCode); // delete specific dc
+    }
+}
+
 void Subpage::SetFastext(std::array<FastextLink, 6> links, uint8_t mag)
 {
     std::array<uint8_t, 40> line; // 40 bytes of packet data in CODING_HAMMING_8_4 form

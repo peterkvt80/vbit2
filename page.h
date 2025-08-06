@@ -68,6 +68,7 @@ class Subpage
         
         std::shared_ptr<TTXLine> GetRow(unsigned int rowNumber);
         void SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line);
+        void DeleteRow(unsigned int rownumber, int designationCode=-1);
         
         void SetFastext(std::array<FastextLink, 6> links, uint8_t mag);
         

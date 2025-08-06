@@ -34,11 +34,6 @@ TTXLine::TTXLine(std::string const& line):
             break;
         }
 
-        if (ch < 0x20)
-        {
-            ch |= 0x80; // set high bit on control codes
-        }
-
         _line[j++]=ch;
     }
 }
@@ -98,4 +93,49 @@ void TTXLine::AppendLine(std::shared_ptr<TTXLine> line)
     }
     
     p->_nextLine = line; // append line to end of chain
+}
+
+std::shared_ptr<TTXLine> TTXLine::RemoveLine(uint8_t designationCode)
+{
+    // returns new pointer to linked list for this line
+    if ((_line[0]&0xF) == (designationCode&0xF)) // the root line matches the designation code
+    {
+        if (_nextLine == nullptr) // this is the only line
+            return nullptr;
+        else
+            return _nextLine; // return the next line as the new root
+    }
+    
+    // seek through list for a specific designation code
+    std::shared_ptr<TTXLine> p=this->getptr();
+    for (p=this->getptr();p->_nextLine!=nullptr;p=p->_nextLine)
+    {
+        if ((p->_nextLine->GetCharAt(0)&0xF) == (designationCode&0xF))
+        {
+            // next line matches designationCode
+            p->_nextLine = p->_nextLine->_nextLine; // cut line out of list
+            
+            if (p->_nextLine == nullptr)
+                break; // this is now the end of the list so break out of loop
+        }
+    }
+    
+    return this->getptr(); // give back the same list
+}
+
+std::shared_ptr<TTXLine> TTXLine::LocateLine(uint8_t designationCode)
+{
+    // seek through list for a specific designation code
+    std::shared_ptr<TTXLine> p=this->getptr();
+    for (p=this->getptr();;p=p->_nextLine)
+    {
+        if ((p->GetCharAt(0)&0xF) == (designationCode&0xF))
+        {
+            return p; // return the line
+        }
+        
+        if (p->_nextLine == nullptr) // reached the end of the list
+            break;
+    }
+    return nullptr;
 }
