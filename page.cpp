@@ -453,6 +453,9 @@ void Subpage::SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line)
 
 void Subpage::DeleteRow(unsigned int rownumber, int designationCode)
 {
+    if (rownumber < 26)
+        _subpageChanged = true; // page content within scope of CRC was changed
+    
     if (rownumber < 26 || designationCode < 0 || designationCode > 15)
     {
         _lines[rownumber] = nullptr; // delete entire row
