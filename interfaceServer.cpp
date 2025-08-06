@@ -595,13 +595,6 @@ void InterfaceServer::run()
                                                                         _pageList->UpdatePageLists(_clientState[i].page);
                                                                         _clientState[i].subpage->SetSubpageStatus(PAGESTATUS_TRANSMITPAGE);
                                                                         
-                                                                        // ------------------- Debug: add a test row -----------------
-                                                                        std::stringstream ss;
-                                                                        ss << "TEST " << std::hex << std::setw(4) << std::setfill('0') << num;
-                                                                        std::shared_ptr<TTXLine> tmp(new TTXLine(ss.str()));
-                                                                        _clientState[i].subpage->SetRow(1,tmp);
-                                                                        // -----------------------------------------------------------
-                                                                        
                                                                         if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
                                                                             _clientState[i].page->SetSubpage(num); // put this subpage on air
                                                                     }
