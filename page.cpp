@@ -459,7 +459,8 @@ void Subpage::DeleteRow(unsigned int rownumber, int designationCode)
     }
     else
     {
-        _lines[rownumber] = _lines[rownumber]->RemoveLine(designationCode); // delete specific dc
+        if (_lines[rownumber])
+            _lines[rownumber] = _lines[rownumber]->RemoveLine(designationCode); // delete specific dc
     }
 }
 
