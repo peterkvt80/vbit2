@@ -716,8 +716,8 @@ void InterfaceServer::run()
                                                     
                                                     if (n > 3)
                                                     {
-                                                        int num = readBuffer[3] & 0x1F;
-                                                        int deleteFlag = readBuffer[3]&0x80;
+                                                        int num = (uint8_t)readBuffer[3] & 0x1F;
+                                                        int deleteFlag = (uint8_t)readBuffer[3]&0x80;
                                                         if (num > 0 && num < 29)
                                                         {
                                                             if (!deleteFlag)
@@ -727,7 +727,7 @@ void InterfaceServer::run()
                                                                     // write row data
                                                                     std::array<uint8_t, 40> tmp;
                                                                     for (int i = 0; i < 40; i++)
-                                                                        tmp[i] = readBuffer[4+i];
+                                                                        tmp[i] = (uint8_t)readBuffer[4+i];
                                                                     std::shared_ptr<TTXLine> line(new TTXLine(tmp));
                                                                     
                                                                     _clientState[i].subpage->SetRow(num, line);
@@ -739,7 +739,7 @@ void InterfaceServer::run()
                                                                     // read row data
                                                                     std::shared_ptr<TTXLine> line = _clientState[i].subpage->GetRow(num);
                                                                     if (n==5 && line!=nullptr)
-                                                                        line = line->LocateLine(readBuffer[4]&0xF);
+                                                                        line = line->LocateLine((uint8_t)readBuffer[4]&0xF);
                                                                     
                                                                     if (line != nullptr)
                                                                     {
@@ -761,7 +761,7 @@ void InterfaceServer::run()
                                                                 else if (num > 25 && n==5)
                                                                 {
                                                                     // delete dc
-                                                                    _clientState[i].subpage->DeleteRow(num, readBuffer[4]&0xF);
+                                                                    _clientState[i].subpage->DeleteRow(num, (uint8_t)readBuffer[4]&0xF);
                                                                 }
                                                                 res[0] = CMDOK; // didn't check if line existed, just returns OK
                                                             }
@@ -771,9 +771,61 @@ void InterfaceServer::run()
                                             }
                                             else if (cmd == PAGELINKS)
                                             {
-                                                std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": PAGELINKS";
-                                                _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                if (_clientState[i].subpage)
+                                                {
+                                                    std::stringstream ss;
+                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGELINKS";
+                                                    _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
+                                                    
+                                                    std::array<FastextLink, 6> links;
+                                                    
+                                                    if (n == 15 || n == 27)
+                                                    {
+                                                        for (int l=0; l<6; l++)
+                                                        {
+                                                            links[l].page = (((uint8_t)readBuffer[3+(l*2)] & 0x7) << 8) | (uint8_t)readBuffer[4+(l*2)];
+                                                            
+                                                            if (n == 27)
+                                                            {
+                                                                links[l].subpage = (((uint8_t)readBuffer[15+(l*2)] << 8) | (uint8_t)readBuffer[16+(l*2)]) & 0x3f7f;
+                                                            }
+                                                            else
+                                                            {
+                                                                links[l].subpage = 0x3f7f;
+                                                            }
+                                                        }
+                                                        _clientState[i].subpage->SetFastext(links);
+                                                    }
+                                                    else if (n != 3)
+                                                    {
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    
+                                                    if (res[0] == CMDOK)
+                                                    {
+                                                        if (_clientState[i].subpage->GetFastext(&links))
+                                                        {
+                                                            for (int l = 0; l < 6; l++)
+                                                            {
+                                                                res.push_back((links[l].page >> 8) & 7);
+                                                                res.push_back(links[l].page & 0xff);
+                                                            }
+                                                            for (int l = 0; l < 6; l++)
+                                                            {
+                                                                res.push_back((links[l].subpage >> 8) & 0x3f);
+                                                                res.push_back(links[l].subpage & 0x7f);
+                                                            }
+                                                        }
+                                                        else
+                                                        {
+                                                            res[0] = CMDNOENT;
+                                                        }
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    res[0] = CMDERR;
+                                                }
                                             }
                                             else if (cmd > PAGELINKS) // last defined command number
                                             {

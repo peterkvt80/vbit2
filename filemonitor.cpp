@@ -195,7 +195,7 @@ bool File::LoadTTI(std::string filename)
                         
                         if (s != nullptr)
                         {
-                            s->SetFastext(links, m);
+                            s->SetFastext(links);
                         }
                         break;
                     }

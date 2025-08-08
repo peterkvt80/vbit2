@@ -51,8 +51,10 @@ class Subpage
         Subpage();
         virtual ~Subpage();
         
+        void SetMagazine(uint8_t mag){_mag=mag&7;} // messing with this will break fastext
+        
         uint16_t GetSubCode() {return _subcode;}
-        void SetSubCode(uint16_t subcode) {_subcode=subcode;}
+        void SetSubCode(uint16_t subcode){_subcode=subcode;}
         
         uint16_t GetSubpageStatus() {return _status;}
         void SetSubpageStatus(uint16_t ps){_status=ps;}
@@ -70,7 +72,8 @@ class Subpage
         void SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line);
         void DeleteRow(unsigned int rownumber, int designationCode=-1);
         
-        void SetFastext(std::array<FastextLink, 6> links, uint8_t mag);
+        void SetFastext(std::array<FastextLink, 6> links);
+        bool GetFastext(std::array<FastextLink, 6> *links);
         
         unsigned int GetLastPacket() {return _lastPacket;};
         
@@ -88,6 +91,8 @@ class Subpage
         uint8_t _cycleTime;     // number of page cycles or seconds before subpage cycles
         bool _timedMode;        // cycle subpage based on time in seconds
         uint8_t _region;
+        
+        uint8_t _mag;           // this is used in fastext link calculation
         
         std::shared_ptr<TTXLine> _lines[MAXROW+1];
         unsigned int _lastPacket;

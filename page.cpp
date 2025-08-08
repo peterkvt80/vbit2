@@ -15,6 +15,8 @@ Page::~Page()
 
 void Page::AppendSubpage(std::shared_ptr<Subpage> s)
 {
+    s->SetMagazine(_pageNumber >> 8); // tell subpage what magazine it is in for fastext
+    
     _subpages.push_back(s);
     if (_carouselPage == nullptr)
         StepFirstSubpage();
@@ -22,6 +24,8 @@ void Page::AppendSubpage(std::shared_ptr<Subpage> s)
 
 void Page::InsertSubpage(std::shared_ptr<Subpage> s)
 {
+    s->SetMagazine(_pageNumber >> 8); // tell subpage what magazine it is in for fastext
+    
     for (std::list<std::shared_ptr<Subpage>>::iterator it=_subpages.begin();it!=_subpages.end();++it)
     {
         // find first subpage with a higher subcode
@@ -382,6 +386,7 @@ Subpage::Subpage() :
     _cycleTime(1),
     _timedMode(false),
     _region(0),
+    _mag(0),
     _lastPacket(0),
     _subpageChanged(true),
     _headerCRC(0),
@@ -467,7 +472,7 @@ void Subpage::DeleteRow(unsigned int rownumber, int designationCode)
     }
 }
 
-void Subpage::SetFastext(std::array<FastextLink, 6> links, uint8_t mag)
+void Subpage::SetFastext(std::array<FastextLink, 6> links)
 {
     std::array<uint8_t, 40> line; // 40 bytes of packet data in CODING_HAMMING_8_4 form
     
@@ -483,7 +488,7 @@ void Subpage::SetFastext(std::array<FastextLink, 6> links, uint8_t mag)
         if (lp == 0) lp = 0x8ff; // turn zero into 8FF to be ignored
         ls=links[i].subpage;
 
-        uint8_t m=(lp/0x100 ^ mag);         // calculate the relative magazine
+        uint8_t m=(lp/0x100 ^ _mag);     // calculate the relative magazine
         line[p++]=lp & 0xF;              // page units
         line[p++]=(lp & 0xF0) >> 4;      // page tens
         line[p++]=ls & 0xF;              // S1
@@ -494,6 +499,35 @@ void Subpage::SetFastext(std::array<FastextLink, 6> links, uint8_t mag)
     
     std::shared_ptr<TTXLine> ttxline(new TTXLine(line));
     SetRow(27,ttxline);
+}
+
+bool Subpage::GetFastext(std::array<FastextLink, 6> *links)
+{
+    std::shared_ptr<TTXLine> line = _lines[27];
+    if (line == nullptr)
+        return false; // no X/27
+    
+    line = line->LocateLine(0);
+    if (line == nullptr)
+        return false; // no X/27/0
+    
+    uint8_t p=1;
+    for (uint8_t i=0; i<6; i++)
+    {
+        uint8_t m;
+        uint16_t lp, ls;
+        lp = line->GetCharAt(p++) & 0xf;            // page units
+        lp |= (line->GetCharAt(p++) & 0xf) << 4;    // page tens
+        ls = line->GetCharAt(p++) & 0xf;            // S1
+        m = (line->GetCharAt(p) & 0x8) >> 3;        // M1
+        ls |= (line->GetCharAt(p++) & 0x7) << 4;    // S2
+        ls |= (line->GetCharAt(p++) & 0xf) << 8;    // S3
+        m |= (line->GetCharAt(p) & 0xc) >> 1;       // M2 + M3
+        ls |= (line->GetCharAt(p++) & 0x3) << 12;   // S4
+        links->at(i).page = ((m ^ _mag) << 8) | lp;
+        links->at(i).subpage = ls;
+    }
+    return true;
 }
 
 bool Subpage::HasHeaderChanged(uint16_t crc)
