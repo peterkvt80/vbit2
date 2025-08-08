@@ -852,8 +852,8 @@ void InterfaceServer::run()
                                 
                                 res.insert(res.begin(), res.size()+1); // prepend message size
                                 
-                                int n = send(sock, (char*)res.data(), res.size(), 0); // send response
-                                if (n > 0)
+                                unsigned int n = send(sock, (char*)res.data(), res.size(), 0); // send response
+                                if (n == res.size()) // fail if only partial response can be sent
                                     continue; // next socket in loop
                             }
                             // else fall through to error handling
