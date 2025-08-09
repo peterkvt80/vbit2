@@ -263,7 +263,7 @@ void Page::StepFirstSubpage()
 {
     if (_subpages.empty())
     {
-        _carouselPage==nullptr;
+        _carouselPage = nullptr;
     }
     else
     {
@@ -276,7 +276,7 @@ void Page::StepLastSubpage()
 {
     if (_subpages.empty())
     {
-        _carouselPage==nullptr;
+        _carouselPage = nullptr;
     }
     else
     {
@@ -289,28 +289,32 @@ void Page::StepNextSubpageNoLoop()
 {
     if (_subpages.empty())
     {
-        _carouselPage==nullptr;
+        _carouselPage = nullptr;
     }
     else
     {
         if (_carouselPage==nullptr)
         {
             _iter=_subpages.begin();
-            _carouselPage = *_iter;
         }
         else
         {
             ++_iter;
-            _carouselPage = *_iter;
         }
         
         if (_iter == _subpages.end())
         {
             _carouselPage = nullptr;
         }
-        else if (!(_carouselPage->GetSubpageStatus() & PAGESTATUS_TRANSMITPAGE))
+        else
         {
-            StepNextSubpageNoLoop(); // skip over subpages if transmit flag not set
+            _carouselPage = *_iter;
+        }
+        
+        if (_carouselPage != nullptr)
+        {
+            if (!(_carouselPage->GetSubpageStatus() & PAGESTATUS_TRANSMITPAGE))
+                StepNextSubpageNoLoop(); // skip over subpages if transmit flag not set
         }
     }
 }
@@ -319,7 +323,7 @@ void Page::StepNextSubpage()
 {
     if (_subpages.empty())
     {
-        _carouselPage==nullptr;
+        _carouselPage = nullptr;
     }
     else
     {
