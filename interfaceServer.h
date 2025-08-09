@@ -51,8 +51,8 @@
 #define PAGECLOSE   0x04    /* close updated page */
 #define PAGEFANDC   0x05    /* get/set page function and coding */
 #define PAGEOPTNS   0x06    /* get/set subpage options */
-#define PAGEROW     0x07
-#define PAGELINKS   0x08
+#define PAGEROW     0x07    /* read/write/delete subpage row data */
+#define PAGELINKS   0x08    /* get/set fastext link values */
 
 namespace vbit
 

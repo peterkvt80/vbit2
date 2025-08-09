@@ -1,6 +1,6 @@
 /** A TCP server for various configuration and teletext input interfaces
-    A network interface for the injection of databroadcast packets, which is extended to provide
-    configuration and page data APIs for multiple simultaneous clients.
+    A network interface for the injection of databroadcast packets, inserter configuration, and
+    page configuration, for multiple simultaneous clients.
     
     This is a binary message interface where the first byte of any message holds the message
     length, and the second byte contains either a command number (for messages to the server) or an
@@ -9,11 +9,16 @@
     
     The command numbers and error codes are defined in interfaceServer.h
     
-    The client must select which channel subsequent commands relate to using the DCSET command.
-    Databroadcast packet commands must be sent to any of channels 1-15, and only a single client
-    may select each of these datacast channels at one time.
-    Channel 0 is used for non databroadcast commands. It currently implements a configuration
-    interface, which can set and retrieve certain vbit2 configuration options.
+    The client must select which channel subsequent commands relate to using the SETCHAN command.
+    Databroadcast packet commands must be sent to any of channels 1-15 (corresponding to the packet
+    addresses 1/30 to 7/31), and only a single client may select each of these datacast channels at
+    one time.
+    Channel 0 is used for non databroadcast commands and may have multiple simultaneous users.
+    
+    The server currently implements:
+    * A databroadcast interface, which can encode IDL format A datacast, or inject raw packet data.
+    * A configuration interface, which can set and retrieve certain vbit2 configuration options.
+    * A page data API, capable of creating and deleting pages, modifying settings and row data.
 */
 
 #include "interfaceServer.h"

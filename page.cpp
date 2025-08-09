@@ -446,7 +446,15 @@ void Subpage::SetRow(unsigned int rownumber, std::shared_ptr<TTXLine> line)
     {
         if (rownumber<26) // Ordinary line
         {
-            _lines[rownumber] = line;
+            if (line->IsBlank())
+            {
+                // don't store blank lines - they will be generated on the fly if necessary
+                _lines[rownumber] = nullptr;
+            }
+            else
+            {
+                _lines[rownumber] = line;
+            }
         }
         else // Enhanced packet
         {
