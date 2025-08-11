@@ -440,24 +440,60 @@ void InterfaceServer::run()
                                                 
                                                 case CONFHEADER: /* get/set header template */
                                                 {
-                                                    if (n == 35) // set new header template
+                                                    if (n == 35 || n == 36) // set new header template
                                                     {
                                                         std::array<uint8_t, 40> tmp;
                                                         for (int i = 0; i < 32; i++)
-                                                            tmp[8+i] = readBuffer[3+i];
+                                                            tmp[8+i] = readBuffer[(n-32)+i];
                                                         std::shared_ptr<TTXLine> line(new TTXLine(tmp));
-                                                        _configure->SetHeaderTemplate(line);
+                                                        
                                                         std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
+                                                        if (n==35)
+                                                        {
+                                                            _configure->SetHeaderTemplate(line);
+                                                            ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
+                                                        }
+                                                        else
+                                                        {
+                                                            uint8_t mag = (uint8_t)readBuffer[3] & 0x7;
+                                                            _pageList->GetMagazines()[mag]->SetCustomHeader(line);
+                                                            ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set on magazine " << (int)mag;
+                                                        }
                                                         _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
-                                                    else if (n != 3)
+                                                    else if (n == 3)
+                                                    {
+                                                        for(char& c : _configure->GetHeaderTemplate()) {
+                                                            res.push_back((uint8_t)c);
+                                                        }
+                                                    }
+                                                    else if (n == 4)
+                                                    {
+                                                        uint8_t mag = (uint8_t)readBuffer[3];
+                                                        if (mag & 0x80)
+                                                        {
+                                                            // delete flag
+                                                            _pageList->GetMagazines()[mag & 0x7]->DeleteCustomHeader();
+                                                        }
+                                                        else
+                                                        {
+                                                            std::string tmp = _pageList->GetMagazines()[mag & 0x7]->GetCustomHeader();
+                                                            if (tmp.length() == 32)
+                                                            {
+                                                                for(char& c : tmp) {
+                                                                    res.push_back((uint8_t)c);
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                // no custom header set for magazine
+                                                                res[0] = CMDNOENT;
+                                                            }
+                                                        }
+                                                    }
+                                                    else
                                                     {
                                                         res[0] = CMDERR;
-                                                    }
-                                                    
-                                                    for(char& c : _configure->GetHeaderTemplate()) {
-                                                        res.push_back((uint8_t)c);
                                                     }
                                                     
                                                     break;

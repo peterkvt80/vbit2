@@ -44,6 +44,7 @@ namespace vbit
             
             void SetCustomHeader(std::shared_ptr<TTXLine> line);
             bool GetCustomHeaderFlag() { return _hasCustomHeader; };
+            std::string GetCustomHeader() { return _hasCustomHeader?_customHeaderTemplate:"";}
             void DeleteCustomHeader();
             
             void InvalidateCycleTimestamp() { _lastCycleTimestamp = {0,0}; }; // reset cycle duration calculation

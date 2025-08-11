@@ -4,6 +4,7 @@
 #include "configure.h"
 #include "debug.h"
 #include "pagelist.h"
+#include "packetmag.h"
 #include "ttxpagestream.h"
 #include "packet.h"
 #include "packetDatacast.h"
