@@ -21,3 +21,5 @@ VBIT2 includes the following features:
 * Level 1.5 and 2.5 features including dynamic character and object downloading pages and Packet 29 insertion.
 * Format 1 Broadcast Service Data Packet generation with automatic daylight saving time.
 * Fastext and TOP navigation support.
+* IDL Format A data broadcast transmission.
+* TCP control interface for live manipulation of teletext pages and service parameters.

@@ -24,8 +24,6 @@ class TTXLine : public std::enable_shared_from_this<TTXLine>
         /** Default destructor */
         virtual ~TTXLine();
 
-        void SetLineTxt(std::string const& val);
-
         std::array<uint8_t, 40> GetLine(){return _line;};
         bool IsBlank();
         uint8_t GetCharAt(int index){return _line[index];};
