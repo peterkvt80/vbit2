@@ -35,6 +35,12 @@ def load():
     if not configData["settings"].get("packetServerPort"):
         configData["settings"]["packetServerPort"] = 19761
     
+    if not configData["settings"].get("interfaceServer"):
+        configData["settings"]["interfaceServer"] = False
+    
+    if not configData["settings"].get("interfaceServerPort"):
+        configData["settings"]["interfaceServerPort"] = 1992
+    
     return configData
 
 def save(configData):

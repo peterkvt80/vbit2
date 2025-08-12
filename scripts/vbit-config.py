@@ -218,6 +218,7 @@ def optionsMenu():
     updateEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "teletext-update.timer"], capture_output=True, text=True).stdout == "enabled\n"
     bootEnabled = subprocess.run(["systemctl", "--user", "is-enabled", "vbit2.service"], capture_output=True, text=True).stdout == "enabled\n"
     serverEnabled = configData["settings"].get("packetServer")
+    interfaceEnabled = configData["settings"].get("interfaceServer")
     
     options = [("U", "Automatically update selected service")]
     
@@ -239,6 +240,13 @@ def optionsMenu():
         options[2] += ("on",)
     else:
         options[2] += ("off",)
+    
+    options += [("I", "Enable control interface server")]
+    
+    if interfaceEnabled:
+        options[3] += ("on",)
+    else:
+        options[3] += ("off",)
     
     code, tags = d.checklist("",choices=options, title="Options", no_tags=True, no_cancel=True)
 
@@ -263,6 +271,15 @@ def optionsMenu():
             # server was clear, now enabled
             configData["settings"]["packetServer"] = True
             config.save(configData)
+        if not "I" in tags and interfaceEnabled:
+            # server was enabled, now clear
+            configData["settings"]["interfaceServer"] = False
+            config.save(configData)
+        if "I" in tags and not interfaceEnabled:
+            # server was clear, now enabled
+            configData["settings"]["interfaceServer"] = True
+            config.save(configData)
+        
 
 def mainMenu():
     while True:

@@ -67,6 +67,11 @@ if configData["settings"].get("packetServer") and packetServerPort:
     cmdline.append("--packetserver")
     cmdline.append(str(packetServerPort))
 
+interfaceServerPort = configData["settings"].get("interfaceServerPort")
+if configData["settings"].get("interfaceServer") and interfaceServerPort:
+    cmdline.append("--interface")
+    cmdline.append(str(interfaceServerPort))
+
 vbit = subprocess.Popen(cmdline, stdout=subprocess.PIPE)
 
 signal.signal(signal.SIGTERM, signalHandler)
