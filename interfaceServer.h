@@ -43,6 +43,7 @@
 #define CONFRBYTES  0x01    /* get/set BSDP reserved bytes */
 #define CONFSTATUS  0x02    /* get/set 20 byte BSDP status message */
 #define CONFHEADER  0x03    /* get/set 32 byte header template */
+#define CONFENHANC  0x04    /* Get/Set/Delete magazine enhancements */
 
 /* command numbers for page data API */
 #define PAGEDELETE  0x00    /* remove a page from the service */

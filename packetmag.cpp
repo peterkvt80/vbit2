@@ -501,11 +501,20 @@ void PacketMag::SetPacket29(std::shared_ptr<TTXLine> line)
     _nextPacket29 = _packet29;
 }
 
-void PacketMag::DeletePacket29()
+void PacketMag::DeletePacket29(int designationCode)
 {
     _mtx.lock();
-    _packet29 = nullptr;
-    _nextPacket29 == nullptr;
+    if (designationCode < 0 || designationCode > 15)
+    {
+        // delete all
+        _packet29 = nullptr;
+        _nextPacket29 == nullptr;
+    }
+    else
+    {
+        _packet29 = _packet29->RemoveLine(designationCode); // delete specific dc
+        _nextPacket29 = _packet29; // reset to first dc
+    }
     _mtx.unlock();
 }
 

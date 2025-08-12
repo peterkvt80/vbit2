@@ -158,7 +158,7 @@ void PageList::CheckForPacket29OrCustomHeader(std::shared_ptr<TTXPageStream> pag
         }
         
         /* attempt to load packet M/29 data from the page */
-        if ((!_mag[mag]->GetPacket29Flag()) || page->GetPacket29Flag()) // Only allow one file to set packet29 per magazine
+        if ((_mag[mag]->GetPacket29() == nullptr) || page->GetPacket29Flag()) // Only allow one file to set packet29 per magazine
         {
             bool Packet29Flag = false;
             

@@ -39,8 +39,8 @@ namespace vbit
             bool IsReady(bool force=false);
 
             void SetPacket29(std::shared_ptr<TTXLine> line);
-            bool GetPacket29Flag() { return _packet29 != nullptr; };
-            void DeletePacket29();
+            std::shared_ptr<TTXLine> GetPacket29() { return _packet29; }
+            void DeletePacket29(int designationCode=-1);
             
             void SetCustomHeader(std::shared_ptr<TTXLine> line);
             bool GetCustomHeaderFlag() { return _hasCustomHeader; };

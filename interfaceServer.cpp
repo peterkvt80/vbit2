@@ -499,6 +499,65 @@ void InterfaceServer::run()
                                                     break;
                                                 }
                                                 
+                                                case CONFENHANC:
+                                                {
+                                                    res[0] = CMDERR; // default to an returning an error unless we have success
+                                                    if (n > 3)
+                                                    {
+                                                        int mag = (uint8_t)readBuffer[3] & 0x1F;
+                                                        int deleteFlag = (uint8_t)readBuffer[3]&0x80;
+                                                        if (mag < 8)
+                                                        {
+                                                            if (!deleteFlag)
+                                                            {
+                                                                if (n == 44)
+                                                                {
+                                                                    // write row data
+                                                                    std::array<uint8_t, 40> tmp;
+                                                                    for (int i = 0; i < 40; i++)
+                                                                        tmp[i] = (uint8_t)readBuffer[4+i];
+                                                                    std::shared_ptr<TTXLine> line(new TTXLine(tmp));
+                                                                    
+                                                                    _pageList->GetMagazines()[mag]->SetPacket29(line);
+                                                                    
+                                                                    res[0] = CMDOK;
+                                                                }
+                                                                else if (n == 5)
+                                                                {
+                                                                    // read row data
+                                                                    std::shared_ptr<TTXLine> line = _pageList->GetMagazines()[mag]->GetPacket29();
+                                                                    if (line!=nullptr)
+                                                                        line = line->LocateLine((uint8_t)readBuffer[4]&0xF);
+                                                                    
+                                                                    if (line != nullptr)
+                                                                    {
+                                                                        std::array<uint8_t, 40> tmp = line->GetLine();
+                                                                        res.insert (res.end(), tmp.data(), tmp.data()+tmp.size());
+                                                                        res[0] = CMDOK;
+                                                                    }
+                                                                    else
+                                                                        res[0] = CMDNOENT; // row doesn't exist
+                                                                }
+                                                            }
+                                                            else
+                                                            {
+                                                                if (n==4)
+                                                                {
+                                                                    // delete all packets
+                                                                    _pageList->GetMagazines()[mag]->DeletePacket29();
+                                                                }
+                                                                else if (n==5)
+                                                                {
+                                                                    // delete dc
+                                                                    _pageList->GetMagazines()[mag]->DeletePacket29((uint8_t)readBuffer[4]&0xF);
+                                                                }
+                                                                res[0] = CMDOK; // didn't check if line existed, just returns OK
+                                                            }
+                                                        }
+                                                    }
+                                                    break;
+                                                }
+                                                
                                                 default: // unknown configuration command
                                                     res[0] = CMDERR;
                                             }
