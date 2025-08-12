@@ -60,7 +60,11 @@ void Packet::SetRow(int mag, int row, std::array<uint8_t, 40> val, PageCoding co
             int off = Packet::GetOffsetOfSubstition("%%%%%V");
             if (off > -1)
             {
-                std::copy_n(VBIT2_VERSION,6,_packet.begin() + off);
+                // allow this substitution to overflow the template
+                int len = strlen(VBIT2_VERSION);
+                if (off + len > 45)
+                    len = 45 - off; // but clamp to the end of the packet
+                std::copy_n(VBIT2_VERSION,len,_packet.begin() + off);
             }
             
             // first byte parity already set by first switch statement
