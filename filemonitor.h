@@ -7,23 +7,58 @@
 #include <list>
 #include <strings.h>
 #include <sys/stat.h>
+#include <array>
 
 #include "configure.h"
 #include "pagelist.h"
-
-/**
- * @brief Watches for changes to teletext page files and updates the page list as needed
- * www.ibm.com/developerworks/linux/library/l-ubuntu-inotify/index.html
- */
+#include "packetmag.h"
+#include "ttxpagestream.h"
 
 namespace vbit
 {
+    class File
+    {
+        public:
+            enum Status
+            {
+              NEW,      // Just created
+              NOTFOUND, // Not found yet
+              FOUND     // Matched on drive
+            };
+            
+            File(std::string filename);
+            std::shared_ptr<TTXPageStream> GetPage(){return _page;};
+            
+            // The time that the file was modified.
+            time_t GetModifiedTime(){return _modifiedTime;};
+            void SetModifiedTime(time_t timeVal){_modifiedTime=timeVal;};
+            
+            void SetState(Status state){_fileStatus=state;};
+            Status GetStatusFlag(){return _fileStatus;};
+            
+            std::string GetFilename() const {return _filename;}
+            
+            void LoadFile(std::string filename);
+            bool Loaded(){return _loaded;}
+            
+        private:
+            std::shared_ptr<TTXPageStream> _page; // the page loaded from this file
+            std::string _filename;
+            time_t _modifiedTime;   /// Poll this in case the source file changes (Used to detect updates)
+            Status _fileStatus; /// Used to mark if we found the file. (Used to detect deletions)
+            bool LoadTTI(std::string filename);
+            bool _loaded;
+    };
+    
+    /**
+     * Watches for changes to teletext page files and adds them to the page list or marks them for removal
+     */
     class FileMonitor
     {
         public:
             /** Default constructor */
             FileMonitor();
-            FileMonitor(ttx::Configure *configure, Debug *debug, ttx::PageList *pageList);
+            FileMonitor(Configure *configure, Debug *debug, PageList *pageList);
             /** Default destructor */
             virtual ~FileMonitor();
 
@@ -36,10 +71,16 @@ namespace vbit
         protected:
 
         private:
-            ttx::Configure* _configure; /// Member reference to the configuration settings
+            Configure* _configure; /// Member reference to the configuration settings
             Debug* _debug;
-            ttx::PageList* _pageList;
-            int readDirectory(std::string path);
+            PageList* _pageList;
+            std::list<std::shared_ptr<File>> _FilesList;
+            int readDirectory(std::string path, bool firstrun=false);
+            
+            std::shared_ptr<File> Locate(std::string filename);
+            void ClearFlags();
+            void DeleteOldPages();
+            void Delete29AndHeader(std::shared_ptr<TTXPageStream> page);
     };
 }
 

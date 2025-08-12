@@ -1,96 +1,64 @@
-/** ***************************************************************************
- * Description       : Class for a single teletext line
- * Compiler          : C++
- *
- * Copyright (C) 2014, Peter Kwan
- *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for any purpose and without fee is hereby
- * granted, provided that the above copyright notice appear in all
- * copies and that both that the copyright notice and this
- * permission notice and warranty disclaimer appear in supporting
- * documentation, and that the name of the author not be used in
- * advertising or publicity pertaining to distribution of the
- * software without specific, written prior permission.
- *
- * The author disclaims all warranties with regard to this
- * software, including all implied warranties of merchantability
- * and fitness.  In no event shall the author be liable for any
- * special, indirect or consequential damages or any damages
- * whatsoever resulting from loss of use, data or profits, whether
- * in an action of contract, negligence or other tortious action,
- * arising out of or in connection with the use or performance of
- * this software.
- *************************************************************************** **/
-
 #include "ttxline.h"
 
-
-TTXLine::TTXLine(std::string const& line, bool validateLine):
-    m_textline(validate(line)),
-    _nextLine(nullptr)
-
-{
-    if (!validateLine)
-        m_textline=line;
-}
-
-TTXLine::TTXLine():m_textline("                                        "),
+// create a blank line
+TTXLine::TTXLine():
     _nextLine(nullptr)
 {
+    _line.fill(0x20); // initialise lines with all spaces
 }
 
-TTXLine::~TTXLine()
+// create a new line from a 40 byte array
+TTXLine::TTXLine(std::array<uint8_t, 40> line):
+    _nextLine(nullptr)
 {
-    if (_nextLine)
-        delete _nextLine;
+    _line = line;
 }
 
-void TTXLine::Setm_textline(std::string const& val, bool validateLine)
+TTXLine::TTXLine(std::string const& line):
+    _nextLine(nullptr)
 {
-    if (validateLine)
-        m_textline = validate(val);
-    else
-        m_textline = val;
-}
-
-std::string TTXLine::validate(std::string const& val)
-{
+    // convert text string to 40 byte ttxline representation, expanding escape codes etc
     char ch;
     int j=0;
-    std::string str="                                        ";
-    for (unsigned int i=0;i<val.length() && j<40;i++)
+    _line.fill(0x20); // spaces
+    for (unsigned int i=0;i<line.length() && j<40;i++)
     {
-        ch = val[i] & 0x7f; // 7-bit
-        if (val[i] == 0x1b) // ascii escape
+        ch = line[i] & 0x7f; // 7-bit
+        if (line[i] == 0x1b) // ascii escape
         {
             i++;
-            ch = val[i] & 0x3f;
+            ch = line[i] & 0x3f;
         }
-        else if ((uint8_t)val[i] < 0x20) // other ascii control code
+        else if ((uint8_t)line[i] < 0x20) // other ascii control code
         {
             break;
         }
 
-        if (ch < 0x20)
-        {
-            ch |= 0x80; // set high bit on control codes
-        }
-
-        str[j++]=ch;
+        _line[j++]=ch;
     }
-    return str;
+}
+
+// create a copy of an existing line
+TTXLine::TTXLine(std::shared_ptr<TTXLine> line):
+    _nextLine(nullptr)
+{
+    _line = line->GetLine();
+    
+    // recurse down appended lines
+    if (line->GetNextLine())
+        _nextLine = std::shared_ptr<TTXLine>(new TTXLine(line->GetNextLine()));
+}
+
+TTXLine::~TTXLine()
+{
+    //std::cerr << "TTXLine dtor " << m_textline << std::endl;
 }
 
 bool TTXLine::IsBlank()
 {
-    if (m_textline.length()==0)
+    for (unsigned int i=0;i<_line.size();i++)
     {
-        return true;
-    }
-    for (unsigned int i=0;i<m_textline.length();i++)
-    {
-        if (m_textline.at(i)!=' ')
+        if (_line[i]!=0x20)
         {
             return false;
         }
@@ -98,44 +66,76 @@ bool TTXLine::IsBlank()
     return true; // Yes, the line is blank
 }
 
-char TTXLine::SetCharAt(int x,int code)
+void TTXLine::AppendLine(std::shared_ptr<TTXLine> line)
 {
-    char c=m_textline[x];
-    code=code & 0x7f;
-    m_textline[x]=code;
-    return c;
-}
-
-char TTXLine::GetCharAt(int xLoc)
-{
-    if (m_textline.length()<(uint16_t)xLoc)
+    // Seek through list
+    std::shared_ptr<TTXLine> p=this->getptr();
+    for (p=this->getptr();;p=p->_nextLine)
     {
-        // extend the line to 40 characters
-        for (int i=xLoc;i<40;i++)
-            m_textline+=" ";
+        if ((p->GetCharAt(0)&0xF) == (line->GetCharAt(0)&0xF))
+        {
+            // line with same designation code already exists
+            p->_line = line->_line; // overwrite it with our new line data but leave _nextLine unmodified
+            return;
+        }
+        else if ((p->GetCharAt(0)&0xF) > (line->GetCharAt(0)&0xF))
+        {
+            // existing line has higher designation code than we are trying to add
+            std::array<uint8_t, 40> tmp = p->_line; // preserve original line data
+            line->_nextLine = p->_nextLine; // move original _nextLine pointer to our new line
+            p->_line = line->_line; // move our new line data to original line
+            line->_line = tmp; // move original line data into our new line
+            p->_nextLine = line; // finally update _nextLine pointer to our line which now contains the original line
+        }
+        
+        if (p->_nextLine == nullptr) // reached the end of the list
+            break;
     }
-    return m_textline[xLoc];
+    
+    p->_nextLine = line; // append line to end of chain
 }
 
-std::string TTXLine::GetLine()
+std::shared_ptr<TTXLine> TTXLine::RemoveLine(uint8_t designationCode)
 {
-    // If the string is less than 40 characters we need to pad it or get weird render errors
-    int len=m_textline.length();
-    if (len>40)
+    // returns new pointer to linked list for this line
+    if ((_line[0]&0xF) == (designationCode&0xF)) // the root line matches the designation code
     {
-        return m_textline.substr(40);
+        if (_nextLine == nullptr) // this is the only line
+            return nullptr;
+        else
+            return _nextLine; // return the next line as the new root
     }
-    if (len<40)
-        for (int i=len;i<40;i++)
-            m_textline+=" ";
-
-    return m_textline;
+    
+    // seek through list for a specific designation code
+    std::shared_ptr<TTXLine> p=this->getptr();
+    for (p=this->getptr();p->_nextLine!=nullptr;p=p->_nextLine)
+    {
+        if ((p->_nextLine->GetCharAt(0)&0xF) == (designationCode&0xF))
+        {
+            // next line matches designationCode
+            p->_nextLine = p->_nextLine->_nextLine; // cut line out of list
+            
+            if (p->_nextLine == nullptr)
+                break; // this is now the end of the list so break out of loop
+        }
+    }
+    
+    return this->getptr(); // give back the same list
 }
 
-void TTXLine::AppendLine(std::string  const& line)
+std::shared_ptr<TTXLine> TTXLine::LocateLine(uint8_t designationCode)
 {
-    // Seek the end of the list
-    TTXLine* p;
-    for (p=this;p->_nextLine;p=p->_nextLine);
-    p->_nextLine=new TTXLine(line,true);
+    // seek through list for a specific designation code
+    std::shared_ptr<TTXLine> p=this->getptr();
+    for (p=this->getptr();;p=p->_nextLine)
+    {
+        if ((p->GetCharAt(0)&0xF) == (designationCode&0xF))
+        {
+            return p; // return the line
+        }
+        
+        if (p->_nextLine == nullptr) // reached the end of the list
+            break;
+    }
+    return nullptr;
 }

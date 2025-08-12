@@ -1,9 +1,6 @@
 #ifndef _CONFIGURE_H_
 #define _CONFIGURE_H_
-/** Configure holds settings like source folder, header info, packet 830 and magazine priority.
- *  It could also hold data about the teletext server that the client should connect to.
- *  /// @todo Rewrite this as a singleton
- *
+/** Configure processes settings related to the teletext service and vbit2 command line options.
  */
 
 #include <iostream>
@@ -16,13 +13,14 @@
 #include <array>
 #include <algorithm>
 #include <stdexcept>
+#include <memory>
 
 #include "debug.h"
 #include "ttxline.h"
 
 #define CONFIGFILE "vbit.conf" // default config file name
 
-namespace ttx
+namespace vbit
 
 {
 class Configure
@@ -40,23 +38,24 @@ class Configure
         //Configure();
         /** Constructor can take overrides from the command line
          */
-        Configure(vbit::Debug *debug, int argc=0, char** argv=NULL);
+        Configure(Debug *debug, int argc=0, char** argv=NULL);
         ~Configure();
         
         inline std::string GetPageDirectory(){return _pageDir;};
         
         std::string GetHeaderTemplate(){return _headerTemplate;}
+        void SetHeaderTemplate(std::shared_ptr<TTXLine> line);
         bool GetRowAdaptive(){return _rowAdaptive;}
+        void SetRowAdaptive(bool flag){_rowAdaptive = flag;}
         std::string GetServiceStatusString(){return _serviceStatusString;}
+        void SetServiceStatusString(std::string status){status.resize(20,' '); _serviceStatusString = status;}
         bool GetMultiplexedSignalFlag(){return _multiplexedSignalFlag;}
         uint16_t GetNetworkIdentificationCode(){return _NetworkIdentificationCode;}
         std::array<uint8_t, 4> GetReservedBytes(){return _reservedBytes;}
+        void SetReservedBytes(std::array<uint8_t, 4> reserved){_reservedBytes = reserved;}
         uint8_t GetInitialMag(){return _initialMag;}
         uint8_t GetInitialPage(){return _initialPage;}
         uint16_t GetInitialSubcode(){return _initialSubcode;}
-        uint8_t GetSubtitleRepeats(){return _subtitleRepeats;}
-        uint16_t GetCommandPort(){return _commandPort;}
-        bool GetCommandPortEnabled(){return _commandPortEnabled;}
         uint16_t GetLinesPerField(){return _linesPerField;}
         uint16_t GetDatacastLines(){return _datacastLines;}
         bool GetReverseFlag(){return _reverseBits;}
@@ -68,19 +67,17 @@ class Configure
         uint16_t GetPacketServerPort(){return _packetServerPort;}
         bool GetPacketServerEnabled(){return _packetServerPort != 0;}
         
-        uint16_t GetDatacastServerPort(){return _datacastServerPort;}
-        bool GetDatacastServerEnabled(){return _datacastServerPort != 0;}
+        uint16_t GetInterfaceServerPort(){return _interfaceServerPort;}
+        bool GetInterfaceServerEnabled(){return _interfaceServerPort != 0;}
         
     private:
-        vbit::Debug* _debug;
+        Debug* _debug;
         int DirExists(std::string *path);
         
         int LoadConfigFile(std::string filename);
         
         // template string for generating header packets
         std::string _headerTemplate;
-        
-        uint16_t _commandPort;
         
         bool _rowAdaptive;
         uint16_t _linesPerField;
@@ -99,15 +96,13 @@ class Configure
         
         std::string _configFile; /// Configuration file name --config
         std::string _pageDir; /// Configuration file name --dir
-        uint8_t _subtitleRepeats; /// Number of times a subtitle repeats (typically 1 or 2).
-        bool _commandPortEnabled;
         bool _reverseBits;
         
         OutputFormat _OutputFormat;
         uint16_t _PID;
         
         uint16_t _packetServerPort;
-        uint16_t _datacastServerPort;
+        uint16_t _interfaceServerPort;
     };
 }
 

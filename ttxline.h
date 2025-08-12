@@ -4,65 +4,50 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <memory>
+#include <array>
 
 /** TTXLine - a single line of teletext
  *  The line is always stored in 40 bytes in transmission ready format
  * (but with the parity bit set to 0).
  */
 
-class TTXLine
+class TTXLine : public std::enable_shared_from_this<TTXLine>
 {
     public:
         /** Constructors */
         TTXLine();
-        TTXLine(std::string const& line, bool validate=true);
-        // TTXLine(std::string const& line);
+        TTXLine(std::array<uint8_t, 40> line);
+        TTXLine(std::string const& line);
+        TTXLine(std::shared_ptr<TTXLine> line);
+        
         /** Default destructor */
         virtual ~TTXLine();
 
-        /** Set the teletext line contents
-         * \param val - New value to set
-         * \param validateLine - If true, it ensures the line is checked and modified if needed to be transmission ready.
-         */
-        void Setm_textline(std::string const& val, bool validateLine=true);
-
-        /** Access m_textline
-         * \return The current value of m_textline
-         */
-        std::string GetLine();
-
-        /**
-         * @brief Check if the line is blank so that we don't bother to write it to the file.
-         * @return true is the line is blank
-         */
+        std::array<uint8_t, 40> GetLine(){return _line;};
         bool IsBlank();
-
-        /** Place a character in a line. Must be an actual teletext code.
-         *  Bit 7 will be stripped off.
-         * @param x - Address of the character
-         & @param code - The character to set
-         * \return previous character at that location (for undo)
-         */
-        char SetCharAt(int x,int code);
-
-        /** Get one character from this line.
-         *  If there is no data set then return a space
-         */
-        char GetCharAt(int xLoc);
+        uint8_t GetCharAt(int index){return _line[index];};
 
         /** Adds line to a linked list
          *  This is used for enhanced packets which might require multiples of the same row
          */
-        void AppendLine(std::string  const& line);
+        void AppendLine(std::shared_ptr<TTXLine> line);
+        
+        std::shared_ptr<TTXLine> RemoveLine(uint8_t designationCode); // remove line by designation code
+        
+        std::shared_ptr<TTXLine> LocateLine(uint8_t designationCode); // get line by designation code
 
-        TTXLine* GetNextLine(){return _nextLine;}
+        std::shared_ptr<TTXLine> GetNextLine(){return _nextLine;}
 
     protected:
     private:
-        std::string validate(std::string const& test);
-
-        std::string m_textline;
-        TTXLine* _nextLine;
+        std::shared_ptr<TTXLine> getptr()
+        {
+            return shared_from_this();
+        }
+        
+        std::array<uint8_t, 40> _line; // 40 byte line
+        std::shared_ptr<TTXLine> _nextLine;
 };
 
 #endif // TTXLINE_H

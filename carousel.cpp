@@ -3,7 +3,9 @@
 
 using namespace vbit;
 
-Carousel::Carousel(Debug *debug) :
+Carousel::Carousel(int mag, PageList *pageList, Debug *debug) :
+    _mag(mag),
+    _pageList(pageList),
     _debug(debug)
 {
     //ctor
@@ -14,57 +16,74 @@ Carousel::~Carousel()
     //dtor
 }
 
-void Carousel::addPage(TTXPageStream* p)
+void Carousel::addPage(std::shared_ptr<TTXPageStream> p)
 {
     // @todo Don't allow duplicate entries
-    p->SetTransitionTime(p->GetCycleTime());
+    p->SetCarouselFlag(true);
+    int t = 1;
+    if (std::shared_ptr<Subpage> s = p->GetSubpage())
+        t += s->GetCycleTime();
+    
+    p->SetTransitionTime(t);
     _carouselList.push_front(p);
 }
 
-void Carousel::deletePage(TTXPageStream* p)
+std::shared_ptr<TTXPageStream> Carousel::nextCarousel()
 {
-    _carouselList.remove(p);
-}
-
-TTXPageStream* Carousel::nextCarousel()
-{
-    TTXPageStream* p;
-    if (_carouselList.size()==0) return NULL;
+    std::shared_ptr<TTXPageStream> p;
+    if (_carouselList.size()==0) return nullptr;
     
-    for (std::list<TTXPageStream*>::iterator it=_carouselList.begin();it!=_carouselList.end();++it)
+    for (std::list<std::shared_ptr<TTXPageStream>>::iterator it=_carouselList.begin();it!=_carouselList.end();++it)
     {
         p=*it;
-        if (p->GetStatusFlag()==TTXPageStream::MARKED && p->GetCarouselFlag()) // only remove it once
+        if (p->GetOneShotFlag())
         {
-            _debug->Log(Debug::LogLevels::logINFO,"[Carousel::nextCarousel] Deleted " + p->GetSourcePage());
-            
-            p->SetCarouselFlag(false);
-            if (!(p->GetNormalFlag() || p->GetSpecialFlag() || _page->GetUpdatedFlag()))
-                p->SetState(TTXPageStream::GONE); // if we are last mark it gone
-            _carouselList.erase(it--);
-        }
-        else if ((!(p->IsCarousel())) || (p->Special()))
-        {
-            std::stringstream ss;
-            ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << p->GetPageNumber();
-            _debug->Log(Debug::LogLevels::logINFO,ss.str());
-            
             p->SetCarouselFlag(false);
             _carouselList.erase(it--);
+            continue;
         }
-        else
+        
+        if (p->GetLock()) // try to lock this page against changes
         {
-            if (p->Expired())
+            if (p->GetIsMarked() && p->GetCarouselFlag()) // only remove it once
             {
-                // We found a carousel that is ready to step
-                if (p->GetCarouselPage()->GetPageStatus() & PAGESTATUS_C9_INTERRUPTED)
+                std::stringstream ss;
+                ss << "[Carousel::nextCarousel] Deleted " << std::hex << (p->GetPageNumber());
+                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                
+                p->SetCarouselFlag(false);
+                _carouselList.erase(it--);
+                
+                _pageList->RemovePage(p); // try to remove it from the pagelist immediately - will free the lock
+                continue; // jump back to loop
+            }
+            else if ((!(p->IsCarousel())) || p->Special())
+            {
+                std::stringstream ss;
+                ss << "[Carousel::nextCarousel] no longer a carousel " << std::hex << (p->GetPageNumber());
+                _debug->Log(Debug::LogLevels::logINFO,ss.str());
+                
+                p->SetCarouselFlag(false);
+                _carouselList.erase(it--);
+            }
+            else
+            {
+                if (p->Expired())
                 {
-                    // carousel should go out now out of sequence
-                    return p;
+                    // We found a carousel that is ready to step
+                    if (std::shared_ptr<Subpage> s = p->GetSubpage()) // make sure there is a subpage
+                    {
+                        if (s->GetSubpageStatus() & PAGESTATUS_C9_INTERRUPTED)
+                        {
+                            // carousel should go out now out of sequence
+                            return p; // return page locked
+                        }
+                    }
                 }
             }
+            
+            p->FreeLock(); // unlock
         }
-        p=nullptr;
     }
-    return p;
+    return nullptr;
 }

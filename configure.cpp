@@ -2,7 +2,7 @@
  */
 #include "configure.h"
 
-using namespace ttx;
+using namespace vbit;
 
 int Configure::DirExists(std::string *path)
 {
@@ -16,7 +16,7 @@ int Configure::DirExists(std::string *path)
         return 0;
 }
 
-Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
+Configure::Configure(Debug *debug, int argc, char** argv) :
     _debug(debug),
     // settings for generation of packet 8/30
     _initialMag(1),
@@ -25,8 +25,7 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
     _NetworkIdentificationCode(0x0000),
     _CountryNetworkIdentificationCode(0x0000),
     _reservedBytes{0x15, 0x15, 0x15, 0x15}, // initialise reserved bytes to hamming 8/4 encoded 0
-    _serviceStatusString(20, ' '),
-    _subtitleRepeats(1)
+    _serviceStatusString(20, ' ')
 {
     _configFile = CONFIGFILE;
     
@@ -37,10 +36,6 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
 #endif
     // This is where the default header template is defined.
     _headerTemplate = "VBIT2    %%# %%a %d %%b" "\x03" "%H:%M:%S";
-    
-    // the default command interface port
-    _commandPort = 5570;
-    _commandPortEnabled = false;
     
     _reverseBits = false;
 
@@ -55,7 +50,7 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
     _PID = 0x20; // default PID is 0x20
     
     _packetServerPort = 0; // port 0 disables packet server
-    _datacastServerPort = 0;
+    _interfaceServerPort = 0;
     
     uint8_t priority[8]={9,3,3,6,3,3,5,6}; // 1=High priority,9=low. Note: priority[0] is mag 8
     
@@ -189,20 +184,20 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
                     {
                         switch(l){
                             case 0:
-                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logNONE);
+                                _debug->SetDebugLevel(Debug::LogLevels::logNONE);
                                 break;
                             case 1:
-                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logERROR);
+                                _debug->SetDebugLevel(Debug::LogLevels::logERROR);
                                 break;
                             case 2:
-                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logWARN);
+                                _debug->SetDebugLevel(Debug::LogLevels::logWARN);
                                 break;
                             case 3:
-                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logINFO);
+                                _debug->SetDebugLevel(Debug::LogLevels::logINFO);
                                 break;
                             case 4:
                             default:
-                                _debug->SetDebugLevel(vbit::Debug::LogLevels::logDEBUG);
+                                _debug->SetDebugLevel(Debug::LogLevels::logDEBUG);
                                 break;
                         }
                         
@@ -242,7 +237,7 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
                     exit(EXIT_FAILURE);
                 }
             }
-            else if (arg == "--datacast")
+            else if (arg == "--interface")
             {
                 if (i + 1 < argc)
                 {
@@ -251,7 +246,7 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
                     long l = std::strtol(argv[++i], &end_ptr, 10);
                     if (errno == 0 && *end_ptr == '\0' && l > 0 && l < 65536)
                     {
-                        _datacastServerPort = (int)l;
+                        _interfaceServerPort = (int)l;
                     }
                     else
                     {
@@ -261,7 +256,7 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
                 }
                 else
                 {
-                    std::cerr << "--datacast requires a port number\n";
+                    std::cerr << "--interface requires a port number\n";
                     exit(EXIT_FAILURE);
                 }
             }
@@ -282,8 +277,8 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
     }
     
     // TODO: allow overriding config file from command line
-    _debug->Log(vbit::Debug::LogLevels::logINFO,"[Configure::Configure] Pages directory is " + _pageDir);
-    _debug->Log(vbit::Debug::LogLevels::logINFO,"[Configure::Configure] Config file is " + _configFile);
+    _debug->Log(Debug::LogLevels::logINFO,"[Configure::Configure] Pages directory is " + _pageDir);
+    _debug->Log(Debug::LogLevels::logINFO,"[Configure::Configure] Config file is " + _configFile);
     
     std::string path;
     path = _pageDir;
@@ -295,7 +290,7 @@ Configure::Configure(vbit::Debug *debug, int argc, char** argv) :
     
     if (_datacastLines > _linesPerField)
     {
-        _debug->Log(vbit::Debug::LogLevels::logERROR,"[Configure] datacast lines cannot be greater than lines per field");
+        _debug->Log(Debug::LogLevels::logERROR,"[Configure] datacast lines cannot be greater than lines per field");
         _datacastLines = _linesPerField; // clamp
     }
 }
@@ -305,22 +300,29 @@ Configure::~Configure()
     
 }
 
+void Configure::SetHeaderTemplate(std::shared_ptr<TTXLine> line)
+{
+    std::string str = "";
+    for (int i=8; i<40; i++)
+        str += line->GetCharAt(i) & 0x7f;
+    _headerTemplate.assign(str);
+}
+
 int Configure::LoadConfigFile(std::string filename)
 {
     std::ifstream filein(filename.c_str()); // Open the file
 
     std::vector<std::string>::iterator iter;
     // these are all the valid strings for config lines
-    std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display", "subtitle_repeats","enable_command_port","command_port","lines_per_field","datacast_lines","magazine_priority"};
+    std::vector<std::string> nameStrings{ "header_template", "initial_teletext_page", "row_adaptive_mode", "network_identification_code", "country_network_identification", "full_field", "status_display","lines_per_field","datacast_lines","magazine_priority"};
 
     if (filein.is_open())
     {
-        _debug->Log(vbit::Debug::LogLevels::logINFO,"[Configure::LoadConfigFile] opened " + filename);
+        _debug->Log(Debug::LogLevels::logINFO,"[Configure::LoadConfigFile] opened " + filename);
 
         std::string line;
         std::string name;
         std::string value;
-        TTXLine* header = new TTXLine();
         while (std::getline(filein >> std::ws, line))
         {
             if (line.front() != ';') // ignore comments
@@ -340,10 +342,8 @@ int Configure::LoadConfigFile(std::string filename)
                         {
                             case 0: // header_template
                             {
-                                header->Setm_textline(value,true);
-                                value = header->GetLine();
-                                value.resize(32,' ');
-                                _headerTemplate.assign(value);
+                                std::shared_ptr<TTXLine> header(new TTXLine("        "+value)); // use to process escape codes
+                                SetHeaderTemplate(header);
                                 break;
                             }
                             case 1: // initial_teletext_page
@@ -461,67 +461,10 @@ int Configure::LoadConfigFile(std::string filename)
                             }
                             case 6: // "status_display"
                             {
-                                value.resize(20,' '); // string must be 20 characters
-                                _serviceStatusString.assign(value);
+                                SetServiceStatusString(value);
                                 break;
                             }
-                            case 7: // "subtitle_repeats" - The number of times a subtitle transmission is repeated 0..9
-                            {
-                                if (value.size() == 1)
-                                {
-                                    try
-                                    {
-                                        _subtitleRepeats = stoi(std::string(value, 0, 1));
-                                    }
-                                    catch (const std::invalid_argument& ia)
-                                    {
-                                        error = 1;
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    error = 1;
-                                }
-                                break;
-                            }
-                            case 8: // "enable_command_port"
-                            {
-                                if (!value.compare("true"))
-                                {
-                                    _commandPortEnabled = true;
-                                }
-                                else if (!value.compare("false"))
-                                {
-                                    _commandPortEnabled = false;
-                                }
-                                else
-                                {
-                                    error = 1;
-                                }
-                                break;
-                            }
-                            case 9: // "command_port"
-                            {
-                                if (value.size() > 0 && value.size() < 6)
-                                {
-                                    try
-                                    {
-                                        _commandPort = stoi(std::string(value, 0, 5));
-                                    }
-                                    catch (const std::invalid_argument& ia)
-                                    {
-                                        error = 1;
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    error = 1;
-                                }
-                                break;
-                            }
-                            case 10: // "lines_per_field"
+                            case 7: // "lines_per_field"
                             {
                                 if (value.size() > 0 && value.size() < 4)
                                 {
@@ -541,7 +484,7 @@ int Configure::LoadConfigFile(std::string filename)
                                 }
                                 break;
                             }
-                            case 11: // datacast_lines
+                            case 8: // datacast_lines
                             {
                                 if (value.size() > 0 && value.size() < 4)
                                 {
@@ -561,7 +504,7 @@ int Configure::LoadConfigFile(std::string filename)
                                 }
                                 break;
                             }
-                            case 12: // "magazine_priority"
+                            case 9: // "magazine_priority"
                             {
                                 std::stringstream ss(value);
                                 std::string temps;
@@ -605,7 +548,7 @@ int Configure::LoadConfigFile(std::string filename)
                 }
                 if (error)
                 {
-                    _debug->Log(vbit::Debug::LogLevels::logERROR,"[Configure::LoadConfigFile] invalid config line: " + line);
+                    _debug->Log(Debug::LogLevels::logERROR,"[Configure::LoadConfigFile] invalid config line: " + line);
                 }
             }
         }
@@ -614,7 +557,7 @@ int Configure::LoadConfigFile(std::string filename)
     }
     else
     {
-        _debug->Log(vbit::Debug::LogLevels::logWARN,"[Configure::LoadConfigFile] open failed");
+        _debug->Log(Debug::LogLevels::logWARN,"[Configure::LoadConfigFile] open failed");
         return -1;
     }
 }

@@ -9,9 +9,8 @@
 #include "debug.h"
 #include "pagelist.h"
 #include "filemonitor.h"
-#include "command.h"
 #include "packetServer.h"
-#include "datacastServer.h"
+#include "interfaceServer.h"
 #include "masterClock.h"
 
 #ifdef WIN32

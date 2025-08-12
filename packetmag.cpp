@@ -5,8 +5,8 @@
 
 using namespace vbit;
 
-PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, Debug *debug, uint8_t priority) :
-    _pageSet(pageSet),
+PacketMag::PacketMag(uint8_t mag, PageList *pageList, Configure *configure, Debug *debug, uint8_t priority) :
+    _pageList(pageList),
     _configure(configure),
     _debug(debug),
     _page(nullptr),
@@ -17,27 +17,22 @@ PacketMag::PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Config
     _state(PACKETSTATE_HEADER),
     _thisRow(0),
     _lastTxt(nullptr),
-    _nextPacket29DC(0),
-    _hasPacket29(false),
+    _packet29(nullptr),
+    _nextPacket29(nullptr),
     _hasCustomHeader(false),
     _magRegion(0),
     _specialPagesFlipFlop(false),
-    _waitingForField(0),
+    _waitingForField(false),
+    _waitingForSecond(false),
     _cycleDuration(-1)
 {
     //ctor
     _lastCycleTimestamp = {0,0};
     
-    for (int i=0;i<MAXPACKET29TYPES;i++)
-    {
-        _headerTemplate = configure->GetHeaderTemplate();
-        _packet29[i]=nullptr;
-    }
-
-    _carousel=new vbit::Carousel(_debug);
-    _specialPages=new vbit::SpecialPages(_debug);
-    _normalPages=new vbit::NormalPages(_debug);
-    _updatedPages=new vbit::UpdatedPages(_debug);
+    _carousel=new Carousel(_magNumber, _pageList, _debug);
+    _specialPages=new SpecialPages(_magNumber, _pageList, _debug);
+    _normalPages=new NormalPages(_magNumber, _pageList, _debug);
+    _updatedPages=new UpdatedPages(_magNumber, _pageList, _debug);
 }
 
 PacketMag::~PacketMag()
@@ -51,43 +46,36 @@ PacketMag::~PacketMag()
 
 Packet* PacketMag::GetPacket(Packet* p)
 {
-    int thisPageNum;
     unsigned int thisSubcode;
-    int* links=NULL;
     bool updatedFlag=false;
-    
-    static vbit::Packet* TempPacket=new vbit::Packet(8,25,"                                        "); // a temporary packet for checksum calculation
 
     // We should only call GetPacket if IsReady has returned true
 
     // no pages
-    if (_pageSet->size()<1)
+    if (_pageList->GetSize(_magNumber)<1)
     {
         return nullptr;
     }
 
+loopback: // jump back point to avoid returning null packets when we could send something
     switch (_state)
     {
         case PACKETSTATE_HEADER: // Start to send out a new page, which may be a simple page or one of a carousel
         {
-            if (GetEvent(EVENT_PACKET_29) && _hasPacket29)
+            _waitingForField = true; // enforce 20ms page erasure interval
+            if (GetEvent(EVENT_PACKET_29) && _packet29 != nullptr)
             {
                 if (_mtx.try_lock()) // skip if unable to get lock
                 {
-                    while (_packet29[_nextPacket29DC] == nullptr)
+                    if (_nextPacket29 == nullptr)
                     {
-                        _nextPacket29DC++;
-                    }
-                    
-                    if (_nextPacket29DC >= MAXPACKET29TYPES)
-                    {
-                        _nextPacket29DC = 0;
+                        _nextPacket29 = _packet29;
                         ClearEvent(EVENT_PACKET_29);
                     }
                     else
                     {
-                        p->SetRow(_magNumber, 29, _packet29[_nextPacket29DC]->GetLine(), CODING_13_TRIPLETS);
-                        _nextPacket29DC++;
+                        p->SetRow(_magNumber, 29, _nextPacket29->GetLine(), CODING_13_TRIPLETS);
+                        _nextPacket29 = _nextPacket29->GetNextLine();
                         _mtx.unlock(); // unlock before we return!
                         return p;
                     }
@@ -103,18 +91,20 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     // got a special page
                     
-                    if (_page->GetPageFunction() == MIP)
+                    if (_page->GetPageFunction() != MIP)
                     {
-                        // Magazine Inventory Page
-                        _waitingForField = 2; // enforce 20ms page erasure interval
+                        // presentation enhancement pages
+                        _waitingForField = false; // don't need a page erasure interval
                     }
                     
-                    if (_page->IsCarousel())
-                        _subpage = _page->GetCarouselPage();
-                    else
-                        _subpage = _page;
+                    _subpage = _page->GetSubpage();
+                    if (_subpage == nullptr) // page is empty
+                    {
+                        _page->FreeLock(); // Must free the lock or we can never use this page again!
+                        goto loopback;
+                    }
                     
-                    _status = _subpage->GetPageStatus() & 0x8000; // get transmit flag
+                    _status = _subpage->GetSubpageStatus() & PAGESTATUS_TRANSMITPAGE; // get transmit flag
                     _region = _subpage->GetRegion();
                     thisSubcode = (_subpage->GetSubCode() & 0x000F) | (_subpage->GetLastPacket() << 8);
                     
@@ -128,7 +118,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 {
                     // got to the end of the special pages
                     ClearEvent(EVENT_SPECIAL_PAGES);
-                    return nullptr;
+                    goto loopback;
                 }
             }
             else
@@ -161,46 +151,70 @@ Packet* PacketMag::GetPacket(Packet* p)
                     MasterClock *mc = mc->Instance();
                     MasterClock::timeStruct t = mc->GetMasterClock();
                     if (_lastCycleTimestamp.seconds){ // wait for real timestamps
+                        // calculate time since magazine cycle started
                         int diffSeconds = difftime(t.seconds, _lastCycleTimestamp.seconds); // truncates double to int
                         _cycleDuration = ((diffSeconds * 50) - _lastCycleTimestamp.fields) + t.fields;
-                        _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
+                        if (_cycleDuration < 50)
+                        {
+                            // hold magazine cycle start until next second tick
+                            _waitingForSecond = true;
+                        }
+                        else
+                        {
+                            // otherwise update cycle duration
+                            _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
+                        }
                     }
                     _lastCycleTimestamp = t; // update timestamp
                     
                     // couldn't get a page to send so sent a time filling header
-                    p->Header(_magNumber,0xFF,0x0000,0x8010,_headerTemplate);
-                    _waitingForField = 2; // enforce 20ms page erasure interval
+                    p->Header(_magNumber,0xFF,0x0000,0x8010,_hasCustomHeader?_customHeaderTemplate:_configure->GetHeaderTemplate());
                     return p;
                 }
                 
                 _thisRow=0;
                 
-                if (_page->IsCarousel())
+                if (_page->IsCarousel() && !_page->GetOneShotFlag()) // don't cycle oneshot pages
                 {
                     if (_page->Expired(true))
                     {
                         // cycle if timer has expired
                         _page->StepNextSubpage();
-                        _page->SetTransitionTime(_page->GetCarouselPage()->GetCycleTime());
-                        _status=_page->GetCarouselPage()->GetPageStatus();
+                        _subpage = _page->GetSubpage();
+                        if (_subpage == nullptr) // page is empty
+                        {
+                            _page->FreeLock(); // Must free the lock or we can never use this page again!
+                            goto loopback;
+                        }
+                        _page->SetTransitionTime(_subpage->GetCycleTime());
+                        _status=_subpage->GetSubpageStatus();
                     }
                     else
                     {
+                        _subpage = _page->GetSubpage();
+                        if (_subpage == nullptr) // page is empty
+                        {
+                            _page->FreeLock(); // Must free the lock or we can never use this page again!
+                            goto loopback;
+                        }
                         // clear any ERASE bit if page hasn't cycled to minimise flicker, and the interrupted status bit
-                        _status=_page->GetCarouselPage()->GetPageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
+                        _status=_subpage->GetSubpageStatus() & ~(PAGESTATUS_C4_ERASEPAGE | PAGESTATUS_C9_INTERRUPTED);
                     }
-                    
-                    _subpage = _page->GetCarouselPage();
                     
                     thisSubcode=_subpage->GetSubCode();
                     _region=_subpage->GetRegion();
                 }
                 else
                 {
-                    _subpage = _page;
+                    _subpage = _page->GetSubpage();
+                    if (_subpage == nullptr) // page is empty
+                    {
+                        _page->FreeLock(); // Must free the lock or we can never use this page again!
+                        goto loopback;
+                    }
                     
                     thisSubcode=_subpage->GetSubCode();
-                    _status=_subpage->GetPageStatus();
+                    _status=_subpage->GetSubpageStatus();
                     _region=_subpage->GetRegion();
                 }
                 
@@ -209,7 +223,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                 if (_status & PAGESTATUS_C8_UPDATE)
                 {
                     // Clear update bit in stored page so that update flag is only transmitted once
-                    _subpage->SetPageStatus(_subpage->GetPageStatus() & ~PAGESTATUS_C8_UPDATE);
+                    _subpage->SetSubpageStatus(_subpage->GetSubpageStatus() & ~PAGESTATUS_C8_UPDATE);
                     
                     // Also set the erase flag in output. This will allow left over rows in adaptive transmission to be cleared without leaving the erase flag set causing flickering.
                     _status|=PAGESTATUS_C4_ERASEPAGE;
@@ -222,67 +236,56 @@ Packet* PacketMag::GetPacket(Packet* p)
                 }
             }
             
-            // Assemble the header. (we can simplify this code or leave it for the optimiser)
-            thisPageNum=_page->GetPageNumber();
-            thisPageNum=(thisPageNum/0x100) % 0x100; // Remove this line for Continuous Random Acquisition of Pages.
-            
-            if (!(_status & 0x8000))
+            if (!(_status & PAGESTATUS_TRANSMITPAGE))
             {
-                _page=nullptr;
-                return nullptr;
+                _page->FreeLock(); // Must free the lock or we can never use this page again!
+                goto loopback;
             }
-            
-            _waitingForField = 2; // enforce 20ms page erasure interval
             
             // clear a flag we use to prevent duplicated X/28/0 packets
             _hasX28Region = false;
-            p->Header(_magNumber,thisPageNum,thisSubcode,_status,_headerTemplate);// loads of stuff to do here!
+            p->Header(_magNumber,_page->GetPageNumber(),thisSubcode,_status,_hasCustomHeader?_customHeaderTemplate:_configure->GetHeaderTemplate());
             
             uint16_t tempCRC = p->PacketCRC(0); // calculate the crc of the new header
             
             bool headerChanged = _subpage->HasHeaderChanged(tempCRC);
-            bool fileChanged = _subpage->HasFileChanged();
-            if (headerChanged || fileChanged)
+            bool pageChanged = _subpage->HasSubpageChanged();
+            if (headerChanged || pageChanged)
             {
                 // the content of the header has changed or the page has been reloaded
                 // we must now CRC the whole page
-                
+                Packet TempPacket(8,25); // a temporary packet for checksum calculation
                 for (int i=1; i<26; i++)
                 {
-                    TempPacket->SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _subpage->GetPageCoding());
-                    tempCRC = TempPacket->PacketCRC(tempCRC);
+                    TempPacket.SetRow(_magNumber, _thisRow, _subpage->GetRow(i)->GetLine(), _subpage->GetRow(i)->IsBlank()?CODING_7BIT_TEXT:_page->GetPageCoding());
+                    tempCRC = TempPacket.PacketCRC(tempCRC);
                 }
                 
-                _subpage->SetPageCRC(tempCRC);
+                _subpage->SetSubpageCRC(tempCRC);
                 
                 // TODO: the page content may get modified by substitutions in Packet::tx() which will result in an invalid checksum
             }
             
             assert(p!=NULL);
-
-            links=_subpage->GetLinkSet();
-            if ((links[0] & links[1] & links[2] & links[3] & links[4] & links[5]) != 0x8FF) // only create if links were initialised
-            {
-                _state=PACKETSTATE_FASTEXT;
-                break;
-            }
-            else
-            {
-                _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
-                _state=PACKETSTATE_PACKET27;
-                break;
-            }
+            
+            _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
+            _state=PACKETSTATE_PACKET27;
+            break;
         }
         case PACKETSTATE_PACKET27:
         {
             if (_lastTxt)
             {
-                if ((_lastTxt->GetLine()[0] & 0xF) > 3) // designation codes > 3
+                if ((_lastTxt->GetCharAt(0) & 0xF) > 3) // designation codes > 3
                     p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_13_TRIPLETS); // enhancement linking
-                else
+                else if ((_lastTxt->GetCharAt(1) & _lastTxt->GetCharAt(2) & _lastTxt->GetCharAt(7) & _lastTxt->GetCharAt(8) &
+                         _lastTxt->GetCharAt(13) & _lastTxt->GetCharAt(14) & _lastTxt->GetCharAt(19) & _lastTxt->GetCharAt(20) &
+                         _lastTxt->GetCharAt(25) & _lastTxt->GetCharAt(26) & _lastTxt->GetCharAt(31) & _lastTxt->GetCharAt(32)) != 0xf)
+                         // don't generate packet if all page links are 0xFF
                 {
                     p->SetRow(_magNumber, 27, _lastTxt->GetLine(), CODING_HAMMING_8_4); // navigation packets
-                    p->SetX27CRC(_subpage->GetPageCRC());
+                    if ((_lastTxt->GetCharAt(0) & 0xF) == 0) // only designation code 0 has CRC
+                        p->SetX27CRC(_subpage->GetSubpageCRC());
                 }
                 _lastTxt=_lastTxt->GetNextLine();
                 break;
@@ -306,13 +309,19 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
                 // create X/28/0 packet for pages which have a region set with RE in file
                 // this could almost certainly be done more efficiently but it's quite confusing and this is more readable for when it all goes wrong.
-                std::string val = "@@@tGpCuW@twwCpRA`UBWwDsWwuwwwUwWwuWwE@@"; // default X/28/0 packet
+                
+                std::array<uint8_t, 40> val{
+                    0x40, 0x40, 0x40, 0x74, 0x47, 0x70, 0x43, 0x75, 0x57, 0x40, 0x74, 0x77,
+                    0x77, 0x43, 0x70, 0x52, 0x41, 0x60, 0x55, 0x42, 0x57, 0x77, 0x44, 0x73,
+                    0x57, 0x77, 0x75, 0x77, 0x77, 0x77, 0x55, 0x77, 0x57, 0x77, 0x75, 0x57,
+                    0x77, 0x45, 0x40, 0x40
+                }; // default X/28/0 packet in pre Hamming24EncodeTriplet form (i.e. tti OL format)
                 int NOS = (_status & 0x380) >> 7;
                 int language = NOS | (_region << 3);
                 int triplet = 0x3C000 | (language << 7); // construct triplet 1
-                val.replace(1,1,1,(triplet & 0x3F) | 0x40);
-                val.replace(2,1,1,((triplet & 0xFC0) >> 6) | 0x40);
-                val.replace(3,1,1,((triplet & 0x3F000) >> 12) | 0x40);
+                val[1] = (triplet & 0x3F) | 0x40;
+                val[2] = ((triplet & 0xFC0) >> 6) | 0x40;
+                val[3] = ((triplet & 0x3F000) >> 12) | 0x40;
                 p->SetRow(_magNumber, 28, val, CODING_13_TRIPLETS);
                 _lastTxt=_page->GetTxRow(26); // Get _lastTxt ready for packet 26 processing
                 _state=PACKETSTATE_PACKET26;
@@ -328,7 +337,7 @@ Packet* PacketMag::GetPacket(Packet* p)
             {
                 // do X/1 to X/25 first and go back to X/26 after
                 _state=PACKETSTATE_TEXTROW;
-                return nullptr;
+                goto loopback;
             }
             /* fallthrough */
             [[gnu::fallthrough]];
@@ -351,7 +360,9 @@ Packet* PacketMag::GetPacket(Packet* p)
                 // otherwise we end the page here
                 _state=PACKETSTATE_HEADER;
                 _thisRow=0;
-                return nullptr;
+                _pageList->RemovePage(_page); // remove from page list if no longer in any type lists - will free the lock
+                // this is to handle the case where an UpdatedPages is the only copy of a page left and must be removed now it's been transmitted.
+                goto loopback;
             }
             /* fallthrough */
             [[gnu::fallthrough]];
@@ -374,6 +385,7 @@ Packet* PacketMag::GetPacket(Packet* p)
                     // if this is a normal page we've finished
                     _state=PACKETSTATE_HEADER;
                     _thisRow=0;
+                    _page->FreeLock(); // Must free the lock or we can never use this page again!
                 }
                 else
                 {
@@ -381,14 +393,14 @@ Packet* PacketMag::GetPacket(Packet* p)
                     _lastTxt=_page->GetTxRow(26);
                     _state=PACKETSTATE_PACKET26;
                 }
-                return nullptr;
+                goto loopback;
             }
             else
             {
             //_outp("J");
-                if (_lastTxt->IsBlank() && (_configure->GetRowAdaptive() || _page->GetPageFunction() != LOP)) // If a row is empty then skip it if row adaptive mode on, or not a level 1 page
+                if (_lastTxt->IsBlank() && (_configure->GetRowAdaptive() || _thisRow == 25 || _page->GetPageFunction() != LOP)) // If a row is empty then skip it if row adaptive mode on, or not a level 1 page
                 {
-                    return nullptr;
+                    goto loopback;
                 }
                 else
                 {
@@ -399,19 +411,10 @@ Packet* PacketMag::GetPacket(Packet* p)
             }
             break;
         }
-        case PACKETSTATE_FASTEXT:
-        {
-            p->SetMRAG(_magNumber,27);
-            links=_subpage->GetLinkSet();
-            p->Fastext(links,_magNumber);
-            p->SetX27CRC(_subpage->GetPageCRC());
-            _lastTxt=_page->GetTxRow(27); // Get _lastTxt ready for packet 27 processing
-            _state=PACKETSTATE_PACKET27; // makes no attempt to prevent an FL row and an X/27/0 both being sent
-            break;
-        }
         default:
         {
             _state=PACKETSTATE_HEADER;// For now, do the next page
+            _page->FreeLock(); // Must free the lock or we can never use this page again!
             return nullptr;
         }
     }
@@ -430,28 +433,49 @@ bool PacketMag::IsReady(bool force)
     // We can always send something unless
     // 1) We have just sent out a header and are waiting on a new field
     // 2) There are no pages
+    // 3) The magazine cycle is less than 1 second
     if (GetEvent(EVENT_FIELD))
     {
         ClearEvent(EVENT_FIELD);
-        if (_waitingForField > 0)
+        if (_waitingForField)
         {
-            // _waitingForField is set to 2 when the last packet was a header but field event is not yet cleared
-            // on the next IsReady we clear the event and decrement it ready to wait for the next field event.
-            _waitingForField--;
+            _waitingForField = false;
         }
     }
     
-    if (_waitingForField == 0)
+    if (GetEvent(EVENT_P830_FORMAT_1))
+    {
+        ClearEvent(EVENT_P830_FORMAT_1);
+        
+        if (_waitingForSecond)
+        {
+            _waitingForSecond = false;
+            // get master clock singleton
+            MasterClock *mc = mc->Instance();
+            MasterClock::timeStruct t = mc->GetMasterClock();
+            // calculate time since last time filling header and add to cycle time measured there
+            int diffSeconds = difftime(t.seconds, _lastCycleTimestamp.seconds); // truncates double to int
+            _cycleDuration += ((diffSeconds * 50) - _lastCycleTimestamp.fields) + t.fields;
+            // should clamp to 1 second
+            _debug->SetMagCycleDuration(_magNumber, _cycleDuration);
+            _lastCycleTimestamp = t; // update timestamp so that true cycle time can be measured
+        }
+    }
+    
+    if (_state==PACKETSTATE_HEADER && _waitingForSecond && !_updatedPages->waiting()) // force if there are updated pages waiting
+        return false; // limit output
+    
+    if (!_waitingForField)
     {
         _priorityCount--;
-        if (_priorityCount==0 || force || (_updatedPages->waiting())) // force if there are updated pages waiting
+        if (_priorityCount==0 || force || _updatedPages->waiting())
         {
             _priorityCount=_priority;
             result=true;
         }
     }
     
-    if (_pageSet->size()>0)
+    if (_pageList->GetSize(_magNumber)>0)
     {
         return result;
     }
@@ -461,39 +485,50 @@ bool PacketMag::IsReady(bool force)
     }
 };
 
-void PacketMag::SetPacket29(int i, TTXLine *line)
+void PacketMag::SetPacket29(std::shared_ptr<TTXLine> line)
 {
-    _packet29[i] = line;
-    _hasPacket29 = true;
-    
-    if (_packet29[0])
+    _packet29 = line;
+    _nextPacket29 = _packet29;
+    do
     {
-        _magRegion = ((_packet29[0]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[0]->GetCharAt(3) & 0x3) << 2);
-    } 
-    else if (_packet29[2])
-    {
-        _magRegion = ((_packet29[2]->GetCharAt(2) & 0x30) >> 4) | ((_packet29[2]->GetCharAt(3) & 0x3) << 2);
-    }
+        uint8_t dc = _nextPacket29->GetCharAt(0) & 0xf;
+        if (dc == 0 || dc == 4)
+        {
+            _magRegion = ((_nextPacket29->GetCharAt(2) & 0x30) >> 4) | ((_nextPacket29->GetCharAt(3) & 0x3) << 2);
+        }
+        _nextPacket29 = _nextPacket29->GetNextLine();
+    } while (_nextPacket29 != nullptr);
+    _nextPacket29 = _packet29;
 }
 
-void PacketMag::DeletePacket29()
+void PacketMag::DeletePacket29(int designationCode)
 {
     _mtx.lock();
-    for (int i=0;i<MAXPACKET29TYPES;i++)
+    if (designationCode < 0 || designationCode > 15)
     {
-        if (_packet29[i] != nullptr)
-        {
-            delete _packet29[i]; // delete TTXLine created in PageList::CheckForPacket29
-            _packet29[i] = nullptr;
-        }
+        // delete all
+        _packet29 = nullptr;
+        _nextPacket29 == nullptr;
     }
-    _hasPacket29 = false;
+    else
+    {
+        _packet29 = _packet29->RemoveLine(designationCode); // delete specific dc
+        _nextPacket29 = _packet29; // reset to first dc
+    }
     _mtx.unlock();
+}
+
+void PacketMag::SetCustomHeader(std::shared_ptr<TTXLine> line)
+{
+    _hasCustomHeader = true;
+    std::string str = "";
+    for (int i=8; i<40; i++)
+        str += line->GetCharAt(i);
+    _customHeaderTemplate.assign(str);
 }
 
 void PacketMag::DeleteCustomHeader()
 {
-    _headerTemplate = _configure->GetHeaderTemplate(); // revert to service default template
     _hasCustomHeader = false;
-     _debug->Log(Debug::LogLevels::logINFO,"[PacketMag::DeleteCustomHeader] Removing custom header from magazine " + std::to_string(_magNumber));
+    _debug->Log(Debug::LogLevels::logINFO,"[PacketMag::DeleteCustomHeader] Removing custom header from magazine " + std::to_string(_magNumber));
 }

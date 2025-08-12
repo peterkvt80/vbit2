@@ -2,7 +2,7 @@
 
 using namespace vbit;
 
-Packet830::Packet830(ttx::Configure *configure) :
+Packet830::Packet830(Configure *configure) :
     _configure(configure)
 {
     //ctor
@@ -20,7 +20,7 @@ Packet830::~Packet830()
 
 Packet* Packet830::GetPacket(Packet* p)
 {
-    vbit::MasterClock *mc = mc->Instance();
+    MasterClock *mc = mc->Instance();
     time_t timeRaw = mc->GetMasterClock().seconds;
     time_t timeLocal;
     struct tm *tmLocal;

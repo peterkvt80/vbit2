@@ -11,7 +11,7 @@
 #include <ctime>
 #include "tables.h"
 #include <cassert>
-#include "ttxpage.h"
+#include "page.h"
 #include "masterClock.h"
 
 /**
@@ -26,7 +26,7 @@ namespace vbit
     {
         public:
             /** row constructor */
-            Packet(int mag, int row, std::string val);
+            Packet(int mag, int row);
 
             /** Default destructor */
             virtual ~Packet();
@@ -38,12 +38,6 @@ namespace vbit
              * \param data New 40 byte binary packet data
              */
             void SetPacketRaw(std::vector<uint8_t> data);
-
-            /** SetPacketText
-             * Copy the supplied text into the text part of the packet (last 40 bytes)
-             * \param val New 40 character text string
-             */
-            void SetPacketText(std::string val);
             
             /** tx
              * @return pointer to packet data vector
@@ -85,7 +79,7 @@ namespace vbit
              * @param mag - Magazine number
              *
              */
-            void Fastext(int* links, int mag);
+            void Fastext(std::array<FastextLink, 6>links, int mag);
             
             enum IDLAFormatFlags : uint8_t
             {
@@ -114,7 +108,7 @@ namespace vbit
              * @param val - The contents of the row text (40 characters)
              * @param coding -
              */
-            void SetRow(int mag, int row, std::string val, PageCoding coding);
+            void SetRow(int mag, int row, std::array<uint8_t, 40> val, PageCoding coding);
             
             /** PacketCRC
              * Set the 16 byte CRC in X/27/0 packets

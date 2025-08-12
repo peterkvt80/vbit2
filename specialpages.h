@@ -5,6 +5,7 @@
 
 #include "debug.h"
 #include "ttxpagestream.h"
+#include "pagelist.h"
 
 // list of special pages
 
@@ -15,26 +16,25 @@ class SpecialPages
 {
     public:
         /** Default constructor */
-        SpecialPages(Debug *debug);
+        SpecialPages(int mag, PageList *pageList, Debug *debug);
         /** Default destructor */
         virtual ~SpecialPages();
 
-        TTXPageStream* NextPage();
+        std::shared_ptr<TTXPageStream> NextPage();
         
         void ResetIter();
 
-        void addPage(TTXPageStream* p);
-
-        void deletePage(TTXPageStream* p);
-
+        void addPage(std::shared_ptr<TTXPageStream> p);
 
     protected:
 
     private:
+        int _mag;
+        PageList* _pageList;
         Debug* _debug;
-        std::list<TTXPageStream*> _specialPagesList;
-        std::list<TTXPageStream*>::iterator _iter;
-        TTXPageStream* _page;
+        std::list<std::shared_ptr<TTXPageStream>> _specialPagesList;
+        std::list<std::shared_ptr<TTXPageStream>>::iterator _iter;
+        std::shared_ptr<TTXPageStream> _page;
 };
 
 }

@@ -16,7 +16,7 @@ namespace vbit
     {
         public:
             /** Default constructor */
-            PacketDebug(ttx::Configure* configure, Debug* debug);
+            PacketDebug(Configure* configure, Debug* debug);
             /** Default destructor */
             virtual ~PacketDebug();
 
@@ -30,7 +30,7 @@ namespace vbit
         protected:
 
         private:
-            ttx::Configure* _configure;
+            Configure* _configure;
             Debug* _debug;
             
             uint8_t _datachannel;

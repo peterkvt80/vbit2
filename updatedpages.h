@@ -5,6 +5,7 @@
 
 #include "debug.h"
 #include "ttxpagestream.h"
+#include "pagelist.h"
 
 // list of updated pages
 
@@ -15,23 +16,25 @@ class UpdatedPages
 {
     public:
         /** Default constructor */
-        UpdatedPages(Debug *debug);
+        UpdatedPages(int mag, PageList *pageList, Debug *debug);
         /** Default destructor */
         virtual ~UpdatedPages();
 
-        TTXPageStream* NextPage();
+        std::shared_ptr<TTXPageStream> NextPage();
 
-        void addPage(TTXPageStream* p);
+        void addPage(std::shared_ptr<TTXPageStream> p);
         
         bool waiting(){ return _UpdatedPagesList.size() > 0; };
 
     protected:
 
     private:
+        int _mag;
+        PageList* _pageList;
         Debug* _debug;
-        std::list<TTXPageStream*> _UpdatedPagesList;
-        std::list<TTXPageStream*>::iterator _iter;
-        TTXPageStream* _page;
+        std::list<std::shared_ptr<TTXPageStream>> _UpdatedPagesList;
+        std::list<std::shared_ptr<TTXPageStream>>::iterator _iter;
+        std::shared_ptr<TTXPageStream> _page;
         
 };
 

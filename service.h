@@ -11,25 +11,23 @@
 #include "debug.h"
 #include "pagelist.h"
 #include "packetServer.h"
-#include "datacastServer.h"
+#include "interfaceServer.h"
 #include "packet.h"
 #include "packetsource.h"
 #include "packetmag.h"
 #include "packet830.h"
-#include "packetsubtitle.h"
 #include "packetDebug.h"
 #include "masterClock.h"
 
-namespace ttx
+namespace vbit
 {
     /** A Service creates a teletext stream from packet sources.
-     *  Packet sources are magazines, subtitles, Packet 830 and databroadcast.
+     *  Packet sources are magazines, Packet 8/30, databroadcast, and debugging.
      *  Service:
      *    Instances the packet sources
      *    Sends them timing events (cues for field timing etc.)
      *    Polls the packet sources for packets to send
      *    Sends the packets.
-     *
      */
     class Service
     {
@@ -38,7 +36,7 @@ namespace ttx
              * @param configure A Configure object with all the settings
              * @param pageList A pageList object already loaded with pages
              */
-            Service(Configure* configure, vbit::Debug* debug, PageList* pageList, PacketServer* packetServer, DatacastServer *datacastServer);
+            Service(Configure* configure, Debug* debug, PageList* pageList, PacketServer* packetServer, InterfaceServer *interfaceServer);
             
             ~Service();
             
@@ -48,19 +46,14 @@ namespace ttx
              */
             int run();
 
-            /** Part of Newfor subtitles implementation
-             * \return The packet source handling the subtitles
-             */
-            vbit::PacketSubtitle* GetSubtitle(){return _subtitle;};
-
         private:
             // Member variables that define the service
             Configure* _configure; /// Member reference to the configuration settings
-            vbit::Debug* _debug;
+            Debug* _debug;
             PageList* _pageList; /// Member reference to the pages list
-            vbit::PacketMag** _magList;
+            PacketMag** _magList;
             PacketServer* _packetServer;
-            DatacastServer* _datacastServer;
+            InterfaceServer* _interfaceServer;
 
             // Member variables for event management
             uint16_t _linesPerField;
@@ -71,15 +64,14 @@ namespace ttx
             uint64_t _PTS; // presentation timestamp counter
             bool _PTSFlag; // generate PCR and PTS
             
-            std::list<vbit::PacketSource*> _magazineSources; // A list of packet sources for magazine data
-            std::list<vbit::PacketSource*> _datacastSources; // A list of sources for independent data line packets
+            std::list<PacketSource*> _magazineSources; // A list of packet sources for magazine data
+            std::list<PacketSource*> _datacastSources; // A list of sources for independent data line packets
 
-            vbit::PacketSubtitle* _subtitle; // Newfor needs to know which packet source is doing subtitles
-            vbit::Packet830* _packet830; // BSDP packet source
-            vbit::PacketDebug* _packetDebug; // Debug packet source
+            Packet830* _packet830; // BSDP packet source
+            PacketDebug* _packetDebug; // Debug packet source
 
             // Member functions
-            void _register(std::list<vbit::PacketSource*> *list, vbit::PacketSource *src); // Register packet sources
+            void _register(std::list<PacketSource*> *list, PacketSource *src); // Register packet sources
 
             /**
              * @brief Check if anything changed, and if so signal the event to the packet sources.
@@ -88,7 +80,7 @@ namespace ttx
             void _updateEvents();
             
             /* output a packet in the desired format */
-            void _packetOutput(vbit::Packet* pkt);
+            void _packetOutput(Packet* pkt);
             
             /* queue up packets for outputting as a Packetised Elementary Stream */
             std::vector<std::vector<uint8_t>> _PESBuffer;

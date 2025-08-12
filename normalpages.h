@@ -2,9 +2,11 @@
 #define _NORMALPAGES_H
 
 #include <list>
+#include <mutex>
 
 #include "debug.h"
 #include "ttxpagestream.h"
+#include "pagelist.h"
 
 // list of normal pages
 
@@ -15,30 +17,23 @@ class NormalPages
 {
     public:
         /** Default constructor */
-        NormalPages(Debug *debug);
+        NormalPages(int mag, PageList *pageList, Debug *debug);
         /** Default destructor */
         virtual ~NormalPages();
 
-        TTXPageStream* NextPage();
+        std::shared_ptr<TTXPageStream> NextPage();
 
-        void addPage(TTXPageStream* p);
+        void addPage(std::shared_ptr<TTXPageStream> p);
 
     protected:
 
     private:
+        int _mag;
+        PageList* _pageList;
         Debug* _debug;
-        std::list<TTXPageStream*> _NormalPagesList;
-        std::list<TTXPageStream*>::iterator _iter;
-        TTXPageStream* _page;
-        bool _needSorting;
-        
-        template <typename TTXPageStream>
-        struct pageLessThan
-        {
-            bool operator()(const TTXPageStream *a, const TTXPageStream *b) const{
-                return a->GetPageNumber() < b->GetPageNumber();
-            }
-        };
+        std::list<std::shared_ptr<TTXPageStream>> _NormalPagesList;
+        std::list<std::shared_ptr<TTXPageStream>>::iterator _iter;
+        std::shared_ptr<TTXPageStream> _page;
 };
 
 }

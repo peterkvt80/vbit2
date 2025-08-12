@@ -2,6 +2,7 @@
 #define PACKETMAG_H
 #include <list>
 #include <mutex>
+#include <memory>
 #include <packetsource.h>
 #include "ttxpagestream.h"
 #include "carousel.h"
@@ -9,10 +10,9 @@
 #include "normalpages.h"
 #include "updatedpages.h"
 #include "configure.h"
+#include "pagelist.h"
 #include "debug.h"
 #include "masterClock.h"
-
-#define MAXPACKET29TYPES 3
 
 namespace vbit
 {
@@ -20,14 +20,9 @@ namespace vbit
     {
         public:
             /** Default constructor */
-            PacketMag(uint8_t mag, std::list<TTXPageStream>* pageSet, ttx::Configure *configure, Debug *debug, uint8_t priority);
+            PacketMag(uint8_t mag, PageList *pageList, Configure *configure, Debug *debug, uint8_t priority);
             /** Default destructor */
             virtual ~PacketMag();
-
-            /** Access _pageSet
-            * \return The current value of _pageSet
-            */
-            std::list<TTXPageStream>*  Get_pageSet() { return _pageSet; }
 
             Carousel* GetCarousel() { return _carousel; }
             SpecialPages* GetSpecialPages() { return _specialPages; }
@@ -43,12 +38,13 @@ namespace vbit
 
             bool IsReady(bool force=false);
 
-            void SetPacket29(int i, TTXLine *line);
-            bool GetPacket29Flag() { return _hasPacket29; };
-            void DeletePacket29();
+            void SetPacket29(std::shared_ptr<TTXLine> line);
+            std::shared_ptr<TTXLine> GetPacket29() { return _packet29; }
+            void DeletePacket29(int designationCode=-1);
             
-            void SetCustomHeader(std::string row) {_headerTemplate = row; _hasCustomHeader = true;}
+            void SetCustomHeader(std::shared_ptr<TTXLine> line);
             bool GetCustomHeaderFlag() { return _hasCustomHeader; };
+            std::string GetCustomHeader() { return _hasCustomHeader?_customHeaderTemplate:"";}
             void DeleteCustomHeader();
             
             void InvalidateCycleTimestamp() { _lastCycleTimestamp = {0,0}; }; // reset cycle duration calculation
@@ -57,13 +53,13 @@ namespace vbit
         protected:
 
         private:
-            enum PacketState {PACKETSTATE_HEADER, PACKETSTATE_FASTEXT, PACKETSTATE_PACKET26, PACKETSTATE_PACKET27, PACKETSTATE_PACKET28, PACKETSTATE_TEXTROW};
+            enum PacketState {PACKETSTATE_HEADER, PACKETSTATE_PACKET26, PACKETSTATE_PACKET27, PACKETSTATE_PACKET28, PACKETSTATE_TEXTROW};
             
-            std::list<TTXPageStream>*  _pageSet; //!< Member variable "_pageSet"
-            ttx::Configure* _configure;
+            PageList* _pageList;
+            Configure* _configure;
             Debug* _debug;
-            TTXPageStream* _page; //!< The current page being output
-            TTXPage* _subpage; // pointer to the actual subpage
+            std::shared_ptr<TTXPageStream> _page; //!< The current page being output
+            std::shared_ptr<Subpage> _subpage; // pointer to the actual subpage
             int _magNumber; //!< The number of this magazine. (where 0 is mag 8)
             uint8_t _priority; //!< Priority of transmission where 1 is highest
 
@@ -75,15 +71,13 @@ namespace vbit
             uint8_t _priorityCount; /// Controls transmission priority
             PacketState _state; /// State machine to sequence packet types
             uint8_t _thisRow; // The current line that we are outputting
-            TTXLine* _lastTxt; // The text of the last row that we fetched. Used for enhanced packets
+            std::shared_ptr<TTXLine> _lastTxt; // The text of the last row that we fetched. Used for enhanced packets
 
-            int _nextPacket29DC;
-            TTXLine* _packet29[MAXPACKET29TYPES]; // space to store magazine related enhancement packets
-            TTXLine* _nextPacket29;
-            bool _hasPacket29;
-            std::mutex _mtx; // Mutex to interlock packet 29 from filemonitor
+            std::shared_ptr<TTXLine> _packet29; // magazine related enhancement packets
+            std::shared_ptr<TTXLine> _nextPacket29;
+            std::mutex _mtx; // Mutex to interlock packet 29 from filemonitor.
             
-            std::string _headerTemplate;
+            std::string _customHeaderTemplate;
             bool _hasCustomHeader;
 
             int _magRegion;
@@ -91,7 +85,8 @@ namespace vbit
             int _region;
             bool _hasX28Region;
             bool _specialPagesFlipFlop; // toggle to alternate between special pages and normal pages
-            int _waitingForField;
+            bool _waitingForField;
+            bool _waitingForSecond;
             
             MasterClock::timeStruct _lastCycleTimestamp;
             int _cycleDuration; // magazine cycle time in fields

@@ -1,42 +1,6 @@
-/** Top level teletext application
- *  @brief Load the configuration, initialise the service and run it.
- * @detail This can be run without parameters in which case it will use the defaults in configure.
- * If a parameter is given then it replaces the defaults.
- * @todo Define options for overriding the config file settings, and the config file itself,
- * This will include path to pages, header packet, priority etc.
- * Example: vbit2 --config teletext/vbit.conf
- * Compiler: c++11
- */
-
-/** ***************************************************************************
- * Description       : Top level teletext stream generator
- * Compiler          : C++
- *
- * Copyright (C) 2016, Peter Kwan
- *
- * Permission to use, copy, modify, and distribute this software
- * and its documentation for any purpose and without fee is hereby
- * granted, provided that the above copyright notice appear in all
- * copies and that both that the copyright notice and this
- * permission notice and warranty disclaimer appear in supporting
- * documentation, and that the name of the author not be used in
- * advertising or publicity pertaining to distribution of the
- * software without specific, written prior permission.
- *
- * The author disclaims all warranties with regard to this
- * software, including all implied warranties of merchantability
- * and fitness.  In no event shall the author be liable for any
- * special, indirect or consequential damages or any damages
- * whatsoever resulting from loss of use, data or profits, whether
- * in an action of contract, negligence or other tortious action,
- * arising out of or in connection with the use or performance of
- * this software.
- *************************************************************************** **/
-
 #include "vbit2.h"
 
 using namespace vbit;
-using namespace ttx;
 
 MasterClock *MasterClock::instance = 0; // initialise MasterClock singleton
 
@@ -64,19 +28,12 @@ int main(int argc, char** argv)
     
     PageList *pageList=new PageList(configure, debug);
     PacketServer *packetServer=new PacketServer(configure, debug);
-    DatacastServer *datacastServer=new DatacastServer(configure, debug);
+    InterfaceServer *interfaceServer=new InterfaceServer(configure, debug, pageList);
 
-    Service* svc=new Service(configure, debug, pageList, packetServer, datacastServer); // Need to copy the subtitle packet source for Newfor
+    Service* svc=new Service(configure, debug, pageList, packetServer, interfaceServer); // Need to copy the subtitle packet source for Newfor
 
     std::thread monitorThread(&FileMonitor::run, FileMonitor(configure, debug, pageList));
     std::thread serviceThread(&Service::run, svc);
-
-    if (configure->GetCommandPortEnabled())
-    {
-        // only start command thread if required
-        std::thread commandThread(&Command::run, Command(configure, debug, svc->GetSubtitle(), pageList) );
-        commandThread.detach();
-    }
 
     if (configure->GetPacketServerEnabled())
     {
@@ -85,11 +42,11 @@ int main(int argc, char** argv)
         packetServerThread.detach();
     }
 
-    if (configure->GetDatacastServerEnabled())
+    if (configure->GetInterfaceServerEnabled())
     {
-        // only start datacast server thread if required
-        std::thread datacastServerThread(&DatacastServer::run, datacastServer );
-        datacastServerThread.detach();
+        // only start interface server thread if required
+        std::thread interfaceServerThread(&InterfaceServer::run, interfaceServer );
+        interfaceServerThread.detach();
     }
 
     // The threads should never stop, but just in case...

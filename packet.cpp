@@ -3,11 +3,11 @@
 
 using namespace vbit;
 
-Packet::Packet(int mag, int row, std::string val) : _isHeader(false), _coding(CODING_7BIT_TEXT)
+Packet::Packet(int mag, int row) : _isHeader(false), _coding(CODING_7BIT_TEXT)
 {
     //ctor
-    SetMRAG(mag, row);
-    SetPacketText(val);
+    _packet.fill(0x20); // fill with spaces
+    SetMRAG(mag, row); // overwrite front 5 bytes
     assert(_row!=0); // Use Header for row 0
 }
 
@@ -16,17 +16,20 @@ Packet::~Packet()
     //dtor
 }
 
-void Packet::SetRow(int mag, int row, std::string val, PageCoding coding)
+void Packet::SetRow(int mag, int row, std::array<uint8_t, 40> val, PageCoding coding)
 {
     SetMRAG(mag, row);
-    SetPacketText(val);
+    
+    _isHeader=false; // Because it can't be a header
+    std::copy(val.begin(), val.end(), _packet.begin() + 5);
+    
     _coding = coding;
     
     switch(coding)
     {
         case CODING_PER_PACKET:
         {
-            _coding = TTXPage::ReturnPageCoding(_packet[5] & 0xF); // set packet coding based on first byte of packet
+            _coding = Page::ReturnPageCoding(_packet[5] & 0xF); // set packet coding based on first byte of packet
             /* fallthrough */
             [[gnu::fallthrough]];
         }
@@ -136,13 +139,6 @@ void Packet::SetPacketRaw(std::vector<uint8_t> data)
     _coding = CODING_8BIT_DATA; // don't allow this to be re-processed with parity etc
 }
 
-void Packet::SetPacketText(std::string data)
-{
-    _isHeader=false; // Because it can't be a header
-    data.resize(40, ' '); // ensure correct length
-    std::copy(data.begin(), data.end(), _packet.begin() + 5);
-}
-
 // Set CRI and MRAG. Leave the rest of the packet alone
 void Packet::SetMRAG(uint8_t mag, uint8_t row)
 {
@@ -205,7 +201,7 @@ int Packet::GetOffsetOfSubstition(std::string string)
 std::array<uint8_t, PACKETSIZE>* Packet::tx()
 {
     // get master clock singleton
-    vbit::MasterClock *mc = mc->Instance();
+    MasterClock *mc = mc->Instance();
     time_t t = mc->GetMasterClock().seconds;
     
     // Get local time
@@ -326,7 +322,7 @@ void Packet::Header(uint8_t mag, uint8_t page, uint16_t subcode, uint16_t contro
     // perform the header template substitutions for page number, date, etc.
     
     // get master clock singleton
-    vbit::MasterClock *mc = mc->Instance();
+    MasterClock *mc = mc->Instance();
     time_t t = mc->GetMasterClock().seconds;
     
     // Get local time
@@ -461,9 +457,9 @@ void Packet::Parity(uint8_t offset)
     }
 }
 
-void Packet::Fastext(int* links, int mag)
+void Packet::Fastext(std::array<FastextLink, 6> links, int mag)
 {
-    unsigned long nLink;
+    uint16_t lp, ls;
     uint8_t p=5;
     
     _packet[p++]=Hamming8EncodeTable[0]; // Designation code 0
@@ -479,17 +475,17 @@ void Packet::Fastext(int* links, int mag)
     // for each of the six links
     for (uint8_t i=0; i<6; i++)
     {
-        nLink=links[i];
-        if (nLink == 0) nLink = 0x8ff; // turn zero into 8FF to be ignored
+        lp=links[i].page;
+        if (lp == 0) lp = 0x8ff; // turn zero into 8FF to be ignored
+        ls=links[i].subpage;
 
-        // calculate the relative magazine
-        uint8_t cRelMag=(nLink/0x100 ^ mag);
-        _packet[p++]=Hamming8EncodeTable[nLink & 0xF];              // page units
-        _packet[p++]=Hamming8EncodeTable[(nLink & 0xF0) >> 4];      // page tens
-        _packet[p++]=Hamming8EncodeTable[0xF];                      // subcode S1
-        _packet[p++]=Hamming8EncodeTable[((cRelMag & 1) << 3) | 7]; // subcode S2 + M1
-        _packet[p++]=Hamming8EncodeTable[0xF];                      // subcode S3
-        _packet[p++]=Hamming8EncodeTable[((cRelMag & 6) << 1) | 3]; // subcode S4 + M2, M3
+        uint8_t m=(lp/0x100 ^ mag); // calculate the relative magazine
+        _packet[p++]=Hamming8EncodeTable[lp & 0xF];             // page units
+        _packet[p++]=Hamming8EncodeTable[(lp & 0xF0) >> 4];     // page tens
+        _packet[p++]=Hamming8EncodeTable[ls & 0xF];             // S1
+        _packet[p++]=Hamming8EncodeTable[((m & 1) << 3) | ((ls >> 4) & 0xF)]; // S2 + M1
+        _packet[p++]=Hamming8EncodeTable[((ls >> 8) & 0xF)];    // S3
+        _packet[p++]=Hamming8EncodeTable[((m & 6) << 1) | ((ls >> 4) & 0x3)]; // S4 + M2, M3
     }
 }
 

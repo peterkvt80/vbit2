@@ -2,33 +2,29 @@
  */
 #include "service.h"
 
-using namespace ttx;
 using namespace vbit;
 
-Service::Service(Configure *configure, vbit::Debug *debug, PageList *pageList, PacketServer *packetServer, DatacastServer *datacastServer) :
+Service::Service(Configure *configure, Debug *debug, PageList *pageList, PacketServer *packetServer, InterfaceServer *interfaceServer) :
     _configure(configure),
     _debug(debug),
     _pageList(pageList),
     _packetServer(packetServer),
-    _datacastServer(datacastServer),
+    _interfaceServer(interfaceServer),
     _fieldCounter(49) // roll over immediately
 {
     _magList=_pageList->GetMagazines();
     // Register all the magazine packet sources
     for (uint8_t mag=0;mag<8;mag++)
     {
-        vbit::PacketMag* m=_magList[mag];
+        PacketMag* m=_magList[mag];
         m->SetPriority(_configure->GetMagazinePriority(mag)); // set the mags to the desired priorities
         _register(&_magazineSources, m); // use the PacketMags created in pageList rather than duplicating them
     }
     
-    // Add packet source for subtitles
-    _register(&_magazineSources, _subtitle=new PacketSubtitle(_configure, _debug));
-    
     // register datacast sources
     _register(&_datacastSources, _packetDebug = new PacketDebug(_configure, _debug));
     
-    vbit::PacketDatacast** channels = _datacastServer->GetDatachannels();
+    PacketDatacast** channels = _interfaceServer->GetDatachannels();
     for (int dc=1; dc<16; dc++)
     {
         _register(&_datacastSources, channels[dc]);
@@ -53,7 +49,7 @@ Service::~Service()
 {
 }
 
-void Service::_register(std::list<vbit::PacketSource*> *list, PacketSource *src)
+void Service::_register(std::list<PacketSource*> *list, PacketSource *src)
 {
     list->push_front(src);
 }
@@ -62,12 +58,12 @@ int Service::run()
 {
     _debug->Log(Debug::LogLevels::logDEBUG,"[Service::run] This is the worker process");
     
-    std::list<vbit::PacketSource*>::const_iterator magIterator=_magazineSources.begin(); // Iterator for magazine packet sources
-    std::list<vbit::PacketSource*>::const_iterator dcIterator=_datacastSources.begin(); // Iterator for datacast sources
+    std::list<PacketSource*>::const_iterator magIterator=_magazineSources.begin(); // Iterator for magazine packet sources
+    std::list<PacketSource*>::const_iterator dcIterator=_datacastSources.begin(); // Iterator for datacast sources
 
-    vbit::Packet* pkt=new vbit::Packet(8,25,"                                        ");  // This just allocates storage.
+    Packet* pkt=new Packet(8,25);  // This just allocates storage.
 
-    static vbit::Packet* filler=new vbit::Packet(8,25,"                                        ");  // A pre-prepared quiet packet to avoid eating the heap
+    static Packet* filler=new Packet(8,25);  // A pre-prepared quiet packet to avoid eating the heap
 
     _debug->Log(Debug::LogLevels::logINFO,"[Service::run] Lines per field: " + std::to_string((int)_linesPerField));
     _debug->Log(Debug::LogLevels::logINFO,"[Service::run] Dedicated datacast lines: " + std::to_string((int)_datacastLines));
@@ -94,21 +90,10 @@ int Service::run()
             _packetDebug->GetPacket(pkt);
             _packetOutput(pkt);
         }
-        else if (_subtitle->IsReady()) // Special case for subtitles. Subtitles always go if there is one waiting
-        {
-            if (_subtitle->GetPacket(pkt) != nullptr)
-            {
-                _packetOutput(pkt);
-            }
-            else
-            {
-                _packetOutput(filler);
-            }
-        }
         else
         {
             // Iterate through the packet sources until we get a packet to transmit
-            vbit::PacketSource* p=nullptr;
+            PacketSource* p=nullptr;
             
             if (_datacastLines)
             {
@@ -222,8 +207,8 @@ int Service::run()
 
 void Service::_updateEvents()
 {
-    vbit::MasterClock *mc = mc->Instance();
-    vbit::MasterClock::timeStruct masterClock = mc->GetMasterClock();
+    MasterClock *mc = mc->Instance();
+    MasterClock::timeStruct masterClock = mc->GetMasterClock();
     
     // Step the counters
     _lineCounter = (_lineCounter + 1) % _linesPerField;
@@ -267,7 +252,7 @@ void Service::_updateEvents()
             
             if (masterClock.seconds%15==0) // TODO: how often do we want to trigger sending special packets?
             {
-                for (std::list<vbit::PacketSource*>::const_iterator iterator = _magazineSources.begin(), end = _magazineSources.end(); iterator != end; ++iterator)
+                for (std::list<PacketSource*>::const_iterator iterator = _magazineSources.begin(), end = _magazineSources.end(); iterator != end; ++iterator)
                 {
                     (*iterator)->SetEvent(EVENT_SPECIAL_PAGES);
                     (*iterator)->SetEvent(EVENT_PACKET_29);
@@ -278,9 +263,12 @@ void Service::_updateEvents()
         mc->SetMasterClock(masterClock); // update the master clock singleton
         
         // New field, so set the FIELD event in all the registered magazine sources.
-        for (std::list<vbit::PacketSource*>::const_iterator iterator = _magazineSources.begin(), end = _magazineSources.end(); iterator != end; ++iterator)
+        for (std::list<PacketSource*>::const_iterator iterator = _magazineSources.begin(), end = _magazineSources.end(); iterator != end; ++iterator)
         {
             (*iterator)->SetEvent(EVENT_FIELD);
+            
+            if (_fieldCounter%50==0)
+                (*iterator)->SetEvent(EVENT_P830_FORMAT_1); // let magazines see the second tick
         }
         
         _packetDebug->SetEvent(EVENT_FIELD);
@@ -321,7 +309,7 @@ void Service::_updateEvents()
     }
     
     
-    for (std::list<vbit::PacketSource*>::const_iterator iterator = _datacastSources.begin(), end = _datacastSources.end(); iterator != end; ++iterator)
+    for (std::list<PacketSource*>::const_iterator iterator = _datacastSources.begin(), end = _datacastSources.end(); iterator != end; ++iterator)
     {
         // if no dedicated datacast lines are assigned, allow datacast on all lines
         if ((_datacastLines == 0) || (_lineCounter >= _linesPerField - _datacastLines))
@@ -335,7 +323,7 @@ void Service::_updateEvents()
     }
 }
 
-void Service::_packetOutput(vbit::Packet* pkt)
+void Service::_packetOutput(Packet* pkt)
 {
     std::array<uint8_t, PACKETSIZE> *p = pkt->tx();
     
