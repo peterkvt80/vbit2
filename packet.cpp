@@ -65,6 +65,11 @@ void Packet::SetRow(int mag, int row, std::array<uint8_t, 40> val, PageCoding co
                 if (off + len > 45)
                     len = 45 - off; // but clamp to the end of the packet
                 std::copy_n(VBIT2_VERSION,len,_packet.begin() + off);
+                if (len < 6)
+                {
+                    for (int i = len; i < 6; i++)
+                        _packet[off+i] = 0x20; // insert spaces if version string is too short
+                }
             }
             
             // first byte parity already set by first switch statement
