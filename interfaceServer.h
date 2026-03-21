@@ -74,7 +74,7 @@ namespace vbit
             ~InterfaceServer();
             
             void run();
-            bool GetIsActive(){return _isActive;}; /* is the packet server running? */
+            bool GetIsActive(){return _isActive;}; /* is interface server in use? */
             
             
             PacketDatacast** GetDatachannels() { PacketDatacast **channels=_datachannel; return channels; };
@@ -88,12 +88,12 @@ namespace vbit
             PacketDatacast* _datachannel[16]; /* array of datacast sources */
             
             static const uint16_t MAXPENDING=5;
-            static const uint16_t MAXCLIENTS=5;
             
             int _portNumber;
             int _serverSock;
             
-            ClientState _clientState[MAXCLIENTS];
+            std::list<ClientState> _clients;
+            uint16_t _maxClients;
             
             bool _isActive;
             

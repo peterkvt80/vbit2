@@ -4,6 +4,7 @@
 #include "configure.h"
 #include "debug.h"
 #include <mutex>
+#include <list>
 
 #ifdef WIN32
 #include <winsock2.h>
@@ -31,14 +32,14 @@ namespace vbit
         private:
             Debug* _debug;
             static const uint16_t MAXPENDING=5;
-            static const uint16_t MAXCLIENTS=5;
             static const uint16_t BUFFLEN=256;
             
             int _portNumber;
             int _serverSock;
             
-            int _clientSocks[MAXCLIENTS];
-            std::mutex _mtx[MAXCLIENTS];
+            std::mutex _mtx;
+            std::list<int> _clientSocks;
+            uint16_t _maxClients;
             
             bool _isActive;
             

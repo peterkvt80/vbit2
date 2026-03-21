@@ -50,7 +50,9 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
     _PID = 0x20; // default PID is 0x20
     
     _packetServerPort = 0; // port 0 disables packet server
-    _interfaceServerPort = 0;
+    _packetServerMaxClients = 5; // default to 5 connection limit
+    _interfaceServerPort = 0; // port 0 disables interface server
+    _interfaceServerMaxClients = 5; // default to 5 connection limit
     
     uint8_t priority[8]={9,3,3,6,3,3,5,6}; // 1=High priority,9=low. Note: priority[0] is mag 8
     
@@ -227,8 +229,28 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
                     }
                     else
                     {
-                        std::cerr << "invalid server port number\n";
+                        std::cerr << "invalid packetserver port number\n";
                         exit(EXIT_FAILURE);
+                    }
+                    
+                    if (i + 1 < argc)
+                    {
+                        arg = argv[i+1];
+                        if (arg.compare(0,2,"--"))
+                        {
+                            // optional max clients argument
+                            errno = 0;
+                            l = std::strtol(argv[++i], &end_ptr, 10);
+                            if (errno == 0 && *end_ptr == '\0' && l > -1 && l < 65536)
+                            {
+                                _packetServerMaxClients = (uint16_t)l;
+                            }
+                            else
+                            {
+                                std::cerr << "invalid packetserver max clients argument\n";
+                                exit(EXIT_FAILURE);
+                            }
+                        }
                     }
                 }
                 else
@@ -250,8 +272,28 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
                     }
                     else
                     {
-                        std::cerr << "invalid server port number\n";
+                        std::cerr << "invalid interface port number\n";
                         exit(EXIT_FAILURE);
+                    }
+                    
+                    if (i + 1 < argc)
+                    {
+                        arg = argv[i+1];
+                        if (arg.compare(0,2,"--"))
+                        {
+                            // optional max clients argument
+                            errno = 0;
+                            l = std::strtol(argv[++i], &end_ptr, 10);
+                            if (errno == 0 && *end_ptr == '\0' && l > -1 && l < 65536)
+                            {
+                                _interfaceServerMaxClients = (uint16_t)l;
+                            }
+                            else
+                            {
+                                std::cerr << "invalid interface max clients argument\n";
+                                exit(EXIT_FAILURE);
+                            }
+                        }
                     }
                 }
                 else

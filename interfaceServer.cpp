@@ -30,6 +30,7 @@ InterfaceServer::InterfaceServer(Configure *configure, Debug *debug, PageList *p
     _debug(debug),
     _pageList(pageList),
     _portNumber(configure->GetInterfaceServerPort()),
+    _maxClients(configure->GetInterfaceServerMaxClients()),
     _isActive(false)
 {
     /* initialise sockets */
@@ -57,10 +58,14 @@ void InterfaceServer::SocketError(std::string errorMessage)
         #endif
     }
     
-    for (int i = 0; i < MAXCLIENTS; i++)
+    for(std::list<ClientState>::iterator it = _clients.begin(); it != _clients.end();)
     {
-        if (_clientState[i].socket >= 0)
-            CloseClient(&_clientState[i]);
+        ClientState client = *it;
+        
+        if (client.socket >= 0)
+            CloseClient(&client);
+        
+        it = _clients.erase(it);
     }
     
     _debug->Log(Debug::LogLevels::logERROR,errorMessage);
@@ -78,20 +83,14 @@ void InterfaceServer::CloseClient(ClientState *client)
     if (client->page)
     {
         client->page->FreeLock(); // unlock page
-        client->page = nullptr;
     }
-    
-    client->channel = -1;
-    client->subpage = nullptr;
-    client->socket = -1; // mark this slot free for new connections
 }
 
 void InterfaceServer::run()
 {
-    _debug->Log(Debug::LogLevels::logDEBUG,"[InterfaceServer::run] Datacast server thread started");
+    _debug->Log(Debug::LogLevels::logINFO,"[InterfaceServer::run] Datacast server thread started for "+(_maxClients?"max "+std::to_string(_maxClients):"unlimited")+" connections");
     
     int newSock;
-    int sock;
     struct sockaddr_in address;
     char readBuffer[256];
     fd_set readfds;
@@ -153,17 +152,11 @@ void InterfaceServer::run()
         FD_ZERO(&readfds);
         FD_SET(_serverSock, &readfds);
         
-        bool active = false;
-        for (int i = 0; i < MAXCLIENTS; i++)
+        for(std::list<ClientState>::iterator it = _clients.begin(); it != _clients.end(); ++it)
         {
-            sock = _clientState[i].socket;
-            
-            if(sock >= 0){
-                FD_SET(sock , &readfds);
-                active = true; /* packet server has connections */
-            }
+            FD_SET((*it).socket , &readfds);
         }
-        _isActive = active;
+        _isActive = !(_clients.empty());
         
         /* wait for activity on any socket */
         if ((select(FD_SETSIZE, &readfds, NULL, NULL, NULL) < 0) && (errno!=EINTR))
@@ -193,50 +186,44 @@ void InterfaceServer::run()
                 }
             #endif
             
-            for (int i = 0; i <= MAXCLIENTS; i++)
+            if (_maxClients > 0 && _maxClients == _clients.size())
             {
-                if (i == MAXCLIENTS)
-                {
-                    /* no more client slots so reject */
-                    #ifdef WIN32
-                        closesocket(newSock);
-                    #else
-                        close(newSock);
-                    #endif
-                    _debug->Log(Debug::LogLevels::logWARN,"[InterfaceServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
-                    break;
-                }
-                
-                /* find unused slot */
-                if( _clientState[i].socket < 0 )
-                {
-                    /* add to active sockets */
-                    _clientState[i].socket = newSock;
-                    _clientState[i].channel = -1; // no channel set
-                    _debug->Log(Debug::LogLevels::logINFO,"[InterfaceServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
-                    break;
-                }
+                /* no more client slots so reject */
+                #ifdef WIN32
+                    closesocket(newSock);
+                #else
+                    close(newSock);
+                #endif
+                _debug->Log(Debug::LogLevels::logWARN,"[InterfaceServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
+                continue;
             }
+            
+            ClientState newClient;
+            newClient.socket = newSock;
+            _clients.push_back(newClient);
+            
+            _debug->Log(Debug::LogLevels::logINFO,"[InterfaceServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
         }
         else
         {
             /* a client socket has activity */
-            for (int i = 0; i < MAXCLIENTS; i++)
+            for(std::list<ClientState>::iterator it = _clients.begin(); it != _clients.end();)
             {
-                sock = _clientState[i].socket;
+                ClientState* client = &(*it);
                 
-                if (sock >= 0 && FD_ISSET(sock , &readfds))
+                if (client->socket >= 0 && FD_ISSET(client->socket , &readfds))
                 {
                     /* socket has activity */
+                    getpeername(client->socket, (struct sockaddr*)&address, &addrlen);
                     
-                    int n = recv(sock, readBuffer, 1, MSG_PEEK); // peek at first byte of message
+                    int n = recv(client->socket, readBuffer, 1, MSG_PEEK); // peek at first byte of message
                     if (n == 1)
                     {
                         // byte 0 of message is message length
                         int len = (uint8_t)readBuffer[0];
                         if (len)
                         {
-                            n = recv(sock, readBuffer, len, 0); // try to read whole message
+                            n = recv(client->socket, readBuffer, len, 0); // try to read whole message
                             if (n == len)
                             {
                                 std::vector<uint8_t> res = {CMDOK}; // create "OK" response
@@ -248,14 +235,15 @@ void InterfaceServer::run()
                                         int ch = (uint8_t)readBuffer[2];
                                         if (n == 3 && ch >= 0 && ch <= 15)
                                         {
-                                            _clientState[i].channel = -1; // release current channel
+                                            client->channel = -1; // release current channel
                                             
                                             
                                             if (ch) // allows multiple connections for channel 0
                                             {
                                                 // check if another client is using desired datachannel
-                                                for (int j=0; j<MAXCLIENTS; j++){
-                                                    if (_clientState[j].channel == ch)
+                                                for(std::list<ClientState>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+                                                {
+                                                    if ((*it).channel == ch)
                                                     {
                                                         res[0] = CMDBUSY;
                                                         goto SETCHANError; // jump out to return error
@@ -263,10 +251,10 @@ void InterfaceServer::run()
                                                 }
                                             }
                                             
-                                            _clientState[i].channel = ch; // use requested channel
+                                            client->channel = ch; // use requested channel
                                             
                                             std::stringstream ss;
-                                            ss << "[InterfaceServer::run] Client " << i << ": SETCHAN " << ch;
+                                            ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": SETCHAN " << ch;
                                             _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                             break;
                                         }
@@ -293,7 +281,7 @@ void InterfaceServer::run()
                                     case DBCASTAPI:
                                     {
                                         /* databroadcast API */
-                                        if (_clientState[i].channel > 0 && n > 2) // databroadcast commands only on channels 1-15
+                                        if (client->channel > 0 && n > 2) // databroadcast commands only on channels 1-15
                                         {
                                             switch((uint8_t)readBuffer[2]) // byte 2 is databroadcast command number
                                             {
@@ -303,7 +291,7 @@ void InterfaceServer::run()
                                                     {
                                                         std::vector<uint8_t> data(readBuffer+3, readBuffer+n);
                                                         
-                                                        if(_datachannel[_clientState[i].channel]->PushRaw(&data))
+                                                        if(_datachannel[client->channel]->PushRaw(&data))
                                                         {
                                                             res[0] = CMDBUSY; // buffer full
                                                         }
@@ -335,7 +323,7 @@ void InterfaceServer::run()
                                                         
                                                         std::vector<uint8_t> data(readBuffer+9, readBuffer+n);
                                                         
-                                                        int bytes = _datachannel[_clientState[i].channel]->PushIDLA(flags, ial, spa, ri, ci, &data);
+                                                        int bytes = _datachannel[client->channel]->PushIDLA(flags, ial, spa, ri, ci, &data);
                                                         
                                                         if (bytes == 0) // buffer full
                                                             res[0] = CMDBUSY;
@@ -368,7 +356,7 @@ void InterfaceServer::run()
                                     case CONFIGAPI:
                                     {
                                         /* vbit2 configuration API */
-                                        if (_clientState[i].channel == 0 && n > 2) // allow VBIT2 configuration commands on channel 0 only
+                                        if (client->channel == 0 && n > 2) // allow VBIT2 configuration commands on channel 0 only
                                         {
                                             switch((uint8_t)readBuffer[2]){ // byte 2 is configuration command number
                                                 case CONFRAFLAG: /* get/set row adaptive flag */
@@ -377,7 +365,7 @@ void InterfaceServer::run()
                                                     {
                                                         _configure->SetRowAdaptive((uint8_t)readBuffer[3]&1);
                                                         std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] Client " << i << ": CONFRAFLAG " << ((readBuffer[3] & 1)?"ON":"OFF");
+                                                        ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": CONFRAFLAG " << ((readBuffer[3] & 1)?"ON":"OFF");
                                                         _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
                                                     else if (n != 3)
@@ -395,7 +383,7 @@ void InterfaceServer::run()
                                                     {
                                                         _configure->SetReservedBytes(std::array<uint8_t, 4>({(uint8_t)readBuffer[3],(uint8_t)readBuffer[4],(uint8_t)readBuffer[5],(uint8_t)readBuffer[6]}));
                                                         std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] Client " << i << ": CONFRBYTES set";
+                                                        ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": CONFRBYTES set";
                                                         _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
                                                     else if (n != 3)
@@ -423,7 +411,7 @@ void InterfaceServer::run()
                                                         
                                                         _configure->SetServiceStatusString(tmp.str());
                                                         std::stringstream ss;
-                                                        ss << "[InterfaceServer::run] Client " << i << ": CONFSTATUS set";
+                                                        ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": CONFSTATUS set";
                                                         _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
                                                     else if (n != 3)
@@ -451,13 +439,13 @@ void InterfaceServer::run()
                                                         if (n==35)
                                                         {
                                                             _configure->SetHeaderTemplate(line);
-                                                            ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set";
+                                                            ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": CONFHEADER set";
                                                         }
                                                         else
                                                         {
                                                             uint8_t mag = (uint8_t)readBuffer[3] & 0x7;
                                                             _pageList->GetMagazines()[mag]->SetCustomHeader(line);
-                                                            ss << "[InterfaceServer::run] Client " << i << ": CONFHEADER set on magazine " << (int)mag;
+                                                            ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": CONFHEADER set on magazine " << (int)mag;
                                                         }
                                                         _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     }
@@ -573,18 +561,18 @@ void InterfaceServer::run()
                                     {
                                         /* page data API */
                                         
-                                        if (_clientState[i].channel == 0 && n > 2) // allow page data commands on channel 0 only
+                                        if (client->channel == 0 && n > 2) // allow page data commands on channel 0 only
                                         {
                                             int cmd = (uint8_t)readBuffer[2]; // byte 2 is page data API command number
                                             
                                             if (cmd <= PAGEDELSUB) // all commands that start with a page/subpage number
                                             {
-                                                if (cmd <= PAGEOPEN && _clientState[i].page)
+                                                if (cmd <= PAGEOPEN && client->page)
                                                 {
                                                     // implicitly close page when issuing other page delete/open commands
-                                                    _clientState[i].page->FreeLock();
-                                                    _clientState[i].page = nullptr;
-                                                    _clientState[i].subpage = nullptr;
+                                                    client->page->FreeLock();
+                                                    client->page = nullptr;
+                                                    client->subpage = nullptr;
                                                 }
                                                 
                                                 if (n >= 5)
@@ -595,7 +583,7 @@ void InterfaceServer::run()
                                                         if (n == 5)
                                                         {
                                                             std::stringstream ss;
-                                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEDELETE " << std::hex << num;
+                                                            ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": PAGEDELETE " << std::hex << num;
                                                             _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                             
                                                             std::shared_ptr<TTXPageStream> p = _pageList->Locate(num);
@@ -621,7 +609,7 @@ void InterfaceServer::run()
                                                         if (n < 7)
                                                         {
                                                             std::stringstream ss;
-                                                            ss << "[InterfaceServer::run] Client " << i << ": PAGEOPEN " << std::hex << num << (OneShot?" as OneShot":"");
+                                                            ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": PAGEOPEN " << std::hex << num << (OneShot?" as OneShot":"");
                                                             _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                             if ((uint8_t)readBuffer[3] > 0 && (uint8_t)readBuffer[3] <= 8 && (uint8_t)readBuffer[4] < 0xff)
                                                             {
@@ -639,7 +627,7 @@ void InterfaceServer::run()
                                                                         _pageList->AddPage(p, true); // put it in the page lists
                                                                         
                                                                         // at this stage it has no subpages!
-                                                                        _clientState[i].page = p;
+                                                                        client->page = p;
                                                                     }
                                                                     else
                                                                     {
@@ -661,7 +649,7 @@ void InterfaceServer::run()
                                                                             _pageList->UpdatePageLists(p);
                                                                         }
                                                                         
-                                                                        _clientState[i].page = p;
+                                                                        client->page = p;
                                                                         res[0] = CMDOK;
                                                                     }
                                                                 }
@@ -672,11 +660,11 @@ void InterfaceServer::run()
                                                     }
                                                     else if (cmd == PAGESETSUB || cmd == PAGEDELSUB)
                                                     {
-                                                        _clientState[i].subpage = nullptr; // invalidate previous subpage
-                                                        if (n == 5 && _clientState[i].page)
+                                                        client->subpage = nullptr; // invalidate previous subpage
+                                                        if (n == 5 && client->page)
                                                         {
                                                             std::stringstream ss;
-                                                            ss << "[InterfaceServer::run] Client " << i << ": " << ((cmd==PAGESETSUB)?"PAGESETSUB ":"PAGEDELSUB ") << std::hex << num;
+                                                            ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": " << ((cmd==PAGESETSUB)?"PAGESETSUB ":"PAGEDELSUB ") << std::hex << num;
                                                             _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                             
                                                             if ((num & 0xc080) || num >= 0x3f7f) // reject invalid subpage numbers
@@ -685,19 +673,19 @@ void InterfaceServer::run()
                                                             }
                                                             else
                                                             {
-                                                                _clientState[i].subpage = _clientState[i].page->LocateSubpage(num);
-                                                                if (_clientState[i].subpage == nullptr) // subpage not found
+                                                                client->subpage = client->page->LocateSubpage(num);
+                                                                if (client->subpage == nullptr) // subpage not found
                                                                 {
                                                                     if (cmd == PAGESETSUB)
                                                                     {
-                                                                        _clientState[i].subpage = std::shared_ptr<Subpage>(new Subpage()); // create new subpage
-                                                                        _clientState[i].subpage->SetSubCode(num); // set subcode first
-                                                                        _clientState[i].page->InsertSubpage(_clientState[i].subpage); // add to page
-                                                                        _pageList->UpdatePageLists(_clientState[i].page);
-                                                                        _clientState[i].subpage->SetSubpageStatus(PAGESTATUS_TRANSMITPAGE);
+                                                                        client->subpage = std::shared_ptr<Subpage>(new Subpage()); // create new subpage
+                                                                        client->subpage->SetSubCode(num); // set subcode first
+                                                                        client->page->InsertSubpage(client->subpage); // add to page
+                                                                        _pageList->UpdatePageLists(client->page);
+                                                                        client->subpage->SetSubpageStatus(PAGESTATUS_TRANSMITPAGE);
                                                                         
-                                                                        if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
-                                                                            _clientState[i].page->SetSubpage(num); // put this subpage on air
+                                                                        if (client->page->GetOneShotFlag()) // page is a oneshot
+                                                                            client->page->SetSubpage(num); // put this subpage on air
                                                                     }
                                                                     else // PAGEDELSUB
                                                                     {
@@ -708,15 +696,15 @@ void InterfaceServer::run()
                                                                 {
                                                                     if (cmd == PAGESETSUB)
                                                                     {
-                                                                        if (_clientState[i].page->GetOneShotFlag()) // page is a oneshot
-                                                                            _clientState[i].page->SetSubpage(num); // put this subpage on air
+                                                                        if (client->page->GetOneShotFlag()) // page is a oneshot
+                                                                            client->page->SetSubpage(num); // put this subpage on air
                                                                     }
                                                                     else // PAGEDELSUB
                                                                     {
-                                                                        _clientState[i].page->RemoveSubpage(_clientState[i].subpage);
+                                                                        client->page->RemoveSubpage(client->subpage);
                                                                     }
                                                                 }
-                                                                unsigned int count = _clientState[i].page->GetSubpageCount();
+                                                                unsigned int count = client->page->GetSubpageCount();
                                                                 res.push_back((count >> 8) & 0xff);
                                                                 res.push_back(count & 0xff); // return subpage count (big endian)
                                                             }
@@ -731,16 +719,16 @@ void InterfaceServer::run()
                                             else if (cmd == PAGECLOSE)
                                             {
                                                 std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": PAGECLOSE";
+                                                ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": PAGECLOSE";
                                                 _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                 if (n==3)
                                                 {
-                                                    if (_clientState[i].page)
-                                                        _clientState[i].page->FreeLock();
+                                                    if (client->page)
+                                                        client->page->FreeLock();
                                                     else
                                                         res[0] = CMDNOENT;
-                                                    _clientState[i].page = nullptr;
-                                                    _clientState[i].subpage = nullptr;
+                                                    client->page = nullptr;
+                                                    client->subpage = nullptr;
                                                     
                                                     
                                                 }
@@ -751,23 +739,23 @@ void InterfaceServer::run()
                                             }
                                             else if (cmd == PAGEFANDC)
                                             {
-                                                if (_clientState[i].page)
+                                                if (client->page)
                                                 {
                                                     std::stringstream ss;
-                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGEFANDC";
+                                                    ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": PAGEFANDC";
                                                     _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     if (n == 5) // write
                                                     {
-                                                        _clientState[i].page->SetPageFunctionInt((uint8_t)readBuffer[3]);
-                                                        _clientState[i].page->SetPageCodingInt((uint8_t)readBuffer[4]);
-                                                        _pageList->UpdatePageLists(_clientState[i].page);
+                                                        client->page->SetPageFunctionInt((uint8_t)readBuffer[3]);
+                                                        client->page->SetPageCodingInt((uint8_t)readBuffer[4]);
+                                                        _pageList->UpdatePageLists(client->page);
                                                     }
                                                     else if (n != 3)
                                                     {
                                                         res[0] = CMDERR;
                                                     }
-                                                    res.push_back(_clientState[i].page->GetPageFunction());
-                                                    res.push_back(_clientState[i].page->GetPageCoding());
+                                                    res.push_back(client->page->GetPageFunction());
+                                                    res.push_back(client->page->GetPageCoding());
                                                 }
                                                 else
                                                 {
@@ -776,29 +764,29 @@ void InterfaceServer::run()
                                             }
                                             else if (cmd == PAGEOPTNS)
                                             {
-                                                if (_clientState[i].subpage)
+                                                if (client->subpage)
                                                 {
                                                     std::stringstream ss;
-                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGEOPTNS";
+                                                    ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": PAGEOPTNS";
                                                     _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     
                                                     if (n == 8) // write
                                                     {
-                                                        _clientState[i].subpage->SetSubpageStatus(((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4]);
-                                                        _clientState[i].subpage->SetRegion((uint8_t)readBuffer[5]);
-                                                        _clientState[i].subpage->SetCycleTime((uint8_t)readBuffer[6]);
-                                                        _clientState[i].subpage->SetTimedMode((uint8_t)readBuffer[7] & 1);
+                                                        client->subpage->SetSubpageStatus(((uint8_t)readBuffer[3] << 8) | (uint8_t)readBuffer[4]);
+                                                        client->subpage->SetRegion((uint8_t)readBuffer[5]);
+                                                        client->subpage->SetCycleTime((uint8_t)readBuffer[6]);
+                                                        client->subpage->SetTimedMode((uint8_t)readBuffer[7] & 1);
                                                     }
                                                     else if (n != 3)
                                                     {
                                                         res[0] = CMDERR;
                                                     }
-                                                    uint16_t status = _clientState[i].subpage->GetSubpageStatus();
+                                                    uint16_t status = client->subpage->GetSubpageStatus();
                                                     res.push_back((status >> 8) & 0xff);
                                                     res.push_back(status & 0xff);
-                                                    res.push_back(_clientState[i].subpage->GetRegion());
-                                                    res.push_back(_clientState[i].subpage->GetCycleTime());
-                                                    res.push_back(_clientState[i].subpage->GetTimedMode()?1:0);
+                                                    res.push_back(client->subpage->GetRegion());
+                                                    res.push_back(client->subpage->GetCycleTime());
+                                                    res.push_back(client->subpage->GetTimedMode()?1:0);
                                                 }
                                                 else
                                                 {
@@ -808,10 +796,10 @@ void InterfaceServer::run()
                                             else if (cmd == PAGEROW)
                                             {
                                                 res[0] = CMDERR; // default to an returning an error unless we have success
-                                                if (_clientState[i].subpage)
+                                                if (client->subpage)
                                                 {
                                                     std::stringstream ss;
-                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGEROW";
+                                                    ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": PAGEROW";
                                                     _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     
                                                     if (n > 3)
@@ -830,14 +818,14 @@ void InterfaceServer::run()
                                                                         tmp[i] = (uint8_t)readBuffer[4+i];
                                                                     std::shared_ptr<TTXLine> line(new TTXLine(tmp));
                                                                     
-                                                                    _clientState[i].subpage->SetRow(num, line);
+                                                                    client->subpage->SetRow(num, line);
                                                                     
                                                                     res[0] = CMDOK;
                                                                 }
                                                                 else if ((num < 26 && n==4) || (num > 25 && n==5))
                                                                 {
                                                                     // read row data
-                                                                    std::shared_ptr<TTXLine> line = _clientState[i].subpage->GetRow(num);
+                                                                    std::shared_ptr<TTXLine> line = client->subpage->GetRow(num);
                                                                     if (n==5 && line!=nullptr)
                                                                         line = line->LocateLine((uint8_t)readBuffer[4]&0xF);
                                                                     
@@ -856,12 +844,12 @@ void InterfaceServer::run()
                                                                 if (n==4)
                                                                 {
                                                                     // delete row data
-                                                                    _clientState[i].subpage->DeleteRow(num);
+                                                                    client->subpage->DeleteRow(num);
                                                                 }
                                                                 else if (num > 25 && n==5)
                                                                 {
                                                                     // delete dc
-                                                                    _clientState[i].subpage->DeleteRow(num, (uint8_t)readBuffer[4]&0xF);
+                                                                    client->subpage->DeleteRow(num, (uint8_t)readBuffer[4]&0xF);
                                                                 }
                                                                 res[0] = CMDOK; // didn't check if line existed, just returns OK
                                                             }
@@ -871,10 +859,10 @@ void InterfaceServer::run()
                                             }
                                             else if (cmd == PAGELINKS)
                                             {
-                                                if (_clientState[i].subpage)
+                                                if (client->subpage)
                                                 {
                                                     std::stringstream ss;
-                                                    ss << "[InterfaceServer::run] Client " << i << ": PAGELINKS";
+                                                    ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": PAGELINKS";
                                                     _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                                     
                                                     std::array<FastextLink, 6> links;
@@ -894,7 +882,7 @@ void InterfaceServer::run()
                                                                 links[l].subpage = 0x3f7f;
                                                             }
                                                         }
-                                                        _clientState[i].subpage->SetFastext(links);
+                                                        client->subpage->SetFastext(links);
                                                     }
                                                     else if (n != 3)
                                                     {
@@ -903,7 +891,7 @@ void InterfaceServer::run()
                                                     
                                                     if (res[0] == CMDOK)
                                                     {
-                                                        if (_clientState[i].subpage->GetFastext(&links))
+                                                        if (client->subpage->GetFastext(&links))
                                                         {
                                                             for (int l = 0; l < 6; l++)
                                                             {
@@ -930,7 +918,7 @@ void InterfaceServer::run()
                                             else if (cmd > PAGELINKS) // last defined command number
                                             {
                                                 std::stringstream ss;
-                                                ss << "[InterfaceServer::run] Client " << i << ": Unknown PAGESAPI command received " << std::hex << cmd;
+                                                ss << "[InterfaceServer::run] Client " << std::string(inet_ntoa(address.sin_addr)) << ":" << std::to_string(ntohs(address.sin_port)) << ": Unknown PAGESAPI command received " << std::hex << cmd;
                                                 _debug->Log(Debug::LogLevels::logDEBUG,ss.str());
                                             }
                                         }
@@ -952,19 +940,22 @@ void InterfaceServer::run()
                                 
                                 res.insert(res.begin(), res.size()+1); // prepend message size
                                 
-                                unsigned int n = send(sock, (char*)res.data(), res.size(), 0); // send response
+                                unsigned int n = send(client->socket, (char*)res.data(), res.size(), 0); // send response
+                                
                                 if (n == res.size()) // fail if only partial response can be sent
+                                {
+                                    ++it;
                                     continue; // next socket in loop
+                                }
                             }
                             // else fall through to error handling
                         }
                     }
                     // couldn't read/write all bytes
-                    getpeername(sock, (struct sockaddr*)&address, &addrlen);
                     if (n == 0)
                     {
                         /* client disconnected */
-                        _debug->Log(Debug::LogLevels::logINFO,"[InterfaceServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " on socket " + std::to_string(sock));
+                        _debug->Log(Debug::LogLevels::logINFO,"[InterfaceServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " on socket " + std::to_string(client->socket));
                     }
                     else
                     {
@@ -974,11 +965,16 @@ void InterfaceServer::run()
                             int e = errno;
                         #endif
                         
-                        _debug->Log(Debug::LogLevels::logWARN,"[InterfaceServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " recv error " + std::to_string(e) + " on socket " + std::to_string(sock));
+                        _debug->Log(Debug::LogLevels::logWARN,"[InterfaceServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " recv error " + std::to_string(e) + " on socket " + std::to_string(client->socket));
                     }
                     
                     /* close the socket when any error occurs */
-                    CloseClient(&_clientState[i]);
+                    CloseClient(client);
+                    it = _clients.erase(it);
+                }
+                else
+                {
+                    ++it;
                 }
             }
         }

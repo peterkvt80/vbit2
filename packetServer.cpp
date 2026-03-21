@@ -7,13 +7,11 @@ using namespace vbit;
 PacketServer::PacketServer(Configure *configure, Debug *debug) :
     _debug(debug),
     _portNumber(configure->GetPacketServerPort()),
+    _maxClients(configure->GetPacketServerMaxClients()),
     _isActive(false)
 {
     /* initialise sockets */
     _serverSock = -1;
-    
-    for (int i = 0; i < MAXCLIENTS; i++)
-        _clientSocks[i] = -1;
 }
 
 PacketServer::~PacketServer()
@@ -31,13 +29,14 @@ void PacketServer::DieWithError(std::string errorMessage)
         #endif
     }
     
-    for (int i = 0; i < MAXCLIENTS; i++)
+    for(std::list<int>::iterator it = _clientSocks.begin(); it != _clientSocks.end();)
     {
-        if (_clientSocks[i] >= 0)
+        int port = *it;
+        it = _clientSocks.erase(it);
         #ifdef WIN32
-            closesocket(_clientSocks[i]);
+            closesocket(port);
         #else
-            close(_clientSocks[i]);
+            close(port);
         #endif
     }
     
@@ -66,47 +65,45 @@ void PacketServer::SendField(std::vector<std::vector<uint8_t>> FrameBuffer)
     
     int sock;
     int ret;
-    for (i = 0; i < MAXCLIENTS; i++)
+    
+    _mtx.lock();
+    for(std::list<int>::iterator it = _clientSocks.begin(); it != _clientSocks.end(); ++it)
     {
-        if (_mtx[i].try_lock()) // skip this socket if unable to lock mutex as it's in the process of being closed
+        sock = *it;
+        if (sock >= 0)
         {
-            sock = _clientSocks[i];
-            if (sock >= 0)
+            ret = send(sock, (char*)RawFrameBuffer.data(), RawFrameBuffer.size(), 0);
+            if (ret != RawFrameBuffer.size())
             {
-                ret = send(sock, (char*)RawFrameBuffer.data(), RawFrameBuffer.size(), 0);
-                if (ret != RawFrameBuffer.size())
-                {
-                    /*
-                        We were unable to send a whole frame to the client. We either sent a partial frame or the send failed entirely.
-                        This probably means that either there are network issues, or the client is not consuming data fast enough.
-                        Either way trying to handle this adds a lot of complexity and risks getting the client desynchronised or blocking the thread trying to sort it out, so the best thing to do is probably just boot the client off and let it reconnect.
-                    */
-                    
-                    #ifdef WIN32
-                        int e = WSAGetLastError();
-                    #else
-                        int e = errno;
-                    #endif
-                    
-                    _debug->Log(Debug::LogLevels::logWARN,"[PacketServer::SendField] send() failed. Closing socket " + std::to_string(sock) + " send error " + std::to_string(e));
-                    
-                    _clientSocks[i] = -1; /* free slot */
-                    
-                    #ifdef WIN32
-                        closesocket(sock);
-                    #else
-                        close(sock);
-                    #endif
-                }
+                /*
+                    We were unable to send a whole frame to the client. We either sent a partial frame or the send failed entirely.
+                    This probably means that either there are network issues, or the client is not consuming data fast enough.
+                    Either way trying to handle this adds a lot of complexity and risks getting the client desynchronised or blocking the thread trying to sort it out, so the best thing to do is probably just boot the client off and let it reconnect.
+                */
+                
+                #ifdef WIN32
+                    int e = WSAGetLastError();
+                #else
+                    int e = errno;
+                #endif
+                
+                _debug->Log(Debug::LogLevels::logWARN,"[PacketServer::SendField] send() failed. Closing socket " + std::to_string(sock) + " send error " + std::to_string(e));
+                
+                #ifdef WIN32
+                    closesocket(sock);
+                #else
+                    close(sock);
+                #endif
+                *it = -1; // mark this closed so it gets removed in the server thread
             }
-            _mtx[i].unlock();
         }
     }
+    _mtx.unlock();
 }
 
 void PacketServer::run()
 {
-    _debug->Log(Debug::LogLevels::logDEBUG,"[PacketServer::run] TCP packet server thread started");
+    _debug->Log(Debug::LogLevels::logINFO,"[PacketServer::run] TCP packet server thread started for "+(_maxClients?"max "+std::to_string(_maxClients):"unlimited")+" connections");
     
     int newSock;
     int sock;
@@ -165,19 +162,11 @@ void PacketServer::run()
         FD_ZERO(&readfds);
         FD_SET(_serverSock, &readfds);
         
-        bool active = false;
-        
-        for (int i = 0; i < MAXCLIENTS; i++)
+        for(std::list<int>::iterator it = _clientSocks.begin(); it != _clientSocks.end(); ++it)
         {
-            sock = _clientSocks[i];
-            
-            if(sock >= 0){
-                FD_SET(sock , &readfds);
-                active = true; /* packet server has connections */
-            }
+            FD_SET(*it , &readfds);
         }
-        
-        _isActive = active;
+        _isActive = !(_clientSocks.empty());
         
         /* wait for activity on any socket */
         if ((select(FD_SETSIZE, &readfds, NULL, NULL, NULL) < 0) && (errno!=EINTR))
@@ -201,36 +190,28 @@ void PacketServer::run()
             if (setsockopt(newSock, SOL_SOCKET, SO_SNDBUF, (char *) &iopt, sizeof(iopt)) < 0 )
                 DieWithError("[PacketServer::run] setsockopt() failed");
             
-            for (int i = 0; i <= MAXCLIENTS; i++)
+            if (_maxClients > 0 && _maxClients == _clientSocks.size())
             {
-                if (i == MAXCLIENTS)
-                {
-                    /* no more client slots so reject */
-                    #ifdef WIN32
-                        closesocket(newSock);
-                    #else
-                        close(newSock);
-                    #endif
-                    _debug->Log(Debug::LogLevels::logWARN,"[PacketServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
-                    break;
-                }
-                
-                /* find unused slot */
-                if( _clientSocks[i] < 0 )
-                {
-                    /* add to active sockets */
-                    _clientSocks[i] = newSock;
-                    _debug->Log(Debug::LogLevels::logINFO,"[PacketServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
-                    break;
-                }
+                /* no more client slots so reject */
+                #ifdef WIN32
+                    closesocket(newSock);
+                #else
+                    close(newSock);
+                #endif
+                _debug->Log(Debug::LogLevels::logWARN,"[PacketServer::run] reject new connection from " + std::string(inet_ntoa(address.sin_addr)) + " (too many connections)");
+                break;
             }
+                
+            /* add to active sockets */
+            _clientSocks.push_back(newSock);
+            _debug->Log(Debug::LogLevels::logINFO,"[PacketServer::run] new connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " as socket " + std::to_string(newSock));
         }
         else
         {
             /* a client socket has activity */
-            for (int i = 0; i < MAXCLIENTS; i++)
+            for(std::list<int>::iterator it = _clientSocks.begin(); it != _clientSocks.end();)
             {
-                sock = _clientSocks[i];
+                sock = *it;
                 
                 if (sock >= 0 && FD_ISSET(sock , &readfds))
                 {
@@ -243,20 +224,21 @@ void PacketServer::run()
                         getpeername(sock, (struct sockaddr*)&address, &addrlen);
                         
                         _debug->Log(Debug::LogLevels::logINFO,"[PacketServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " on socket " + std::to_string(sock));
-                        
-                        _mtx[i].lock();
-                        _clientSocks[i] = -1; /* free slot */
-                        
+
+                        _mtx.lock();
+                        it = _clientSocks.erase(it);
                         #ifdef WIN32
                             closesocket(sock);
                         #else
                             close(sock);
                         #endif
-                        _mtx[i].unlock();
+                        _mtx.unlock();
+                        
                     }
                     else if (n > 0)
                     {
                         // don't care what client sent right now
+                        ++it;
                     }
                     else /* n < 0 */
                     {
@@ -271,16 +253,28 @@ void PacketServer::run()
                         _debug->Log(Debug::LogLevels::logWARN,"[PacketServer::run] closing connection from " + std::string(inet_ntoa(address.sin_addr)) + ":" + std::to_string(ntohs(address.sin_port)) + " recv error " + std::to_string(e) + " on socket " + std::to_string(sock));
                         
                         /* close the socket when any error occurs */
-                        _mtx[i].lock();
-                        _clientSocks[i] = -1; /* free slot */
                         
+                        _mtx.lock();
+                        it = _clientSocks.erase(it);
                         #ifdef WIN32
                             closesocket(sock);
                         #else
                             close(sock);
                         #endif
-                        _mtx[i].unlock();
+                        _mtx.unlock();
                     }
+                }
+                else
+                {
+                    if (sock < 0)
+                    {
+                        // socket was closed in main thread
+                        _mtx.lock();
+                        it = _clientSocks.erase(it);
+                        _mtx.unlock();
+                    }
+                    else
+                        ++it;
                 }
             }
         }
