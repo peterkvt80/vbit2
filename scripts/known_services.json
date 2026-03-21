@@ -1,6 +1,6 @@
 {
     "services":[
-        {"name":"Teefax","type":"svn","url":"http://teastop.plus.com/svn/teletext/","path":"Teefax"},
+        {"name":"Artfax","type":"git","url":"https://github.com/teletexx/service-artfax","path":"Artfax"},
         {"name":"Ceefax","type":"group","services":[
             {"name":"Ceefax (East)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/East","path":"CeefaxEast"},
             {"name":"Ceefax (East Midlands)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/EastMidlands","path":"CeefaxEastMids"},
@@ -15,8 +15,12 @@
             {"name":"Ceefax (Yorks and Lincs)","type":"svn","url":"https://internal.nathanmediaservices.co.uk/svn/ceefax/Yorks&Lincs","path":"CeefaxYorksAndLincs"}
         ]},
         {"name":"Chunkytext","type":"git","url":"https://zxnet.co.uk/git/cf.git","path":"Chunkytext"},
-        {"name":"SPARK","type":"git","url":"https://github.com/ZXGuesser/spark-teletext.git","path":"SPARK"},
         {"name":"Nemetext","type":"git","url":"https://github.com/JamieNemeth/nemetext.git","path":"Nemetext"},
-        {"name":"Artfax","type":"git","url":"https://github.com/teletexx/service-artfax","path":"Artfax"}
+        {"name":"SPARK","type":"git","url":"https://github.com/ZXGuesser/spark-teletext.git","path":"SPARK"},
+        {"name":"Teefax","type":"svn","url":"http://teastop.plus.com/svn/teletext/","path":"Teefax"},
+        {"name":"Webfax","type":"group","services":[
+            {"name":"Webfax 1","type":"git","url":"https://github.com/Webfax-Teletext/Webfax-Teletext.git","path":"Webfax1"},
+            {"name":"Webfax 2","type":"git","url":"https://github.com/Webfax-Teletext/Webfax2-Teletext.git","path":"Webfax2"}
+        ]}
     ]
 }
