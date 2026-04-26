@@ -343,6 +343,40 @@ void InterfaceServer::run()
                                                     }
                                                     break;
                                                 }
+                                                case DCFORMATB: // load a format B datacast payload
+                                                {
+                                                    /* needs to load:
+                                                        2-bit application number
+                                                        4-bit application identifier
+                                                        490 byte user data "bundle" which is too large to fit in a single message, so require two calls each carrying 7 packets worth of user data.
+                                                    */
+                                                    if (n == 249)
+                                                    {
+                                                        /*
+                                                            byte 3: bits 0-1 AN, bits 2-5 AI, bit 7 second payload half flag
+                                                            bytes 4-248: user data bundle half (245 bytes).
+                                                        */
+                                                        uint8_t an = (uint8_t)readBuffer[3] & 0x3;
+                                                        uint8_t ai = ((uint8_t)readBuffer[3] & 0x3C) >> 2;
+                                                        bool sphf = (uint8_t)readBuffer[3] & 0x80;
+                                                        
+                                                        std::array<uint8_t, 245> data;
+                                                        std::copy(readBuffer+4, readBuffer+249, data.begin());
+                                                        
+                                                        // TODO: try to inject into datacast system.
+                                                        int bytes = _datachannel[client->channel]->PushIDLBHalf(sphf, an, ai, &data);
+                                                        
+                                                        if (bytes == 0) // buffer full
+                                                            res[0] = CMDBUSY;
+                                                        else if (bytes < 0) // invalid bundle half or application address
+                                                            res[0] = CMDERR;
+                                                    }
+                                                    else
+                                                    {
+                                                        res[0] = CMDERR;
+                                                    }
+                                                    break;
+                                                }
                                                 
                                                 default: // unknown datacast command
                                                     res[0] = CMDERR;

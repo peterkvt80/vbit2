@@ -36,7 +36,7 @@
 /* command numbers for databroadcast API */
 #define DCRAW       0x00    /* push raw packet data to datacast buffer */
 #define DCFORMATA   0x01    /* push format A packet to datacast buffer */
-#define DCFORMATB   0x02    /* placeholder - may never implement */
+#define DCFORMATB   0x02    /* push format B payload half to buffer */
 
 /* command numbers for vbit2 configuration API */
 #define CONFRAFLAG  0x00    /* get/set row adaptive flag */
@@ -80,7 +80,7 @@ namespace vbit
             PacketDatacast** GetDatachannels() { PacketDatacast **channels=_datachannel; return channels; };
             
         private:
-            const uint8_t APIVERSION[3] = {1,0,0}; // Version number for interface API.
+            const uint8_t APIVERSION[3] = {1,1,0}; // Version number for interface API.
             
             Configure* _configure;
             Debug* _debug;
