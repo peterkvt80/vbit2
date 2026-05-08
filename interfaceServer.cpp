@@ -154,7 +154,8 @@ void InterfaceServer::run()
         
         for(std::list<ClientState>::iterator it = _clients.begin(); it != _clients.end(); ++it)
         {
-            FD_SET((*it).socket , &readfds);
+            if ((*it).socket > -1)
+                FD_SET((*it).socket , &readfds);
         }
         _isActive = !(_clients.empty());
         

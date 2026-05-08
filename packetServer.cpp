@@ -164,7 +164,8 @@ void PacketServer::run()
         
         for(std::list<int>::iterator it = _clientSocks.begin(); it != _clientSocks.end(); ++it)
         {
-            FD_SET(*it , &readfds);
+            if (*it > -1)
+                FD_SET(*it , &readfds);
         }
         _isActive = !(_clientSocks.empty());
         
