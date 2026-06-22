@@ -227,7 +227,8 @@ void InterfaceServer::run()
                             n = recv(client->socket, readBuffer, len, 0); // try to read whole message
                             if (n == len)
                             {
-                                std::vector<uint8_t> res = {CMDOK}; // create "OK" response
+                                std::vector<uint8_t> res;
+                                res.push_back(CMDOK); // create "OK" response
                                 
                                 // byte 1 of message is interface server command number
                                 switch ((uint8_t)readBuffer[1]){

@@ -508,7 +508,7 @@ void PacketMag::DeletePacket29(int designationCode)
     {
         // delete all
         _packet29 = nullptr;
-        _nextPacket29 == nullptr;
+        _nextPacket29 = nullptr;
     }
     else
     {
