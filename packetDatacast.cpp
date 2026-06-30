@@ -61,29 +61,72 @@ void PacketDatacast::LoadIDLBRow(uint8_t row, uint8_t *data)
     // copy user data into packet data array
     std::copy(data, data+35, _IDLBPacketBlock.begin()+(row*40+3));
     
-    // TODO: calculate real FEC suffix bytes
-    // something recognisable for debugging:
-    _IDLBPacketBlock[row*40+38] = 0xAA;
-    _IDLBPacketBlock[row*40+39] = 0x55;
+    uint8_t s0 = 0;
+    uint8_t s1 = 0;
+    for (int i = 0; i < 35; i++)
+    {
+        s1 ^= data[i];
+        s0 = TimesA[s0]^data[i];
+    }
+    
+    CalculateIDLBSuffixBytes(&s0, &s1);
+    
+    _IDLBPacketBlock[row*40+38] = s0;
+    _IDLBPacketBlock[row*40+39] = s1;
+}
+
+void PacketDatacast::CalculateIDLBSuffixBytes(uint8_t *s0, uint8_t *s1)
+{
+    *s0 = TimesA[*s0]; // This is a bit strange?
+    *s0 = TimesA[*s0];
+    if (*s1 == *s0) // can't take the log
+    {
+        *s0 = 0;
+        *s1 = *s0;
+    }
+    else
+    {
+        int t = BaseALog[*s1^*s0];
+        *s0 = AToPower[(255 + t - BaseALog[3]) % 255];
+        *s1 = *s0 ^ *s1;
+    }
 }
 
 void PacketDatacast::CalculateIDLBProtectionBytes()
 {
-    // TODO: calculate real FEC protection bytes
-    
     for (int col=0; col<35; col++)
     {
-        // something recognisable for debugging:
-        _IDLBPacketBlock[40*14+col+3] = 0xAA;
-        _IDLBPacketBlock[40*15+col+3] = 0x55;
+        uint8_t p = 0;
+        uint8_t q = 0;
+        uint8_t d;
+        for (int i=0; i<14; i++)
+        {
+            d = _IDLBPacketBlock[40*i+col+3];
+            q ^= d;
+            p = TimesA[p]^d;
+        }
+        
+        CalculateIDLBSuffixBytes(&p, &q);
+        _IDLBPacketBlock[40*14+col+3] = p;
+        _IDLBPacketBlock[40*15+col+3] = q;
     }
     
-    // TODO: calculate real FEC suffix bytes
-    // something recognisable for debugging:
-    _IDLBPacketBlock[40*14+38] = 0xAA;
-    _IDLBPacketBlock[40*14+39] = 0x55;
-    _IDLBPacketBlock[40*15+38] = 0xAA;
-    _IDLBPacketBlock[40*15+39] = 0x55;
+    for (int row = 14; row < 16; row++)
+    {
+        uint8_t s0 = 0;
+        uint8_t s1 = 0;
+        for (int i = 0; i < 35; i++)
+        {
+            uint8_t d = _IDLBPacketBlock[row*40+i+3];
+            s1 ^= d;
+            s0 = TimesA[s0]^d;
+        }
+        
+        CalculateIDLBSuffixBytes(&s0, &s1);
+        
+        _IDLBPacketBlock[row*40+38] = s0;
+        _IDLBPacketBlock[row*40+39] = s1;
+    }
 }
 
 int PacketDatacast::PushIDLBHalf(bool halfFlag, uint8_t an, uint8_t ai, std::array<uint8_t, 245> *data)

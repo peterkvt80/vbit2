@@ -15,4 +15,8 @@ extern const uint8_t Hamming24EncodeTable1[256];
 extern const uint8_t Hamming24EncodeTable2[4];
 extern const uint8_t Hamming24ParityTable[3][256];
 
+extern const uint8_t TimesA[256];
+extern const uint8_t AToPower[256];
+extern const uint8_t BaseALog[256];
+
 #endif

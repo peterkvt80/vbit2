@@ -43,6 +43,7 @@ namespace vbit
             
             void LoadIDLBRow(uint8_t row, uint8_t *data);
             void CalculateIDLBProtectionBytes();
+            void CalculateIDLBSuffixBytes(uint8_t *s0, uint8_t *s1);
     };
 }
 
