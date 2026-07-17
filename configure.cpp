@@ -54,7 +54,7 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
     _interfaceServerPort = 0; // port 0 disables interface server
     _interfaceServerMaxClients = 5; // default to 5 connection limit
     
-    uint8_t priority[8]={9,3,3,6,3,3,5,6}; // 1=High priority,9=low. Note: priority[0] is mag 8
+    uint8_t priority[8]={5,5,5,5,5,5,5,5}; // 1=High priority,9=low. Note: priority[0] is mag 8
     
     for (int i=0; i<8; i++)
         _magazinePriority[i] = priority[i];
