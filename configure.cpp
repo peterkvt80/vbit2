@@ -29,11 +29,8 @@ Configure::Configure(Debug *debug, int argc, char** argv) :
 {
     _configFile = CONFIGFILE;
     
-#ifdef RASPBIAN
-    _pageDir = "/home/pi/teletext";
-#else
     _pageDir = "./pages"; // a relative path as a sensible default
-#endif
+    
     // This is where the default header template is defined.
     _headerTemplate = "VBIT2    %%# %%a %d %%b" "\x03" "%H:%M:%S";
     
@@ -627,7 +624,7 @@ int Configure::LoadConfigFile(std::string filename)
     }
     else
     {
-        _debug->Log(Debug::LogLevels::logWARN,"[Configure::LoadConfigFile] open failed");
+        _debug->Log(Debug::LogLevels::logWARN,"[Configure::LoadConfigFile] open failed " + filename);
         return -1;
     }
 }
